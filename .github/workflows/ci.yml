@@ -193,12 +193,14 @@ jobs:
 
       - name: Start the site (Aspire, SQL Server, synthetic seed content)
         run: |
+          # Aspire 17 starts the AppHost through the Aspire CLI, which builds and runs the Debug configuration and ignores
+          # -c Release --no-build (ADR 0012), so the AppHost is started the same way as `make run`.
           # Throwaway admin password for this job only (ES-024). The name has a hyphen, so it is passed with env,
           # because bash cannot export it.
           admin_password="Ad1-$(openssl rand -hex 16)"
           echo "::add-mask::${admin_password}"
           ASPIRE_ALLOW_UNSECURED_TRANSPORT=true env "Parameters__umbraco-admin-password=${admin_password}" \
-            nohup dotnet run --project src/UmbracoSample.AppHost -c Release --no-build --launch-profile http > apphost.log 2>&1 &
+            nohup dotnet run --project src/UmbracoSample.AppHost --launch-profile http > apphost.log 2>&1 &
           # Ready means the runtime is up; the seeded fixture page answering means the uSync import has finished too.
           for _ in $(seq 1 60); do
             if curl -sf --max-time 5 http://localhost:43835/health/ready > /dev/null \

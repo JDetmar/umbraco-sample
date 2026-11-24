@@ -22,6 +22,8 @@
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.Dotnet" />
     <PackageReference Include="Aspire.Hosting.SqlServer" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
   </ItemGroup>
 
   <!-- Fail early with the fix, instead of ASPIRE013, when the tool was not restored or the platform is not mapped. -->
