@@ -32,6 +32,16 @@ check_contains() {
   echo "ok   $path"
 }
 
+check_header() {
+  local path="$1" header="$2" expected="$3" headers
+  headers="$(curl "${curl_opts[@]}" --dump-header - --output /dev/null "$base_url$path" | tr -d '\r')"
+  if ! grep -qi "^$header: .*$expected" <<<"$headers"; then
+    echo "FAIL $path: expected header '$header' containing '$expected'" >&2
+    exit 1
+  fi
+  echo "ok   $path $header"
+}
+
 check_equals /health/live "Healthy"
 check_equals /health/ready "Healthy"
 check_equals /health/schema "Healthy"
@@ -39,4 +49,7 @@ check_equals /health/schema "Healthy"
 check_contains /dist/site.css "--color-text"
 # A marker from this site's own layout, so Umbraco's built-in "no content" page cannot pass.
 check_contains / "${SMOKE_HOME_MARKER:-class=\"skip-link\"}"
+# Security headers (TST-09, ADR 0008): the strict policy and nosniff reach visitors through the edge.
+check_header / "Content-Security-Policy" "default-src 'self'"
+check_header / "X-Content-Type-Options" "nosniff"
 echo "Smoke test passed for $base_url"
