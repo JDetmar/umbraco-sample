@@ -1,6 +1,6 @@
 # Threat model 0001: lead form forwarded to the marketing automation platform
 
-- Status: **Proposed. It needs owner approval before any form code is written (ES-023).**
+- Status: **Approved by the owner on 2026-11-24, with decisions D1 to D4 recorded below (ES-023).**
 - Date: 2026-11-24
 - Scope: plan Phase 4, the Form component and its submission endpoint
 - Clauses: ES-022, ES-023, ES-025, ES-026, ES-043, ES-044, ES-045, ES-046, ES-058, ES-059; framework TST-07
@@ -53,7 +53,7 @@ Each mitigation names the test that will prove it. "Edge" items are Phase 5 infr
 
 | Threat | Mitigation | Evidence (planned) |
 |---|---|---|
-| Bots submit spam leads | Three layers. A honeypot field. A signed render token (Data Protection, built in) that carries the render time and rejects submissions faster than 3 s or older than 2 h. Per-client rate limiting (ASP.NET Core rate limiter, built in) of 5 submissions per 10 minutes. The edge WAF bot rules add a fourth. | Unit tests for honeypot, token age and token tampering. Integration test: the 6th submission gets 429. |
+| Bots submit spam leads | Three layers. A honeypot field. A signed render token (Data Protection, built in) that carries the render time and rejects submissions faster than 3 s or older than 2 h. Per-client rate limiting (ASP.NET Core rate limiter, built in) of 3 submissions per 10 minutes (D3). The edge WAF bot rules add a fourth. | Unit tests for honeypot, token age and token tampering. Integration test: the 4th submission gets 429. |
 | Spam gets through all of that | **D1, decided 2026-11-24:** a CAPTCHA, switched per environment by a `Forms:Captcha:Enabled` setting that is off by default. **Local and CI: off**, because automated tests cannot solve it. **Dev and staging: on, with the provider's always-pass test keys**, so the widget, the policy entries and the server-side verification are exercised before production. **Prod: on, with real keys** (secret key in Key Vault, ES-024). The provider is not chosen yet, so for now the setting stays off everywhere and nothing is configured. Choosing it makes the provider a new dependency, with a third-party allowlist entry (ADR 0008) and a consent review. | Unit tests: off by default, and the form renders and submits with no CAPTCHA markup or script; with it on, the token is verified server-side and a missing or failed token is rejected; with it on but no provider configured, the site refuses to start (fail closed). Dev smoke test: the widget loads under the policy. |
 | Cross-site request forgery posts leads from other sites | Antiforgery token (built in) on the form post. The policy's `form-action 'self'` stops the site's own pages posting elsewhere. | Integration test: a post without the token gets 400. |
 
@@ -106,9 +106,9 @@ Each mitigation names the test that will prove it. "Edge" items are Phase 5 infr
   - partial failure, where the MAP accepts but the response is lost, is reconciled by lookup;
   - an outage gives a clear error and no thank-you.
 
-**Owner decision D2: what happens when the MAP is down?**
-- **Option A (recommended, and the plan's default).** Store nothing. The visitor retries later. A lead can be lost if the visitor gives up, but the site never claims to have received it.
-- **Option B.** Keep a short-lived, encrypted outbox (for example a storage queue with a 7-day TTL) and acknowledge on enqueue. This loses nothing during outages, but brings ES-058 and ES-059 into scope: classification, retention, deletion across replicas and backups, and restore tests.
+**D2, decided 2026-11-24: what happens when the MAP is down.** The owner chose Option A.
+- **Option A (chosen).** Store nothing. The visitor retries later. A lead can be lost if the visitor gives up, but the site never claims to have received it.
+- **Option B (not chosen).** Keep a short-lived, encrypted outbox (for example a storage queue with a 7-day TTL) and acknowledge on enqueue. This loses nothing during outages, but brings ES-058 and ES-059 into scope: classification, retention, deletion across replicas and backups, and restore tests.
 
 ## 6. Privacy (ES-025, ES-058)
 
@@ -122,9 +122,9 @@ Each mitigation names the test that will prove it. "Edge" items are Phase 5 infr
 | ID | Item | Owner action |
 |---|---|---|
 | D1 | CAPTCHA | **Decided:** off locally and in CI; on in dev and staging with test keys and in prod with real keys, once the owner chooses and configures a provider. Until then it is off everywhere. |
-| D2 | Outbox or no outbox during a MAP outage | Decide. Default is Option A. |
-| D3 | Rate-limit numbers (5 per 10 minutes per client) and field limits | Confirm or adjust. |
-| D4 | Which real MAP, and its API's idempotency and lookup support | Needed before go-live. The design assumes lookup by an external ID. |
+| D2 | Outbox or no outbox during a MAP outage | **Decided:** no outbox. The site stores nothing and the visitor retries. |
+| D3 | Rate-limit numbers and field limits | **Decided:** 3 submissions per 10 minutes per client, a 16 KB body and the field limits above. The numbers are configuration. |
+| D4 | Which real MAP | **Decided for now:** design against a generic, documented WireMock stub that supports idempotency keys and lookup by external ID. Choosing a real platform reopens this model and adds contract tests against its API. |
 | R1 | Determined human spammers will get through | Accepted as residual. CRM-side de-duplication and list hygiene handle it. |
 | R2 | The edge WAF and HSTS do not exist until Phase 5 | Tracked by DEV-010. Forms are not enabled on a public environment before Phase 5. |
 
