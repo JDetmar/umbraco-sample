@@ -56,6 +56,12 @@ test('keyboard focus on a link shows the design-token focus outline', async ({ p
   await expect(link).toBeFocused();
 
   // The outline must come from the tokens, not the browser default: a missing stylesheet fails this.
+  const tokens = await page.evaluate(() => {
+    const root = getComputedStyle(document.documentElement);
+    return [root.getPropertyValue('--color-focus').trim(), root.getPropertyValue('--focus-width').trim()];
+  });
+  expect(tokens.every((value) => value !== '')).toBe(true);
+
   const expected = await page.evaluate(() => {
     const root = getComputedStyle(document.documentElement);
     const probe = document.createElement('div');
@@ -68,7 +74,6 @@ test('keyboard focus on a link shows the design-token focus outline', async ({ p
     probe.remove();
     return result;
   });
-  expect(expected.color).not.toBe('');
   const actual = await link.evaluate((el) => {
     const style = getComputedStyle(el);
     return { style: style.outlineStyle, color: style.outlineColor, width: style.outlineWidth };
