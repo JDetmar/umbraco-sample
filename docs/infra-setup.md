@@ -13,7 +13,7 @@ These steps need the owner: they create cloud identities, store a secret and cha
    openssl rand -base64 64 | tr -d '\n' | pulumi config set --secret imagingHmacKey --stack dev
    ```
    Preview fails until both secrets are set.
-4. Set the image once the first image is published: `pulumi config set image ghcr.io/<owner>/umbraco-sample@sha256:<digest> --stack dev`.
+4. Make the GHCR package public once CI first publishes it from main (GitHub, your profile, Packages, umbraco-sample, Package settings, Change visibility). New packages start private, and a public package lets Container Apps pull without a stored registry credential. Then set the image, using the digest from the main CI run's summary: `pulumi config set image ghcr.io/<owner>/umbraco-sample@sha256:<digest> --stack dev`.
 5. Create a Pulumi access token for CI, scoped as narrowly as your plan allows (an organization or team token limited to this project's stacks).
 
 ## 2. Azure
