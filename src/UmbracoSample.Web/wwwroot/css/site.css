@@ -1,0 +1,38 @@
+/* Placeholder styles until design tokens arrive in Phase 2. */
+:root {
+  --color-text: #1b1b1f;
+  --color-background: #ffffff;
+  --color-link: #0b5cad;
+  --space-m: 1rem;
+  --font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--color-text);
+  background: var(--color-background);
+  line-height: 1.5;
+}
+
+a {
+  color: var(--color-link);
+}
+
+.skip-link {
+  position: absolute;
+  left: -999px;
+}
+
+.skip-link:focus {
+  left: var(--space-m);
+  top: var(--space-m);
+  background: var(--color-background);
+  padding: var(--space-m);
+}
+
+.site-header,
+main,
+.site-footer {
+  padding: var(--space-m);
+}

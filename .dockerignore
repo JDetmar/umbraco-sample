@@ -1,0 +1,9 @@
+**/bin/
+**/obj/
+**/node_modules/
+src/UmbracoSample.Web/umbraco/Data/
+src/UmbracoSample.Web/umbraco/Logs/
+src/UmbracoSample.Web/wwwroot/media/
+.git/
+artifacts/
+tests/

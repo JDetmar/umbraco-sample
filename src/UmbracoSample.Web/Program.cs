@@ -1,3 +1,5 @@
+using UmbracoSample.Web.Health;
+
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
@@ -13,6 +15,7 @@ WebApplication app = builder.Build();
 await app.BootUmbracoAsync();
 
 app.MapDefaultEndpoints();
+app.MapSchemaDriftEndpoint();
 
 app.UseUmbraco()
     .WithMiddleware(u =>

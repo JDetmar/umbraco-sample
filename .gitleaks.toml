@@ -1,0 +1,12 @@
+# Secret scanning rules (ES-024). Extends the gitleaks defaults; every allowlist entry is narrow and explained.
+title = "umbraco-sample"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "uSync item identifiers: Key=\"<guid>\" attributes in schema files are public identifiers, not secrets"
+condition = "AND"
+paths = ['''(^|/)uSync/v\d+/.*\.config$''']
+regexTarget = "line"
+regexes = ['''Key="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"''']

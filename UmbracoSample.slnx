@@ -5,6 +5,7 @@
     <Project Path="src/UmbracoSample.Web/UmbracoSample.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/UmbracoSample.Integration.Tests/UmbracoSample.Integration.Tests.csproj" />
     <Project Path="tests/UmbracoSample.Repository.Tests/UmbracoSample.Repository.Tests.csproj" />
   </Folder>
 </Solution>

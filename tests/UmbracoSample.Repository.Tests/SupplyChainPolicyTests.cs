@@ -64,6 +64,19 @@ public sealed partial class SupplyChainPolicyTests
     }
 
     [Fact]
+    public void Committed_app_settings_hold_no_image_signing_key()
+    {
+        // Umbraco writes a generated HMACSecretKey into appsettings.json on first install when none is configured.
+        // Keys come from user secrets locally and Key Vault in Azure (ES-024).
+        var violations = RepositoryRoot.Files("appsettings*.json")
+            .Where(file => ImageSigningKeyValue().IsMatch(File.ReadAllText(file.FullName)))
+            .Select(file => file.Name)
+            .ToList();
+
+        violations.ShouldBeEmpty("ES-024: secrets stay out of committed configuration.");
+    }
+
+    [Fact]
     public void Pin_check_rejects_tags_and_branches()
     {
         PinnedUses().IsMatch("uses: actions/checkout@v4").ShouldBeFalse();
@@ -84,6 +97,10 @@ public sealed partial class SupplyChainPolicyTests
 
     [GeneratedRegex(@"^uses:\s+[\w.-]+/[\w./-]+@[0-9a-f]{40}\s+#\s+\S+")]
     private static partial Regex PinnedUses();
+
+    // A string value, not the JSON schema's object definition of the same property.
+    [GeneratedRegex(@"""HMACSecretKey""\s*:\s*""[^""]+""", RegexOptions.IgnoreCase)]
+    private static partial Regex ImageSigningKeyValue();
 
     [GeneratedRegex(@"permissions:\s*(write-all|read-all)")]
     private static partial Regex BroadPermissions();

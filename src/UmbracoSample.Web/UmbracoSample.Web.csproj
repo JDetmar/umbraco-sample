@@ -5,6 +5,7 @@
 
   <ItemGroup>
     <PackageReference Include="Umbraco.Cms" />
+    <PackageReference Include="uSync" />
     <ProjectReference Include="..\UmbracoSample.ServiceDefaults\UmbracoSample.ServiceDefaults.csproj" />
   </ItemGroup>
 

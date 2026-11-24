@@ -18,6 +18,9 @@ Use the Makefile targets; CI runs the same ones (ES-052).
 | Build | `make build` |
 | Fast tests | `make test` |
 | Fast validation before handoff | `make validate` |
+| Integration tests (starts the Aspire stack; needs Docker) | `make test-integration` |
+| Build the container image | `make image` |
+| Smoke-test a running site | `make smoke URL=<base url>` |
 | Run locally (Aspire: site and SQL Server) | `make run` |
 | Apply formatting | `make format` |
 
@@ -38,7 +41,10 @@ Agents MUST run `make validate` before handing off a change, or record why it co
 | `src/UmbracoSample.Web` | The Umbraco site |
 | `src/UmbracoSample.AppHost` | Aspire orchestration for local development and integration tests |
 | `src/UmbracoSample.ServiceDefaults` | Telemetry, health checks and resilience shared by services |
-| `tests/` | Test projects |
+| `src/UmbracoSample.Web/uSync/v17` | Schema (and synthetic seed content) as code, imported on first boot and checked for drift |
+| `tests/UmbracoSample.Repository.Tests` | Fast policy tests over the repository itself |
+| `tests/UmbracoSample.Integration.Tests` | Tests against the real stack through Aspire (`Category=Integration`) |
+| `scripts/` | Operational scripts, such as the post-deployment smoke test |
 | `docs/adr/` | Architecture decision records (ES-019) |
 | `docs/engineering-conformance.yml` | Conformance ledger: evidence and open deviations (ES-038) |
 | `docs/dependencies.md` | Dependency register with ES-015 justifications |
@@ -49,6 +55,8 @@ Agents MUST run `make validate` before handing off a change, or record why it co
 - Package versions live only in `Directory.Packages.props`; lock files are committed and CI restores in locked mode (ES-013).
 - Third-party GitHub Actions are pinned to a full commit SHA with the tag in a comment, and every workflow declares least-privilege `permissions` (ES-017).
 - No secrets in source, config or CI definitions (ES-024). Local secrets go in user secrets.
+- Schema changes (document types, data types, templates) are made in the local backoffice under `make run`; uSync exports them on save into `src/UmbracoSample.Web/uSync/v17`, and those files are committed. Production never exports and only imports settings, and `/health/schema` reports drift.
+- Umbraco writes a generated `Imaging:HMACSecretKey` into `appsettings.json` on a fresh install when none is configured; never commit it (a policy test fails if you do).
 - Development and CI use synthetic content only; production data never enters them (ES-027).
 - Significant decisions get an ADR in `docs/adr/` with context, alternatives, decision and consequences (ES-019). Supersede accepted ADRs rather than rewriting them.
 - A known gap is recorded in the ledger, never implied away (ES-038). Agents never approve their own exception or accepted risk.

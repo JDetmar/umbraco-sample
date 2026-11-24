@@ -59,6 +59,20 @@ clauses:
       - obligation: Secret scanning gates shared merge
         status: deviation
         deviation: DEV-001
+  ES-030:
+    status: compliant
+    evidence:
+      - ServiceDefaults exports OpenTelemetry traces, metrics and logs over OTLP (vendor-neutral); health-probe requests are filtered out of traces.
+      - /health/live, /health/ready and /health/schema (uSync schema drift) are mapped in every environment; the integration tests assert all three.
+      - scripts/smoke.sh is the post-deployment check; CI runs it against the built image with SQL Server on every pull request.
+  ES-049:
+    status: unknown
+    obligations:
+      - obligation: Releases identify source revision, builder/toolchain, artifact digest and deployed version
+        status: unknown
+        evidence:
+          - The image carries the source revision as an OCI label and as the OpenTelemetry service.version; CI builds it from pinned base-image digests and records the image ID and an SPDX SBOM per run.
+          - No release or registry push exists yet; publishing to a registry and promotion by digest arrive with the deployment pipeline, which needs owner approval.
   ES-052:
     status: compliant
     evidence:

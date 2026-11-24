@@ -46,3 +46,87 @@ jobs:
       - run: make test
       - run: make secrets
       - run: make vuln
+
+  integration:
+    name: integration (Aspire stack with SQL Server)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+
+      - run: make restore
+      - run: make build
+      # Starts SQL Server and the site through the AppHost; content is the synthetic uSync seed (ES-027).
+      - run: make test-integration
+
+  image:
+    name: image (build, SBOM, container smoke test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      # Pinned by digest (ES-013); the same image Aspire runs locally.
+      SQL_IMAGE: mcr.microsoft.com/mssql/server:2022-latest@sha256:4525e3efac9f3e241cb003bb2ff2a82818b502f37e12049d788b1a9fa7e13b7f
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build image
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: src/UmbracoSample.Web/Dockerfile
+          build-args: SOURCE_REVISION=${{ github.sha }}
+          tags: umbraco-sample:ci
+          load: true
+          push: false
+
+      - name: Generate SBOM (ES-016)
+        uses: anchore/sbom-action@dfcb83b97731532d72be422cbc51ee64adb6fd56 # v0.24.4
+        with:
+          image: umbraco-sample:ci
+          format: spdx-json
+          artifact-name: sbom-umbraco-sample.spdx.json
+
+      - name: Run the image against SQL Server
+        run: |
+          # Throwaway credentials for this job only; generated per run, never stored (ES-024).
+          sa_password="Sa1-$(openssl rand -hex 16)"
+          admin_password="Ad1-$(openssl rand -hex 16)"
+          echo "::add-mask::${sa_password}"
+          echo "::add-mask::${admin_password}"
+          docker network create smoke
+          docker run -d --name sql --network smoke -e ACCEPT_EULA=Y -e "MSSQL_SA_PASSWORD=${sa_password}" "${SQL_IMAGE}"
+          for _ in $(seq 1 30); do
+            if docker exec sql /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "${sa_password}" -Q "IF DB_ID('umbraco') IS NULL CREATE DATABASE umbraco" >/dev/null 2>&1; then break; fi
+            sleep 5
+          done
+          docker run -d --name web --network smoke -p 8080:8080 \
+            -e "ConnectionStrings__umbracoDbDSN=Server=sql;Database=umbraco;User Id=sa;Password=${sa_password};TrustServerCertificate=true" \
+            -e ConnectionStrings__umbracoDbDSN_ProviderName=Microsoft.Data.SqlClient \
+            -e Umbraco__CMS__Unattended__InstallUnattended=true \
+            -e "Umbraco__CMS__Unattended__UnattendedUserName=Smoke Admin" \
+            -e Umbraco__CMS__Unattended__UnattendedUserEmail=admin@example.com \
+            -e "Umbraco__CMS__Unattended__UnattendedUserPassword=${admin_password}" \
+            -e "Umbraco__CMS__Imaging__HMACSecretKey=$(openssl rand -hex 64)" \
+            -e Umbraco__CMS__WebRouting__UmbracoApplicationUrl=http://localhost:8080/ \
+            -e uSync__Settings__FirstBootGroup=All \
+            umbraco-sample:ci
+
+      - name: Smoke test (ES-030)
+        env:
+          SMOKE_RETRIES: "30"
+        run: scripts/smoke.sh http://localhost:8080
+
+      - name: Container logs
+        if: always()
+        run: docker logs web 2>&1 | tail -n 200 || true
+
+      - name: Record image ID
+        run: |
+          echo "Image ID: $(docker image inspect umbraco-sample:ci --format '{{.Id}}')" >> "${GITHUB_STEP_SUMMARY}"
