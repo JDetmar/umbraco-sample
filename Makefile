@@ -37,7 +37,7 @@ FAST_TEST_PROJECTS := $(filter-out %Integration.Tests,$(wildcard tests/*.Tests))
 
 test: ## Fast tests: unit and policy tests, no containers
 	@for project in $(FAST_TEST_PROJECTS); do \
-		dotnet test --project "$$project" -c $(CONFIG) --no-build; \
+		dotnet test --project "$$project" -c $(CONFIG) --no-build || exit 1; \
 	done
 
 test-integration: ## Integration tests: starts the real Aspire stack (needs Docker)
