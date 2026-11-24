@@ -54,7 +54,7 @@ Each mitigation names the test that will prove it. "Edge" items are Phase 5 infr
 | Threat | Mitigation | Evidence (planned) |
 |---|---|---|
 | Bots submit spam leads | Three layers. A honeypot field. A signed render token (Data Protection, built in) that carries the render time and rejects submissions faster than 3 s or older than 2 h. Per-client rate limiting (ASP.NET Core rate limiter, built in) of 5 submissions per 10 minutes. The edge WAF bot rules add a fourth. | Unit tests for honeypot, token age and token tampering. Integration test: the 6th submission gets 429. |
-| Spam gets through all of that | **Owner decision D1:** add a CAPTCHA (for example Cloudflare Turnstile). It would be a third-party script, so it needs an allowlist entry, a consent review and a new dependency. | n/a until decided |
+| Spam gets through all of that | **D1, decided 2026-11-24:** a CAPTCHA, in production only, built behind a `Forms:Captcha:Enabled` setting that is off by default. No provider, keys, script or allowlist entry yet. When the owner configures it, the provider becomes a new dependency, gets a third-party allowlist entry (ADR 0008) and a consent review, and its secret key goes in Key Vault (ES-024). With the setting off, the form works exactly as with the bot layers above. | Unit tests: the setting is off by default and the form renders and submits with no CAPTCHA markup or script; with it on but no provider configured, the site refuses to start (fail closed). |
 | Cross-site request forgery posts leads from other sites | Antiforgery token (built in) on the form post. The policy's `form-action 'self'` stops the site's own pages posting elsewhere. | Integration test: a post without the token gets 400. |
 
 ### Tampering
@@ -121,7 +121,7 @@ Each mitigation names the test that will prove it. "Edge" items are Phase 5 infr
 
 | ID | Item | Owner action |
 |---|---|---|
-| D1 | CAPTCHA or not | Decide. Default is no CAPTCHA, with the bot layers above. |
+| D1 | CAPTCHA | **Decided:** yes, production only, off by default until the owner configures a provider. |
 | D2 | Outbox or no outbox during a MAP outage | Decide. Default is Option A. |
 | D3 | Rate-limit numbers (5 per 10 minutes per client) and field limits | Confirm or adjust. |
 | D4 | Which real MAP, and its API's idempotency and lookup support | Needed before go-live. The design assumes lookup by an external ID. |
@@ -136,4 +136,4 @@ Once approved, Phase 4 implements this model test-first, in this order:
 3. the endpoint with antiforgery, rate limit and size limit;
 4. the component and its accessibility tests.
 
-Each mitigation above is linked to its test in the PR. A change to the field set, to storage (D2) or to third parties (D1) reopens this model.
+Each mitigation above is linked to its test in the PR. A change to the field set, to storage (D2) or to third parties (including choosing the D1 CAPTCHA provider) reopens this model.
