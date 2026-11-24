@@ -25,10 +25,10 @@
   </ItemGroup>
 
   <!-- Fail early with the fix, instead of ASPIRE013, when the tool was not restored or the platform is not mapped. -->
-  <Target Name="CheckAspireCli" BeforeTargets="Build;Restore">
+  <Target Name="CheckAspireCli" BeforeTargets="PrepareForBuild;Restore">
     <Error Condition="'$(_AspireCliRid)' == ''" Text="No Aspire CLI runtime is mapped for this platform; add one in UmbracoSample.AppHost.csproj (ADR 0012)." />
   </Target>
-  <Target Name="CheckAspireCliRestored" BeforeTargets="Build">
+  <Target Name="CheckAspireCliRestored" BeforeTargets="PrepareForBuild">
     <Error Condition="!Exists('$(AspireCliPath)')" Text="Aspire CLI not found at $(AspireCliPath). Run 'make bootstrap' (dotnet tool restore) first (ADR 0012)." />
   </Target>
 
