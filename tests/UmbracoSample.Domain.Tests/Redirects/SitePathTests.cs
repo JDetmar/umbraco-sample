@@ -9,7 +9,7 @@ public sealed class SitePathTests
     // Characters that make paths interesting: separators, dots, case, encoding and the characters the parser rejects.
     private static readonly Gen<string> PathLike = Gen.String[Gen.Char["/aAbB.-_%2f?#\\, \t\u0000é"], 0, 24];
 
-    private static readonly Gen<string> ValidSegment = Gen.String[Gen.Char["abcxyzABC0123-_~%"], 1, 8];
+    private static readonly Gen<string> ValidSegment = Gen.String[Gen.Char["abcxyzABC0123-_~"], 1, 8];
 
     private static readonly Gen<string> ValidPath = ValidSegment.Array[1, 4].Select(segments => "/" + string.Join('/', segments));
 
@@ -18,6 +18,10 @@ public sealed class SitePathTests
     [InlineData("/About/", "/about")]
     [InlineData("/a/b///", "/a/b")]
     [InlineData("/", "/")]
+    [InlineData("/caf%C3%A9", "/café")]
+    [InlineData("/Caf%c3%a9/", "/café")]
+    [InlineData("/a%2Fb", "/a%2fb")]
+    [InlineData("/a%2541", "/a%41")]
     public void Valid_paths_are_normalised(string text, string expected)
     {
         SitePath.TryParse(text, out var path, out _).ShouldBeTrue();
@@ -40,6 +44,15 @@ public sealed class SitePathTests
     [InlineData("/a,b")]
     [InlineData("/a\tb")]
     [InlineData("https://example.com/a")]
+    [InlineData("/%2e%2e/admin")]
+    [InlineData("/a/%2E/b")]
+    [InlineData("/a%zz")]
+    [InlineData("/a%4")]
+    [InlineData("/a%0Ab")]
+    [InlineData("/a%20b")]
+    [InlineData("/a%3Fb")]
+    [InlineData("/a%2Cb")]
+    [InlineData("/a%FF")]
     public void Invalid_paths_are_rejected_with_a_reason(string? text)
     {
         SitePath.TryParse(text, out _, out var error).ShouldBeFalse();
@@ -89,5 +102,21 @@ public sealed class SitePathTests
             SitePath.TryParse(variant, out var parsed, out _).ShouldBeTrue();
             parsed.ShouldBe(original);
         });
+    }
+
+    [Fact]
+    public void Request_paths_are_not_decoded_twice()
+    {
+        // Kestrel has already turned /a%2541 into /a%41; decoding again would give /aA.
+        SitePath.TryParseDecoded("/a%41", out var path, out _).ShouldBeTrue();
+        path.Value.ShouldBe("/a%41");
+    }
+
+    [Fact]
+    public void Length_is_limited_at_the_boundary()
+    {
+        SitePath.TryParse("/" + new string('a', SitePath.MaxLength - 1), out _, out _).ShouldBeTrue();
+        SitePath.TryParse("/" + new string('a', SitePath.MaxLength), out _, out var error).ShouldBeFalse();
+        error.ShouldContain("longer");
     }
 }

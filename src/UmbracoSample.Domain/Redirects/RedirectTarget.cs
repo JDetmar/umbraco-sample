@@ -20,7 +20,20 @@ public sealed record RedirectTarget
     /// <summary>The normalised path when the target is on this site, otherwise null.</summary>
     public SitePath? SitePath { get; }
 
-    public bool HasQuery => Location.Contains('?', StringComparison.Ordinal);
+    public bool HasQuery => Location.Split('#', 2)[0].Contains('?', StringComparison.Ordinal);
+
+    /// <summary>The Location for a request: its query is kept unless the target has one, and goes before any fragment.</summary>
+    public string LocationFor(string? requestQuery)
+    {
+        if (HasQuery || string.IsNullOrEmpty(requestQuery) || requestQuery == "?")
+        {
+            return Location;
+        }
+
+        var query = requestQuery.StartsWith('?') ? requestQuery : "?" + requestQuery;
+        var hash = Location.IndexOf('#', StringComparison.Ordinal);
+        return hash < 0 ? Location + query : Location[..hash] + query + Location[hash..];
+    }
 
     public override string ToString() => Location;
 
@@ -41,9 +54,10 @@ public sealed record RedirectTarget
 
         foreach (var c in text)
         {
-            if (char.IsControl(c) || char.IsWhiteSpace(c) || c is '\\' or ',' or '"')
+            if (char.IsControl(c) || char.IsWhiteSpace(c) || c is '\\' or ',' or '"' || c > '\u007f')
             {
-                error = "must not contain whitespace, control characters, backslashes, commas or quotes";
+                // Location is an HTTP header: ASCII only, so non-ASCII must be percent-encoded (or punycode for hosts).
+                error = "must be ASCII without whitespace, control characters, backslashes, commas or quotes; percent-encode other characters";
                 return false;
             }
         }

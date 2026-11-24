@@ -8,7 +8,7 @@ SLN := UmbracoSample.slnx
 CONFIG ?= Release
 GITLEAKS ?= gitleaks
 
-.PHONY: help bootstrap restore lockfiles-check build format format-check frontend frontend-test frontend-audit test test-integration image smoke validate secrets vuln run clean
+.PHONY: help bootstrap restore lockfiles-check build format format-check frontend frontend-test frontend-audit test mutation test-integration image smoke validate secrets vuln run clean
 
 help: ## List targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -48,6 +48,10 @@ test: ## Fast tests: unit and policy tests, no containers
 	@for project in $(FAST_TEST_PROJECTS); do \
 		dotnet test --project "$$project" -c $(CONFIG) --no-build || exit 1; \
 	done
+
+mutation: ## Mutation testing of the domain (Stryker.NET, ES-002); fails below the break threshold in stryker-config.json
+	dotnet tool restore
+	cd tests/UmbracoSample.Domain.Tests && dotnet stryker --config-file stryker-config.json --output ../../artifacts/mutation
 
 test-integration: ## Integration tests: starts the real Aspire stack (needs Docker)
 	dotnet test --project tests/UmbracoSample.Integration.Tests -c $(CONFIG) --no-build

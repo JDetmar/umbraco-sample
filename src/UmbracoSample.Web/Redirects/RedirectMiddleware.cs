@@ -45,9 +45,7 @@ public static class RedirectMiddleware
             }
 
             // Keep campaign and tracking parameters unless the target sets its own query.
-            var location = rule.Target.HasQuery || !request.QueryString.HasValue
-                ? rule.Target.Location
-                : rule.Target.Location + request.QueryString.Value;
+            var location = rule.Target.LocationFor(request.QueryString.Value);
 
             context.Response.StatusCode = (int)rule.Kind;
             context.Response.Headers.Location = location;

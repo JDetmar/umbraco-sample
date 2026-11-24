@@ -20,6 +20,7 @@ Use the Makefile targets; CI runs the same ones (ES-052).
 | Fast tests | `make test` |
 | Fast validation before handoff | `make validate` |
 | Integration tests (starts the Aspire stack; needs Docker) | `make test-integration` |
+| Mutation testing of the domain (Stryker.NET; weekly in CI) | `make mutation` |
 | Build the container image | `make image` |
 | Smoke-test a running site | `make smoke URL=<base url>` |
 | Run locally (Aspire: site and SQL Server) | `make run` |

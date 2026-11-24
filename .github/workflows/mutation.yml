@@ -1,0 +1,34 @@
+# Scheduled mutation testing of the domain (ES-002). Weekly rather than per pull request, because it takes minutes;
+# a failure is visible on the Actions tab and owned like any red build (ES-007 allows scheduled execution).
+name: mutation
+
+on:
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutation
+  cancel-in-progress: false
+
+jobs:
+  domain:
+    name: mutation (Stryker.NET on UmbracoSample.Domain)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+
+      - run: make restore
+      - run: make mutation
+
+      - name: Mutation report summary
+        if: always()
+        run: cat artifacts/mutation/reports/mutation-report.md >> "${GITHUB_STEP_SUMMARY}" || true

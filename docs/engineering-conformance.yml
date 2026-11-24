@@ -13,20 +13,21 @@ updated: 2026-11-24
 
 clauses:
   ES-002:
-    status: deviation
+    status: compliant
     obligations:
       - obligation: Invariant-rich pure logic receives property-based testing (SHOULD)
         status: compliant
         evidence:
-          - CsCheck properties over the redirect parser (tests/UmbracoSample.Domain.Tests/Redirects): parsing never throws, normalisation is idempotent and case/trailing-slash insensitive, every valid map finds every source, and every parsed map is flat (no chains or loops).
+          - CsCheck properties over the redirect parser (tests/UmbracoSample.Domain.Tests/Redirects). Parsing never throws (5,000 hostile inputs per run). Normalisation is idempotent and ignores case and trailing slashes. Every valid map finds every source (2,000 maps per run). Every parsed map is flat, including targets that reuse a source with different case, slash, query, fragment or percent-encoding.
       - obligation: Critical domain logic receives mutation testing (SHOULD)
-        status: deviation
-        deviation: DEV-009
+        status: compliant
+        evidence:
+          - Stryker.NET (`make mutation`, tests/UmbracoSample.Domain.Tests/stryker-config.json) runs weekly in .github/workflows/mutation.yml and fails below a 75% score. The first local run on 2026-11-24 scored 85.85% (202 mutants tested). Survivors are mostly message-text and equivalent mutants in RedirectTarget and RedirectMap.
   ES-007:
     status: compliant
     evidence:
-      - The redirect map is an owned parser of hand-edited input. CsCheck generates hostile inputs (separators, dots, encodings, control characters, CSV noise, chains and loops) on every pull request; this is generator-based, not coverage-guided, fuzzing.
-      - Retained regression cases live in tests/UmbracoSample.Domain.Tests/Redirects/corpus (valid-*.csv must parse, invalid-*.csv must be rejected) and run with the fast tests.
+      - The redirect map is an owned parser of hand-edited input. On every pull request, CsCheck generates thousands of hostile inputs per property. These include separators, dot segments, percent-encodings, non-ASCII, control characters, CSV noise, and chains and loops in many spellings. This is generator-based fuzzing, not coverage-guided fuzzing.
+      - Retained regression cases live in tests/UmbracoSample.Domain.Tests/Redirects/corpus (valid-*.csv must parse, invalid-*.csv must be rejected) and run with the fast tests. The corpus README.md documents how to capture a failing CsCheck seed as a case.
   ES-011:
     status: deviation
     obligations:
@@ -64,7 +65,7 @@ clauses:
   ES-018:
     status: compliant
     evidence:
-      - tests/UmbracoSample.Domain.Tests/ArchitectureTests.cs (NetArchTest) fails the fast gate if UmbracoSample.Domain depends on Umbraco, ASP.NET Core, Microsoft.Extensions, EF Core, data clients or HttpClient, and checks that it references only the base class library. A deliberate probe (a Domain type using HttpClient) failed it.
+      - "tests/UmbracoSample.Domain.Tests/ArchitectureTests.cs (NetArchTest) fails the fast gate if UmbracoSample.Domain depends on any of: Umbraco, ASP.NET Core, Microsoft.Extensions, EF Core, Microsoft.Data, System.Data, System.Net or System.IO. A committed negative test shows that the same rule rejects a probe type using File and HttpClient. A second test fails if the Domain project file gains any package, project, assembly or framework reference."
   ES-019:
     status: compliant
     evidence:
@@ -226,15 +227,3 @@ deviations:
     owner: repository-owner
     opened: 2026-11-24
     disposition: Phase 3 adds Playwright with @axe-core/playwright against the fixture pages as a required CI check, then this gap closes.
-
-  - id: DEV-009
-    kind: gap
-    clauses: [ES-002]
-    obligations:
-      - Critical domain logic receives mutation testing (SHOULD)
-    summary: The redirect parser has property, example and corpus tests but no mutation testing.
-    consequence: A test that executes the parser without asserting the right thing would go unnoticed. The risk is small, because the properties assert outcomes rather than lines, but it is not measured.
-    compensating_controls: Properties over every parsed map, example tests for each rejection reason, a retained corpus, and integration tests of every committed rule.
-    owner: repository-owner
-    opened: 2026-11-24
-    disposition: "Cost: Stryker.NET would be a new dependency (owner approval) and a scheduled job of a few minutes. Proposed for owner decision: run Stryker.NET weekly against UmbracoSample.Domain when forms validation lands there in Phase 4, or record a SHOULD departure."

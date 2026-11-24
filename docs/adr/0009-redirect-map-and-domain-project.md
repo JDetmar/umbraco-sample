@@ -20,8 +20,14 @@ A site migration moves pages. Missing or broken redirects cost search traffic wi
 
 - **The map.** `src/UmbracoSample.Web/redirects.csv` (`source,target,kind`) is code, reviewed in pull requests.
 - **The parser.** `src/UmbracoSample.Domain/Redirects` turns the file into precise types:
-  - `SitePath` is normalised: lower case, no trailing slash, no query, and no empty or dot segments.
-  - `RedirectTarget` is a site path, optionally with a query, or an absolute https URL without credentials.
+  - `SitePath` is normalised:
+    - percent-decoded the way Kestrel decodes request paths (every escape except `%2F`);
+    - lower case, with no trailing slash and no query;
+    - no empty or dot segments, including dot segments written as escapes.
+  - `RedirectTarget` is ASCII only, because Location is an HTTP header:
+    - either a site path, optionally with a query and fragment;
+    - or an absolute https URL without credentials.
+    - The request query is inserted before any fragment.
   - `RedirectKind` is permanent (301) or temporary (302).
 - **Rejected maps.** The parser rejects a map, with line numbers, if it has:
   - duplicate sources after normalisation;
@@ -30,7 +36,9 @@ A site migration moves pages. Missing or broken redirects cost search traffic wi
   - the home page or a reserved path (`/umbraco`, `/health`, `/dist`, `/media`, `/App_Plugins`) as a source.
 - **A parsed map is flat.** Every visitor reaches the final page in one hop.
 - **The site.** It parses the map before booting, and an invalid map stops startup. Middleware placed before Umbraco answers GET and HEAD for matching paths and keeps the request query unless the target has its own.
-- **`UmbracoSample.Domain`** references no packages or projects. A NetArchTest rule fails the fast tests if it ever depends on Umbraco, ASP.NET Core, Microsoft.Extensions, EF Core, data clients or HttpClient.
+- **`UmbracoSample.Domain`** references no packages or projects. A NetArchTest rule fails the fast tests if it ever depends on Umbraco, ASP.NET Core, Microsoft.Extensions, EF Core, `System.Data`, `System.Net` or `System.IO`.
+  - A committed negative test shows that the rule rejects a violating type.
+  - A second test fails if the project file gains any reference.
 - **Tests.**
   - CsCheck properties: parsing never throws; normalisation is idempotent; case and trailing slashes don't matter; every valid map finds every source; every parsed map is flat.
   - Example tests cover each rejection reason.
@@ -43,5 +51,5 @@ A site migration moves pages. Missing or broken redirects cost search traffic wi
 - **Adding a redirect is a one-line pull request.** CI rejects it if it chains, duplicates or targets something unsafe, and the integration test proves the target page exists.
 - **Editors cannot add redirects without a developer.** That is intended for migration maps. In-site moves are still handled by Umbraco's URL tracker. If marketing needs self-service redirects, revisit this with a package and move the checks into a back-office validation step.
 - **The committed rows are synthetic and point at seeded fixture pages.** A real migration replaces them. In production, on-site targets are checked by the integration test only against seed content, so the Phase 5 post-deployment check should follow the map against the deployed site.
-- **No mutation testing yet** (DEV-009). Any input that ever breaks the parser is added to the corpus.
+- **Mutation testing runs weekly.** `make mutation` runs Stryker.NET on the Domain project, and the job fails below 75%. The first run scored 85.85%. Any input that ever breaks the parser is added to the corpus (see its README).
 - **A large map (tens of thousands of rows) is still fine.** Lookup is a frozen dictionary, and parsing happens once at startup.

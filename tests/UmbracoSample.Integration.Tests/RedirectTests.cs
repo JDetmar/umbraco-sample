@@ -10,9 +10,9 @@ namespace UmbracoSample.Integration.Tests;
 [Trait("Category", "Integration")]
 public sealed class RedirectTests(SiteFixture site)
 {
+    // Reserved prefixes are checked by the Web unit test of the committed map; here only the rules matter.
     private static readonly RedirectMap Map = RedirectMap.Parse(
-        File.ReadAllText(Path.Join(AppContext.BaseDirectory, "redirects.csv")),
-        ["/umbraco", "/health", "/dist", "/media", "/App_Plugins"]).Map
+        File.ReadAllText(Path.Join(AppContext.BaseDirectory, "redirects.csv"))).Map
         ?? throw new InvalidOperationException("redirects.csv is invalid; see the Web unit tests.");
 
     public static TheoryData<string> Sources => [.. Map.Rules.Select(rule => rule.Source.Value)];
@@ -29,7 +29,7 @@ public sealed class RedirectTests(SiteFixture site)
 
         ((int)redirect.StatusCode).ShouldBe((int)rule.Kind);
         var location = redirect.Headers.Location!.OriginalString;
-        location.ShouldStartWith(rule.Target.Location);
+        location.ShouldBe(rule.Target.LocationFor("?from=test"), "the request query is kept unless the target sets its own");
 
         if (rule.Target.SitePath is null)
         {

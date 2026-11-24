@@ -38,9 +38,9 @@ public sealed class RedirectMap
 
     public IReadOnlyList<RedirectRule> Rules { get; }
 
-    /// <summary>Finds the rule for a request path, normalised the same way as sources. Returns null if none applies.</summary>
+    /// <summary>Finds the rule for a request path as the server decoded it, normalised like sources. Returns null if none applies.</summary>
     public RedirectRule? Find(string? requestPath) =>
-        SitePath.TryParse(requestPath, out var path, out _) && _bySource.TryGetValue(path.Value, out var rule) ? rule : null;
+        SitePath.TryParseDecoded(requestPath, out var path, out _) && _bySource.TryGetValue(path.Value, out var rule) ? rule : null;
 
     /// <summary>
     /// Parses the map. Never throws: every problem is returned with its line number, and the map is null if there are any.
@@ -52,7 +52,8 @@ public sealed class RedirectMap
         var errors = new List<RedirectError>();
         var rules = new List<RedirectRule>();
         var reserved = (reservedPrefixes ?? []).Select(prefix => prefix.TrimEnd('/').ToLowerInvariant()).ToList();
-        var lines = (text ?? string.Empty).Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        // A byte order mark from a spreadsheet export is not part of the header.
+        var lines = (text ?? string.Empty).TrimStart('\uFEFF').Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
 
         var sawHeader = false;
         for (var index = 0; index < lines.Length; index++)
