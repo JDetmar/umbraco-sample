@@ -1,0 +1,88 @@
+/* Base styles. Every value comes from a design token (tokens/*.json); the policy test rejects raw colours here. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family-body);
+  font-size: var(--font-size-m);
+  line-height: var(--font-line-height-body);
+  color: var(--color-text);
+  background: var(--color-background);
+}
+
+h1,
+h2,
+h3 {
+  line-height: var(--font-line-height-heading);
+}
+
+h1 {
+  font-size: var(--font-size-xxl);
+}
+
+h2 {
+  font-size: var(--font-size-xl);
+}
+
+h3 {
+  font-size: var(--font-size-l);
+}
+
+a {
+  color: var(--color-link);
+}
+
+:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  left: -999px;
+}
+
+.skip-link:focus {
+  left: var(--space-m);
+  top: var(--space-m);
+  z-index: 1;
+  padding: var(--space-m);
+  background: var(--color-background);
+}
+
+.site-header,
+main,
+.site-footer {
+  max-width: var(--measure-page);
+  margin-inline: auto;
+  padding: var(--space-m);
+}
+
+.site-footer {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

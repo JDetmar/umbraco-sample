@@ -36,6 +36,7 @@ clauses:
       - The policy test Every_project_has_a_committed_lock_file checks lock files against git ls-files; `make lockfiles-check` fails CI when restore changes or creates a lock file.
       - global.json pins the exact .NET SDK (rollForward disable) and the Aspire AppHost SDK; CI installs that SDK.
       - CI tools are pinned (Actions by commit SHA, gitleaks by version and SHA-256 checksum).
+      - npm dependencies are exact versions with a committed lock file, installed by `npm ci` with install scripts disabled; Node is pinned in .nvmrc with engine-strict. Policy tests Npm_dependencies_are_exact_and_locked and Npm_never_runs_install_scripts_and_enforces_the_node_version.
   ES-015:
     status: compliant
     evidence:
@@ -173,6 +174,18 @@ deviations:
     owner: repository-owner
     opened: 2026-11-24
     disposition: Before the first deployment, add an ADR for schema changes (expand in one release, contract in a later one) and a repository test that fails when a uSync diff removes a property while views or view models still change in the same pull request, or decide with the owner to disable deletes during startup import.
+
+  - id: DEV-006
+    kind: gap
+    clauses: [ES-016, ES-051]
+    obligations:
+      - Known vulnerabilities in dependencies are assessed and dispositioned
+    summary: "npm audit reports moderate advisories in transitive build-time dependencies of Style Dictionary 5.8.0: glob (GHSA-3g3m-2fjr-6pw4) and minimatch (GHSA-g3hv-75wg-m249). The only fix npm offers is a downgrade to Style Dictionary 3."
+    consequence: Both are denial-of-service or traversal issues reachable only through glob patterns. Style Dictionary globs this repository's own token files at build time; no untrusted input reaches them, and nothing from these packages ships in the site.
+    compensating_controls: Build-time only; `make frontend-audit` fails CI on any high or critical advisory; Dependabot proposes npm updates weekly.
+    owner: repository-owner
+    opened: 2026-11-24
+    disposition: Take the Style Dictionary release that updates its bundled glob when Dependabot proposes it, then close this gap. The owner may instead accept the risk.
 
   - id: DEV-007
     kind: gap

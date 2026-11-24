@@ -31,3 +31,8 @@ test-results/
 .env
 *.pfx
 *.key
+
+# Front-end build output (make frontend)
+frontend/node_modules/
+frontend/build/
+src/UmbracoSample.Web/wwwroot/dist/

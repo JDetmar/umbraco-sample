@@ -1,0 +1,18 @@
+{
+  "name": "umbraco-sample-frontend",
+  "private": true,
+  "type": "module",
+  "description": "Design tokens and the site stylesheet. Output goes to src/UmbracoSample.Web/wwwroot/dist.",
+  "engines": {
+    "node": "24.22.3"
+  },
+  "scripts": {
+    "tokens": "style-dictionary build --config style-dictionary.config.mjs",
+    "build": "npm run tokens && vite build && node scripts/check-bundle-size.mjs",
+    "test": "npm run tokens && node --test \"test/**/*.test.mjs\""
+  },
+  "devDependencies": {
+    "style-dictionary": "5.8.0",
+    "vite": "8.3.8"
+  }
+}

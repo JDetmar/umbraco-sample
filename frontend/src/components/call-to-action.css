@@ -1,0 +1,25 @@
+/* docs/components/call-to-action.md */
+.c-cta {
+  margin-block: var(--space-l);
+  padding: var(--space-l);
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+}
+
+.c-cta__heading {
+  margin-block: 0 var(--space-s);
+}
+
+.c-cta__action a {
+  display: inline-block;
+  padding: var(--space-s) var(--space-m);
+  border-radius: var(--radius-m);
+  background: var(--color-accent);
+  color: var(--color-background);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.c-cta__action a:hover {
+  text-decoration: underline;
+}

@@ -19,3 +19,12 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    groups:
+      frontend-build:
+        patterns: ["*"]
+    open-pull-requests-limit: 5

@@ -35,6 +35,8 @@ check_contains() {
 check_equals /health/live "Healthy"
 check_equals /health/ready "Healthy"
 check_equals /health/schema "Healthy"
+# The stylesheet built from design tokens is served.
+check_contains /dist/site.css "--color-text"
 # A marker from this site's own layout, so Umbraco's built-in "no content" page cannot pass.
 check_contains / "${SMOKE_HOME_MARKER:-class=\"skip-link\"}"
 echo "Smoke test passed for $base_url"

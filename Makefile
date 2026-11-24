@@ -8,7 +8,7 @@ SLN := UmbracoSample.slnx
 CONFIG ?= Release
 GITLEAKS ?= gitleaks
 
-.PHONY: help bootstrap restore lockfiles-check build format format-check test test-integration image smoke validate secrets vuln run clean
+.PHONY: help bootstrap restore lockfiles-check build format format-check frontend frontend-test frontend-audit test test-integration image smoke validate secrets vuln run clean
 
 help: ## List targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -23,6 +23,15 @@ lockfiles-check: restore ## Fail if restore changed or created a lock file (ES-0
 	git diff --exit-code -- '*packages.lock.json'
 	@untracked="$$(git ls-files --others --exclude-standard -- '*packages.lock.json')"; \
 	if [ -n "$$untracked" ]; then echo "Lock files not committed: $$untracked"; exit 1; fi
+
+frontend: ## Build design tokens and the site stylesheet (needs the Node version in .nvmrc)
+	cd frontend && npm ci && npm run build
+
+frontend-test: ## Token contrast and stylesheet rules
+	cd frontend && npm ci && npm test
+
+frontend-audit: ## Fail on high or critical npm advisories (ES-016)
+	cd frontend && npm audit --audit-level=high
 
 build: ## Build the solution (warnings are errors)
 	dotnet build $(SLN) -c $(CONFIG) --no-restore
@@ -43,7 +52,7 @@ test: ## Fast tests: unit and policy tests, no containers
 test-integration: ## Integration tests: starts the real Aspire stack (needs Docker)
 	dotnet test --project tests/UmbracoSample.Integration.Tests -c $(CONFIG) --no-build
 
-image: ## Build the site container image as umbraco-sample:local
+image: frontend ## Build the site container image as umbraco-sample:local
 	docker build -f src/UmbracoSample.Web/Dockerfile --build-arg SOURCE_REVISION="$$(git rev-parse HEAD)" -t umbraco-sample:local .
 
 smoke: ## Smoke-test a running site: make smoke URL=https://host
@@ -58,9 +67,9 @@ vuln: ## Fail on known-vulnerable NuGet packages, including transitive ones
 	@if grep -q "has the following vulnerable packages" artifacts/vulnerable-packages.txt; then \
 		echo "Vulnerable packages found (ES-016)."; exit 1; fi
 
-validate: lockfiles-check format-check build test secrets ## Fast pre-handoff check (ES-053); CI runs the same
+validate: lockfiles-check format-check frontend frontend-test build test secrets ## Fast pre-handoff check (ES-053); CI runs the same
 
-run: ## Run the whole stack locally through Aspire (site and SQL Server)
+run: frontend ## Run the whole stack locally through Aspire (site and SQL Server)
 	dotnet run --project src/UmbracoSample.AppHost
 
 clean: ## Remove build output
