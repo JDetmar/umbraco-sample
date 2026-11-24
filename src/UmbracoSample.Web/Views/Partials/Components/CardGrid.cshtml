@@ -1,0 +1,26 @@
+@model UmbracoSample.Web.Components.CardGridModel
+<section class="c-card-grid">
+    @if (Model.Heading is not null)
+    {
+        <h2 class="c-card-grid__heading">@Model.Heading</h2>
+    }
+    <ul class="c-card-grid__list">
+        @foreach (var card in Model.Cards)
+        {
+            <li class="c-card">
+                @if (Model.CardHeadingLevel == 2)
+                {
+                    <h2 class="c-card__title">@await Html.PartialAsync("Components/CardTitle", card)</h2>
+                }
+                else
+                {
+                    <h3 class="c-card__title">@await Html.PartialAsync("Components/CardTitle", card)</h3>
+                }
+                @if (card.Text is not null)
+                {
+                    <p class="c-card__text">@card.Text</p>
+                }
+            </li>
+        }
+    </ul>
+</section>

@@ -41,10 +41,13 @@ Agents MUST run `make validate` before handing off a change, or record why it co
 | `src/UmbracoSample.Web` | The Umbraco site |
 | `src/UmbracoSample.AppHost` | Aspire orchestration for local development and integration tests |
 | `src/UmbracoSample.ServiceDefaults` | Telemetry, health checks and resilience shared by services |
+| `src/UmbracoSample.Web/Components` | Component view models and the mapping from blocks; views in `Views/Partials/Components` |
 | `src/UmbracoSample.Web/uSync/v17` | Schema (and synthetic seed content) as code, imported on first boot and checked for drift |
 | `tests/UmbracoSample.Repository.Tests` | Fast policy tests over the repository itself |
+| `tests/UmbracoSample.Web.Tests` | Fast unit and component contract tests |
 | `tests/UmbracoSample.Integration.Tests` | Tests against the real stack through Aspire (`Category=Integration`) |
 | `scripts/` | Operational scripts, such as the post-deployment smoke test |
+| `docs/components/` | One page per component: fields, rules, fixtures and tests |
 | `docs/adr/` | Architecture decision records (ES-019) |
 | `docs/engineering-conformance.yml` | Conformance ledger: evidence and open deviations (ES-038) |
 | `docs/dependencies.md` | Dependency register with ES-015 justifications |

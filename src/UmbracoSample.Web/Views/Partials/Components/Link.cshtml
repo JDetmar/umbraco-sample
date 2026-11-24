@@ -1,0 +1,10 @@
+@model UmbracoSample.Web.Components.LinkModel
+@* A new tab is announced to screen-reader users and cannot reach back into this page (ES-026). *@
+@if (Model.OpensInNewTab)
+{
+    <a href="@Model.Url" target="_blank" rel="noopener noreferrer">@Model.Text<span class="visually-hidden"> (opens in a new tab)</span></a>
+}
+else
+{
+    <a href="@Model.Url">@Model.Text</a>
+}

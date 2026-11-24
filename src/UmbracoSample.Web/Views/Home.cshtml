@@ -1,2 +1,2 @@
-﻿@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage
-<h1>@(Model.Value<string>("title") ?? Model.Name)</h1>
+﻿@inherits UmbracoViewPage
+@await Html.PartialAsync("Components/Page", Model)
