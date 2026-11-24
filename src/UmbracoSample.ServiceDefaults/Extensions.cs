@@ -76,9 +76,10 @@ public static class Extensions
             builder.Services.AddOpenTelemetry().UseOtlpExporter();
         }
 
-        // In Azure, traces and metrics go to Application Insights, authenticated with the workload's managed identity
-        // rather than the connection string's instrumentation key (ES-024, ADR 0010). Logs stay on stdout (Serilog),
-        // which the Container Apps environment sends to Log Analytics.
+        // In Azure, traces and metrics also go to Application Insights. The exporter authenticates with the workload's
+        // managed identity; the instrumentation key in the connection string only routes data, and the infrastructure
+        // disables key-only ingestion on the resource (ES-024). Logs stay on stdout (Serilog), which the Container Apps
+        // environment sends to Log Analytics.
         var appInsights = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
         if (!string.IsNullOrWhiteSpace(appInsights))
         {
