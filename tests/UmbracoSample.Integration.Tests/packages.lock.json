@@ -1133,6 +1133,9 @@
           "Aspire.Hosting.SqlServer": "[13.6.5, )"
         }
       },
+      "umbracosample.domain": {
+        "type": "Project"
+      },
       "Aspire.Hosting.SqlServer": {
         "type": "CentralTransitive",
         "requested": "[13.6.5, )",
