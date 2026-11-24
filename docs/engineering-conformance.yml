@@ -36,6 +36,7 @@ clauses:
       - The policy test Every_project_has_a_committed_lock_file checks lock files against git ls-files; `make lockfiles-check` fails CI when restore changes or creates a lock file.
       - global.json pins the exact .NET SDK (rollForward disable) and the Aspire AppHost SDK; CI installs that SDK.
       - CI tools are pinned (Actions by commit SHA, gitleaks by version and SHA-256 checksum).
+      - npm dependencies are exact versions with a committed lock file, installed by `npm ci` with install scripts disabled; Node is pinned in .nvmrc with engine-strict. Policy tests Npm_dependencies_are_exact_and_locked and Npm_never_runs_install_scripts_and_enforces_the_node_version.
   ES-015:
     status: compliant
     evidence:
@@ -72,7 +73,7 @@ clauses:
       - obligation: Releases identify source revision, builder/toolchain, artifact digest and deployed version
         status: unknown
         evidence:
-          - The image carries the source revision as an OCI label and as the OpenTelemetry service.version; CI builds it from pinned base-image digests and records the image ID and an SPDX SBOM per run.
+          - The image carries the source revision as an OCI label and as the OpenTelemetry service.version; CI builds it from pinned base-image digests and records the image ID, an SPDX SBOM, and the stylesheet toolchain (Node version, npm lock-file hash, site.css hash) per run.
           - No release or registry push exists yet; publishing to a registry and promotion by digest arrive with the deployment pipeline, which needs owner approval.
   ES-052:
     status: compliant

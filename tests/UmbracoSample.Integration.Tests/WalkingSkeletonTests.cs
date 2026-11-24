@@ -36,6 +36,17 @@ public sealed class WalkingSkeletonTests(SiteFixture site)
     }
 
     [Fact]
+    public async Task Stylesheet_built_from_design_tokens_is_served()
+    {
+        using var response = await site.Web.GetAsync("/dist/site.css", TestContext.Current.CancellationToken);
+        var css = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        response.IsSuccessStatusCode.ShouldBeTrue("run make frontend before the integration tests");
+        response.Content.Headers.ContentType?.MediaType.ShouldBe("text/css");
+        css.ShouldContain("--color-text:");
+    }
+
+    [Fact]
     public async Task Back_office_is_served()
     {
         using var response = await site.Web.GetAsync("/umbraco", TestContext.Current.CancellationToken);

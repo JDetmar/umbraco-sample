@@ -14,6 +14,8 @@ RUN dotnet restore src/UmbracoSample.Web/UmbracoSample.Web.csproj
 
 COPY src/UmbracoSample.ServiceDefaults/ src/UmbracoSample.ServiceDefaults/
 COPY src/UmbracoSample.Web/ src/UmbracoSample.Web/
+# The stylesheet is built before the image (make frontend, or the CI step), so this image needs no Node toolchain.
+RUN test -f src/UmbracoSample.Web/wwwroot/dist/site.css || { echo 'Run make frontend before building the image.' >&2; exit 1; }
 RUN dotnet publish src/UmbracoSample.Web/UmbracoSample.Web.csproj -c Release --no-restore -o /app /p:UseAppHost=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:aac50ceef10391e78a899e3d2ccd00bbafa2dcb56ccf4586cbccf00edb84fc21 AS final

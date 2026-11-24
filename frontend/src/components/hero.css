@@ -1,0 +1,29 @@
+/* docs/components/hero.md */
+.c-hero {
+  display: grid;
+  gap: var(--space-l);
+  align-items: center;
+  margin-block: var(--space-l);
+}
+
+@media (min-width: 48rem) {
+  .c-hero:has(.c-hero__image) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.c-hero__heading {
+  margin-block: 0 var(--space-m);
+}
+
+.c-hero__intro {
+  max-width: var(--measure-text);
+  font-size: var(--font-size-l);
+}
+
+.c-hero__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-m);
+}

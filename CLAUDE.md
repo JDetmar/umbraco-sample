@@ -15,6 +15,7 @@ Use the Makefile targets; CI runs the same ones (ES-052).
 | Task | Command |
 |---|---|
 | First-time setup | `make bootstrap` |
+| Build the stylesheet from design tokens | `make frontend` |
 | Build | `make build` |
 | Fast tests | `make test` |
 | Fast validation before handoff | `make validate` |
@@ -24,7 +25,7 @@ Use the Makefile targets; CI runs the same ones (ES-052).
 | Run locally (Aspire: site and SQL Server) | `make run` |
 | Apply formatting | `make format` |
 
-Prerequisites: GNU Make, the exact .NET SDK in `global.json`, Docker or Podman, and gitleaks 8.30.1 (for `make secrets` and `make validate`).
+Prerequisites: GNU Make, the exact .NET SDK in `global.json`, Node.js at the exact version in `.nvmrc` (for `make frontend`), Docker or Podman, and gitleaks 8.30.1 (for `make secrets` and `make validate`).
 
 `make run` needs one local secret, the admin password for the unattended install:
 
@@ -46,6 +47,7 @@ Agents MUST run `make validate` before handing off a change, or record why it co
 | `tests/UmbracoSample.Repository.Tests` | Fast policy tests over the repository itself |
 | `tests/UmbracoSample.Web.Tests` | Fast unit and component contract tests |
 | `tests/UmbracoSample.Integration.Tests` | Tests against the real stack through Aspire (`Category=Integration`) |
+| `frontend/` | Design tokens (`tokens/`), stylesheet sources and the build (ADR 0007); output goes to `wwwroot/dist`, never committed |
 | `scripts/` | Operational scripts, such as the post-deployment smoke test |
 | `docs/components/` | One page per component: fields, rules, fixtures and tests |
 | `docs/adr/` | Architecture decision records (ES-019) |
@@ -55,6 +57,8 @@ Agents MUST run `make validate` before handing off a change, or record why it co
 ## Rules that are easy to miss
 
 - Every new dependency needs an entry in `docs/dependencies.md` and owner approval before it is merged (ES-015).
+- Visual values come from design tokens in `frontend/tokens`; stylesheets never use raw colours, and every colour pair the components use is contrast-tested.
+- npm dependencies are exact versions with a committed lock file and no install scripts (`frontend/.npmrc`).
 - Package versions live only in `Directory.Packages.props`; lock files are committed and CI restores in locked mode (ES-013).
 - Third-party GitHub Actions are pinned to a full commit SHA with the tag in a comment, and every workflow declares least-privilege `permissions` (ES-017).
 - No secrets in source, config or CI definitions (ES-024). Local secrets go in user secrets.

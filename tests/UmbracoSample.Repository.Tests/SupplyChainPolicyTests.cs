@@ -8,6 +8,8 @@ namespace UmbracoSample.Repository.Tests;
 /// </summary>
 public sealed partial class SupplyChainPolicyTests
 {
+    private static readonly string[] NpmDependencySections = ["dependencies", "devDependencies"];
+
     [Fact]
     public void Third_party_actions_are_pinned_to_a_full_commit_sha()
     {
@@ -35,6 +37,33 @@ public sealed partial class SupplyChainPolicyTests
 
         missing.ShouldBeEmpty("ES-017: every workflow declares least-privilege top-level permissions.");
         broad.ShouldBeEmpty("ES-017: write-all and read-all grant more than any job needs; list each permission.");
+    }
+
+    [Fact]
+    public void Npm_dependencies_are_exact_and_locked()
+    {
+        var root = RepositoryRoot.Find().FullName;
+        using var package = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Join(root, "frontend", "package.json")));
+
+        var ranges = NpmDependencySections
+            .Where(section => package.RootElement.TryGetProperty(section, out _))
+            .SelectMany(section => package.RootElement.GetProperty(section).EnumerateObject())
+            .Where(dependency => !ExactVersion().IsMatch(dependency.Value.GetString() ?? string.Empty))
+            .Select(dependency => $"{dependency.Name}@{dependency.Value.GetString()}")
+            .ToList();
+
+        ranges.ShouldBeEmpty("ES-013: npm dependencies are pinned to exact versions.");
+        RepositoryRoot.TrackedFiles().ShouldContain("frontend/package-lock.json", "ES-013: the npm lock file is committed.");
+    }
+
+    [Fact]
+    public void Npm_never_runs_install_scripts_and_enforces_the_node_version()
+    {
+        var npmrc = File.ReadAllLines(Path.Join(RepositoryRoot.Find().FullName, "frontend", ".npmrc"));
+
+        npmrc.ShouldContain("ignore-scripts=true", "ES-013: dependency install scripts are arbitrary code; none are needed.");
+        npmrc.ShouldContain("engine-strict=true");
+        npmrc.ShouldContain("save-exact=true");
     }
 
     [Fact]
@@ -101,6 +130,9 @@ public sealed partial class SupplyChainPolicyTests
     // A string value, not the JSON schema's object definition of the same property.
     [GeneratedRegex(@"""HMACSecretKey""\s*:\s*""[^""]+""", RegexOptions.IgnoreCase)]
     private static partial Regex ImageSigningKeyValue();
+
+    [GeneratedRegex(@"^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$")]
+    private static partial Regex ExactVersion();
 
     [GeneratedRegex(@"permissions:\s*(write-all|read-all)")]
     private static partial Regex BroadPermissions();

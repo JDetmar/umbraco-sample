@@ -1,0 +1,21 @@
+{
+  "font": {
+    "family": {
+      "$type": "fontFamily",
+      "body": { "$value": ["system-ui", "-apple-system", "Segoe UI", "sans-serif"] }
+    },
+    "size": {
+      "$type": "dimension",
+      "s": { "$value": "0.875rem" },
+      "m": { "$value": "1rem" },
+      "l": { "$value": "1.25rem" },
+      "xl": { "$value": "1.75rem" },
+      "xxl": { "$value": "2.5rem" }
+    },
+    "line-height": {
+      "$type": "number",
+      "body": { "$value": 1.5 },
+      "heading": { "$value": 1.2 }
+    }
+  }
+}

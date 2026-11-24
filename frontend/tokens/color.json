@@ -1,0 +1,13 @@
+{
+  "color": {
+    "$type": "color",
+    "text": { "$value": "#1b1b1f", "$description": "Body text. Contrast with background is tested (WCAG AA)." },
+    "text-muted": { "$value": "#4a4a55", "$description": "Secondary text; still AA on background and surface." },
+    "background": { "$value": "#ffffff" },
+    "surface": { "$value": "#f4f5f7", "$description": "Card and call-to-action backgrounds." },
+    "border": { "$value": "#8a8f99", "$description": "Card borders: at least 3:1 against background (non-text contrast)." },
+    "link": { "$value": "#0b5cad" },
+    "accent": { "$value": "#0b5cad", "$description": "Call-to-action button background; text on it is background." },
+    "focus": { "$value": "#c2410c", "$description": "Focus outline: at least 3:1 against background and surface." }
+  }
+}

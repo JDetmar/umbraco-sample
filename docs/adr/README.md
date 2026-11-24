@@ -10,5 +10,6 @@ Lightweight records of significant decisions (ES-019). Each records context, alt
 | [0004](0004-azure-container-apps-hosting.md) | Azure Container Apps for hosting | Accepted |
 | [0005](0005-test-stack.md) | Test stack | Accepted |
 | [0006](0006-dependency-policy.md) | Dependency policy | Accepted |
+| [0007](0007-front-end-build.md) | Front-end build: design tokens and one stylesheet, built outside the image | Proposed |
 
 New records copy [template.md](template.md).

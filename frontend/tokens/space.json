@@ -1,0 +1,23 @@
+{
+  "space": {
+    "$type": "dimension",
+    "xs": { "$value": "0.25rem" },
+    "s": { "$value": "0.5rem" },
+    "m": { "$value": "1rem" },
+    "l": { "$value": "2rem" },
+    "xl": { "$value": "4rem" }
+  },
+  "measure": {
+    "$type": "dimension",
+    "text": { "$value": "70ch", "$description": "Maximum line length for readable text." },
+    "page": { "$value": "72rem" }
+  },
+  "radius": {
+    "$type": "dimension",
+    "m": { "$value": "0.5rem" }
+  },
+  "focus": {
+    "$type": "dimension",
+    "width": { "$value": "3px" }
+  }
+}
