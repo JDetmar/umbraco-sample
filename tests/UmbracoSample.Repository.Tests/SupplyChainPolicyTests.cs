@@ -39,6 +39,36 @@ public sealed partial class SupplyChainPolicyTests
         broad.ShouldBeEmpty("ES-017: write-all and read-all grant more than any job needs; list each permission.");
     }
 
+    [Fact]
+    public void Write_permissions_are_granted_only_to_allowlisted_jobs()
+    {
+        // (workflow, job, permission): each write grant is reviewed here before it can exist (ES-017).
+        (string, string, string)[] allowed = [("ci.yml", "publish", "packages"), ("codeql.yml", "analyze", "security-events")];
+
+        var grants = new List<(string, string, string)>();
+        foreach (var file in WorkflowFiles())
+        {
+            string? job = null;
+            foreach (var line in File.ReadAllLines(file.FullName))
+            {
+                var jobMatch = JobHeader().Match(line);
+                if (jobMatch.Success)
+                {
+                    job = jobMatch.Groups[1].Value;
+                }
+
+                var grant = WriteGrant().Match(line);
+                if (grant.Success)
+                {
+                    grants.Add((file.Name, job ?? "<top level>", grant.Groups[1].Value));
+                }
+            }
+        }
+
+        grants.ShouldNotBeEmpty();
+        grants.Except(allowed).ShouldBeEmpty("ES-017: a new write permission needs review; add it to this allowlist with a reason in the ledger.");
+    }
+
     [Theory]
     [InlineData("frontend")]
     [InlineData("e2e")]
@@ -188,6 +218,12 @@ public sealed partial class SupplyChainPolicyTests
 
     [GeneratedRegex(@"^FROM mcr\.microsoft\.com/playwright:v(?<version>\d+\.\d+\.\d+)-noble@sha256:[0-9a-f]{64}$")]
     private static partial Regex PlaywrightImage();
+
+    [GeneratedRegex(@"^  ([A-Za-z0-9_-]+):\s*$")]
+    private static partial Regex JobHeader();
+
+    [GeneratedRegex(@"^\s+([a-z-]+):\s*write\s*(#.*)?$")]
+    private static partial Regex WriteGrant();
 
     [GeneratedRegex(@"permissions:\s*(write-all|read-all)")]
     private static partial Regex BroadPermissions();
