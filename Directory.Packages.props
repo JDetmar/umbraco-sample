@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup Label="Umbraco">
-    <PackageVersion Include="Umbraco.Cms" Version="17.8.2" />
+    <PackageVersion Include="Umbraco.Cms" Version="18.3.2" />
     <PackageVersion Include="uSync" Version="17.6.2" />
   </ItemGroup>
   <ItemGroup Label="Aspire">
