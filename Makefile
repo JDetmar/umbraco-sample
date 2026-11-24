@@ -24,7 +24,7 @@ lockfiles-check: restore ## Fail if restore changed or created a lock file (ES-0
 	@untracked="$$(git ls-files --others --exclude-standard -- '*packages.lock.json')"; \
 	if [ -n "$$untracked" ]; then echo "Lock files not committed: $$untracked"; exit 1; fi
 
-frontend: ## Build design tokens and the site stylesheet (needs the Node version in .nvmrc)
+frontend: ## Build design tokens and the site stylesheet (needs Node 26 LTS; CI uses the exact version in .nvmrc)
 	cd frontend && npm ci && npm run build
 
 frontend-test: ## Token contrast and stylesheet rules

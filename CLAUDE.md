@@ -31,7 +31,7 @@ Use the Makefile targets; CI runs the same ones (ES-052).
 | Infrastructure build and Pulumi mock tests (no cloud account) | `make infra-test` |
 | Preview a stack (owner sign-in to Pulumi Cloud and Azure; never `up`) | `make infra-preview STACK=dev` |
 
-Prerequisites: GNU Make, the exact .NET SDK in `global.json` (`make bootstrap` restores the pinned local tools, including the Aspire CLI that the AppHost build needs), Node.js at the exact version in `.nvmrc` (for `make frontend`), Docker or Podman, and gitleaks 8.30.1 (for `make secrets` and `make validate`).
+Prerequisites: GNU Make, the exact .NET SDK in `global.json` (`make bootstrap` restores the pinned local tools, including the Aspire CLI that the AppHost build needs), Node.js 26 LTS (for `make frontend`; any 26.x works locally, CI uses the exact version in `.nvmrc`), Docker or Podman, and gitleaks 8.30.1 (for `make secrets` and `make validate`).
 
 `make run` needs one local secret, the admin password for the unattended install:
 

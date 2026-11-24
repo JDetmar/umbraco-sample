@@ -53,7 +53,7 @@ clauses:
       - global.json pins the exact .NET SDK (rollForward disable) and the Aspire AppHost SDK; CI installs that SDK.
       - Local tools (Stryker, the Aspire CLI) are pinned in .config/dotnet-tools.json with rollForward false and restored by `make restore`; the policy test Aspire_cli_tool_sdk_and_packages_share_one_version keeps the Aspire CLI, SDK and packages on one version (ADR 0012).
       - CI tools are pinned (Actions by commit SHA, gitleaks by version and SHA-256 checksum).
-      - npm dependencies are exact versions with a committed lock file, installed by `npm ci` with install scripts disabled; Node is pinned in .nvmrc with engine-strict. Policy tests Npm_dependencies_are_exact_and_locked and Npm_never_runs_install_scripts_and_enforces_the_node_version.
+      - npm dependencies are exact versions with a committed lock file, installed by `npm ci` with install scripts disabled; CI installs the exact Node version in .nvmrc, and release artifacts are built only by CI. package.json engines accepts the same major only (any 26.x), with engine-strict, so local builds may use another 26 patch by design (ADR 0007). Policy tests Npm_dependencies_are_exact_and_locked, Npm_never_runs_install_scripts_and_enforces_the_node_version and Node_engine_range_matches_the_ci_version.
   ES-015:
     status: compliant
     evidence:
@@ -157,12 +157,12 @@ deviations:
       - Immediate material-risk checks block the merge event
       - Secret scanning gates shared merge
       - Authorization is enforced outside model-generated text
-    summary: Branch protection with required status checks is not yet enabled on main, so neither CI failures nor the agent envelope are technically enforced at merge.
-    consequence: A change could reach main without passing the authoritative gate, including the secret scan, and an agent's merge authority rests on its own adherence to CLAUDE.md.
-    compensating_controls: None technical. Procedurally, every merge so far has a green CI run and an independent reviewer context recorded in the pull request, and the owner can review and revert any merge from the pull request history.
+    summary: "Since 2026-11-24 two repository rulesets protect main. Ruleset main-1 (id 28000620) blocks deletion and force-push for everyone, with no bypass. Ruleset main-2 (id 28000621) requires six status checks bound to GitHub Actions (integration_id 15368): validate, integration, image, e2e, analyze (csharp) and analyze (actions), on an up-to-date branch. Repository admins can bypass main-2 at any time, and the agent acts as the owner's account, which has admin rights (GET /user returns the owner's login; repository permissions show admin: true). No rule requires a pull request or an approving review."
+    consequence: Non-admins cannot get a change into main without the authoritative gate, including the secret scan, and nobody can rewrite or delete main. An admin, or the agent acting as one, could still merge past a red check or push a commit straight to main without a pull request. The agent's merge authority, including the independent-review and PR-body conditions in CLAUDE.md, still rests on its own adherence to CLAUDE.md.
+    compensating_controls: main-1 applies to everyone, so history on main cannot be rewritten or deleted. main-2 gates every non-admin change. Procedurally, every agent merge so far has had a green CI run and an independent reviewer recorded in the pull request.
     owner: repository-owner
     opened: 2026-11-24
-    disposition: Owner enables branch protection on main requiring the CI checks and a linear history; agents cannot change repository settings.
+    disposition: "Owner decides on two controls. (1) Remove the admin bypass from main-2, or give the agent a non-admin identity: this closes the ES-011, ES-012 and ES-024 obligations. (2) Require pull requests with an approving review from someone other than the author: without it, the ES-054 obligation stays open for the envelope's review and PR-body conditions. Agents cannot change repository settings. If a CI job is renamed, the matching required check must be renamed in main-2 in the same change, or every pull request blocks."
 
   - id: DEV-002
     kind: accepted_risk
@@ -244,12 +244,12 @@ deviations:
     obligations:
       - Automated accessibility checks run in the authoritative gate
       - Periodic real keyboard and screen-reader assessment (SHOULD)
-    summary: The e2e job runs axe on every seeded page, but it becomes an authoritative gate only when branch protection requires it (DEV-001). No periodic manual keyboard and screen-reader assessment is scheduled.
-    consequence: Until the job is required, a pull request could merge with an accessibility failure. Automated rules catch roughly a third to a half of real accessibility problems; the rest need people.
+    summary: The e2e job runs axe on every seeded page and has been a required check on main since 2026-11-24 (ruleset main-2), but admins can bypass that requirement (DEV-001). No periodic manual keyboard and screen-reader assessment is scheduled.
+    consequence: An admin, or the agent acting as one, could merge with an accessibility failure. Automated rules catch roughly a third to a half of real accessibility problems; the rest need people.
     compensating_controls: The delegation envelope forbids agents merging with a failing check; axe, keyboard journeys and contrast tests run on every pull request.
     owner: repository-owner
     opened: 2026-11-24
-    disposition: Close the gate part when branch protection requires the e2e job. Schedule a manual keyboard and screen-reader pass (for example NVDA and VoiceOver on the fixture pages) before the first public release, and record it here.
+    disposition: Close the gate part when DEV-001's admin bypass is removed. Schedule a manual keyboard and screen-reader pass (for example NVDA and VoiceOver on the fixture pages) before the first public release, and record it here.
 
   - id: DEV-010
     kind: gap
