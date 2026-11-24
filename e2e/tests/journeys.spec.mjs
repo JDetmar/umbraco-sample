@@ -1,4 +1,5 @@
-// Critical journeys (TST-11): what a visitor and a keyboard user must always be able to do.
+// Critical journeys (TST-12): what a visitor and a keyboard user must always be able to do.
+// TST-12 also names search and forms; the site has neither yet, so navigation is the only critical path today.
 import { expect, test } from '@playwright/test';
 
 test('home page shows the site heading and its components', async ({ page }) => {
@@ -44,11 +45,33 @@ test('an unknown address returns 404', async ({ page }) => {
   expect(response?.status()).toBe(404);
 });
 
-test('keyboard focus is always visible', async ({ page }) => {
+test('keyboard focus on a link shows the design-token focus outline', async ({ page }) => {
   await page.goto('/fixture-maximal/');
 
+  // Reach the link by keyboard, so :focus-visible applies as it does for a real keyboard user.
   const link = page.locator('.c-cta__action a');
-  await link.focus();
-  const outline = await link.evaluate((el) => getComputedStyle(el).outlineStyle);
-  expect(outline).not.toBe('none');
+  for (let i = 0; i < 50 && !(await link.evaluate((el) => el === document.activeElement)); i++) {
+    await page.keyboard.press('Tab');
+  }
+  await expect(link).toBeFocused();
+
+  // The outline must come from the tokens, not the browser default: a missing stylesheet fails this.
+  const expected = await page.evaluate(() => {
+    const root = getComputedStyle(document.documentElement);
+    const probe = document.createElement('div');
+    probe.style.outlineColor = root.getPropertyValue('--color-focus').trim();
+    probe.style.outlineWidth = root.getPropertyValue('--focus-width').trim();
+    probe.style.outlineStyle = 'solid';
+    document.body.append(probe);
+    const style = getComputedStyle(probe);
+    const result = { color: style.outlineColor, width: style.outlineWidth };
+    probe.remove();
+    return result;
+  });
+  expect(expected.color).not.toBe('');
+  const actual = await link.evaluate((el) => {
+    const style = getComputedStyle(el);
+    return { style: style.outlineStyle, color: style.outlineColor, width: style.outlineWidth };
+  });
+  expect(actual).toEqual({ style: 'solid', ...expected });
 });

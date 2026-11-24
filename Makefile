@@ -56,11 +56,11 @@ test-integration: ## Integration tests: starts the real Aspire stack (needs Dock
 image: frontend ## Build the site container image as umbraco-sample:local
 	docker build -f src/UmbracoSample.Web/Dockerfile --build-arg SOURCE_REVISION="$$(git rev-parse HEAD)" -t umbraco-sample:local .
 
-e2e: ## End-to-end, accessibility and visual tests against a running site (make run first; needs Docker)
+e2e: ## End-to-end, accessibility and visual tests against a running site (make run first; needs Docker or Podman)
 	scripts/e2e.sh
 
 e2e-update-snapshots: ## Re-approve visual baselines after an intended visual change
-	scripts/e2e.sh --update-snapshots --project desktop --project mobile -g 'looks as approved'
+	scripts/e2e.sh --update-snapshots -g 'looks as approved'
 
 smoke: ## Smoke-test a running site: make smoke URL=https://host
 	scripts/smoke.sh "$(URL)"

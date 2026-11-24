@@ -59,6 +59,19 @@ public sealed partial class SupplyChainPolicyTests
     }
 
     [Fact]
+    public void The_playwright_image_is_pinned_by_digest_and_matches_the_library()
+    {
+        var root = RepositoryRoot.Find().FullName;
+        var from = File.ReadAllLines(Path.Join(root, "e2e", "Dockerfile")).Single(line => line.StartsWith("FROM ", StringComparison.Ordinal));
+        using var package = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Join(root, "e2e", "package.json")));
+        var library = package.RootElement.GetProperty("devDependencies").GetProperty("@playwright/test").GetString();
+
+        var match = PlaywrightImage().Match(from);
+        match.Success.ShouldBeTrue("ES-013: the Playwright image is pinned by tag and sha256 digest.");
+        match.Groups["version"].Value.ShouldBe(library, "the browsers in the image must match @playwright/test; update both together.");
+    }
+
+    [Fact]
     public void Npm_never_runs_install_scripts_and_enforces_the_node_version()
     {
         var root = RepositoryRoot.Find().FullName;
@@ -140,6 +153,9 @@ public sealed partial class SupplyChainPolicyTests
 
     [GeneratedRegex(@"^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$")]
     private static partial Regex ExactVersion();
+
+    [GeneratedRegex(@"^FROM mcr\.microsoft\.com/playwright:v(?<version>\d+\.\d+\.\d+)-noble@sha256:[0-9a-f]{64}$")]
+    private static partial Regex PlaywrightImage();
 
     [GeneratedRegex(@"permissions:\s*(write-all|read-all)")]
     private static partial Regex BroadPermissions();

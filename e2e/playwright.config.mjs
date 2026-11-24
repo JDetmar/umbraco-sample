@@ -11,7 +11,8 @@ export default defineConfig({
   timeout: 30_000,
   expect: {
     timeout: 5_000,
-    toHaveScreenshot: { maxDiffPixelRatio: 0.001, animations: 'disabled' },
+    // An absolute budget: a ratio over a full page lets a whole recoloured link row through.
+    toHaveScreenshot: { maxDiffPixels: 50, animations: 'disabled' },
   },
   reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
   use: {

@@ -35,7 +35,8 @@ Status key: **Approved** (owner approved 2026-11-24), **Rejected**. New dependen
 | Stryker.NET | Mutation testing on critical domain logic, scheduled lane (ES-002) | Apache-2.0 | Active | Dotnet tool, CI only | n/a | Low | Approved |
 | WireMock.Net | MAP stub with documented fidelity limits (TST-07, ES-006) | Apache-2.0 | Active | Small | Local only | Low | Approved |
 | NetArchTest.Rules | Executable layering rule: domain never references Umbraco (ES-018) | MIT | Last release 1.3.2 in May 2021; works, but effectively unmaintained. ArchUnitNET is the fallback | Tiny | n/a | Low: a few tests | Approved (watch health) |
-| @playwright/test | End-to-end tests and visual regression (TST-11, TST-12) | Apache-2.0 | Microsoft, active | Downloads browsers in CI | n/a | Medium: test rewrite | Approved |
+| @playwright/test | End-to-end tests (TST-12) and visual regression (TST-11) | Apache-2.0 | Microsoft, active | Runs against the browsers in the Playwright image below | n/a | Medium: test rewrite | Approved |
+| Playwright container image (`mcr.microsoft.com/playwright`, `e2e/Dockerfile`) | The browsers and fonts for `@playwright/test`, pinned by digest and run as linux/amd64, so visual baselines match on every machine (TST-11, ES-006) | Apache-2.0 | Microsoft, published with each Playwright release | Large image (about 2 GB); used only by `make e2e` and CI, never shipped | Pulled from MCR by digest; Dependabot (docker) proposes updates; a policy test keeps its tag equal to `@playwright/test` | Low: `npx playwright install` with the same version | **Proposed: needs owner approval** |
 | @axe-core/playwright | Accessibility scans in the gate (TST-13, ES-036) | MPL-2.0 | Deque, active | Small | n/a | Low | Approved |
 | @lhci/cli (Lighthouse CI) | Performance budgets (TST-14) | Apache-2.0 | Google, moderate activity | Moderate | n/a | Low | Approved |
 
