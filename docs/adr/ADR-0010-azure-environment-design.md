@@ -20,6 +20,8 @@ ADR 0003 chose Pulumi (C#) with Pulumi Cloud state, and ADR 0004 chose Azure Con
 
 One Pulumi project, `infra/UmbracoSample.Infra`, with one stack per environment (`dev`, `prod`; `staging` is allowed by validation but not yet configured). Each stack declares:
 
+[docs/architecture.md](../architecture.md) shows these resources and how they connect.
+
 | Resource | Setting | Why |
 |---|---|---|
 | User-assigned managed identity | The site's only identity | No stored keys or passwords (ES-024) |

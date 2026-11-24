@@ -6,6 +6,7 @@ Every requirement in [the engineering rigor framework](docs/engineering-rigor-fr
 
 - [Build-out plan](docs/plan.md)
 - [Dependency register](docs/dependencies.md)
+- [Architecture diagrams](docs/architecture.md)
 
 ## Getting started
 

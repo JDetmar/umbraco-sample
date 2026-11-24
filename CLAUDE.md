@@ -62,6 +62,7 @@ Agents MUST run `make validate` before handing off a change, or record why it co
 | `infra/` | Pulumi (C#) project and its mock tests (ADR 0010); owner setup in `docs/infra-setup.md` |
 | `scripts/` | Operational scripts, such as the post-deployment smoke test |
 | `docs/components/` | One page per component: fields, rules, fixtures and tests |
+| `docs/architecture.md` | Architecture diagrams (Mermaid) of the deployed site and the delivery path; updated with any `infra/` change that alters them |
 | `docs/adr/` | Architecture decision records (ES-019) |
 | `docs/engineering-conformance.yml` | Conformance ledger: evidence and open deviations (ES-038) |
 | `docs/dependencies.md` | Dependency register with ES-015 justifications |
