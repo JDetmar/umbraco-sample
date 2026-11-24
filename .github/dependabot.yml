@@ -12,12 +12,6 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "Microsoft.Extensions.*"
         update-types: ["version-update:semver-major"]
-      - dependency-name: "Microsoft.EntityFrameworkCore.*"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "Microsoft.Data.SqlClient"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "System.*"
-        update-types: ["version-update:semver-major"]
       - dependency-name: "Umbraco.*"
         update-types: ["version-update:semver-major"]
       - dependency-name: "uSync*"
@@ -62,6 +56,7 @@ updates:
     schedule:
       interval: weekly
     # The .NET base images follow the LTS line too (ADR 0011): 10.0.x patches arrive, 11.0 does not.
+    # global.json pins the exact SDK, so an SDK image bump must change global.json in the same pull request.
     ignore:
       - dependency-name: "dotnet/sdk"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
