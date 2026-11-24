@@ -70,7 +70,7 @@ clauses:
   ES-019:
     status: compliant
     evidence:
-      - docs/adr/0001 to 0009 and 0011 record context, alternatives, decision and consequences.
+      - Every docs/adr/ADR-NNNN-*.md records context, alternatives, decision and consequences; the policy test Every_record_is_named_ADR_NNNN_and_listed_in_the_index checks naming, the index and unique numbers.
   ES-020:
     status: compliant
     evidence:
