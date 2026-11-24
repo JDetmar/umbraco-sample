@@ -194,7 +194,7 @@ deviations:
     opened: 2026-11-24
     approver: null
     approval_ref: null
-    threat_model_ref: docs/adr/0001-umbraco-17-lts.md
+    threat_model_ref: docs/adr/ADR-0001-umbraco-17-lts.md
     review_triggers:
       - A new Umbraco major version.
       - Umbraco adding rollback-safe migrations.
