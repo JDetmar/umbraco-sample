@@ -13,5 +13,6 @@ Lightweight records of significant decisions (ES-019). Each records context, alt
 | [0007](0007-front-end-build.md) | Front-end build: design tokens and one stylesheet, built outside the image | Proposed |
 | [0008](0008-security-headers-and-third-party-allowlist.md) | Security headers, content security policy and the third-party allowlist | Proposed |
 | [0009](0009-redirect-map-and-domain-project.md) | Redirect map as a parsed file, and a domain project for real logic | Proposed |
+| [0011](0011-stay-on-lts-releases.md) | Stay on long-term support releases of .NET and Umbraco | Accepted |
 
 New records copy [template.md](template.md).

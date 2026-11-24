@@ -5,6 +5,23 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Stay on LTS lines (ADR 0001, ADR 0011): .NET and Umbraco majors are deliberate upgrade projects, not bumps.
+    # Minor and patch updates inside the LTS line still arrive; majors of everything else are unaffected.
+    ignore:
+      - dependency-name: "Microsoft.AspNetCore.*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.Extensions.*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.EntityFrameworkCore.*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.Data.SqlClient"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "System.*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Umbraco.*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "uSync*"
+        update-types: ["version-update:semver-major"]
     groups:
       umbraco:
         patterns: ["Umbraco.*"]
@@ -44,4 +61,10 @@ updates:
     directories: ["/e2e", "/src/UmbracoSample.Web"]
     schedule:
       interval: weekly
+    # The .NET base images follow the LTS line too (ADR 0011): 10.0.x patches arrive, 11.0 does not.
+    ignore:
+      - dependency-name: "dotnet/sdk"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "dotnet/aspnet"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
     open-pull-requests-limit: 5
