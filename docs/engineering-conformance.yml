@@ -276,3 +276,15 @@ deviations:
     owner: repository-owner
     opened: 2026-11-24
     disposition: Add a custom 404 page (document type, template and the Error404Collection setting) styled from the site stylesheet before the first deployment. Revisit a fuller back-office policy built on Umbraco's ICspNonceService when Umbraco documents one as supported. Extend the test extractor to SVG image/use href and a ping, check preconnect against the union of directives before the first CDN is allowlisted, and add an integration test that a .js upload is refused through the Management API.
+
+  - id: DEV-013
+    kind: gap
+    clauses: [ES-025]
+    obligations:
+      - Sensitive data is encrypted in transit
+    summary: "Planned topology: Front Door to the Container Apps ingress is HTTPS, but inside the Container Apps environment the ingress forwards plain HTTP to the site container. Lead form submissions (personal data, threat model 0001) cross that hop unencrypted."
+    consequence: Anything able to observe traffic inside the Container Apps environment's network could read submissions. Nothing is deployed yet, so nothing is exposed today.
+    compensating_controls: The hop stays inside the managed environment's private network; forms are not enabled on a public environment before Phase 5 (threat model 0001, R2).
+    owner: repository-owner
+    opened: 2026-11-24
+    disposition: "Owner to decide in Phase 5: accept the managed-environment hop as a risk (an owner decision, not an agent one), or enable end-to-end encryption inside the environment (Container Apps peer-to-peer encryption) and record its cost and evidence here."
