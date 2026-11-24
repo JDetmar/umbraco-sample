@@ -22,6 +22,7 @@ Use the Makefile targets; CI runs the same ones (ES-052).
 | Integration tests (starts the Aspire stack; needs Docker) | `make test-integration` |
 | End-to-end, accessibility (axe) and visual tests against a running site (`make run` first; needs Docker or Podman, `CONTAINER_RUNTIME=podman`) | `make e2e` |
 | Re-approve visual baselines after an intended visual change | `make e2e-update-snapshots` |
+| Lighthouse performance budgets against a running site (same image as `make e2e`) | `make lighthouse` |
 | Build the container image | `make image` |
 | Smoke-test a running site | `make smoke URL=<base url>` |
 | Run locally (Aspire: site and SQL Server) | `make run` |

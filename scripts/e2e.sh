@@ -3,6 +3,7 @@
 # Runs inside the pinned Playwright image (e2e/Dockerfile) as linux/amd64, so browsers, fonts and rendering
 # match the committed screenshots on Linux, Intel Macs and Apple Silicon (through emulation) alike.
 # Usage: scripts/e2e.sh [playwright args]      e.g. scripts/e2e.sh --update-snapshots
+#        scripts/e2e.sh --lighthouse            Lighthouse CI budgets (TST-14) in the same image
 # Needs: Docker or Podman (CONTAINER_RUNTIME=podman), and the site running (make run).
 # Works with the bash 3.2 that macOS ships.
 set -euo pipefail
@@ -35,6 +36,12 @@ for name in HTTPS_PROXY HTTP_PROXY NO_PROXY https_proxy http_proxy no_proxy; do
   if [[ -n "${!name:-}" ]]; then extra+=(-e "$name"); fi
 done
 
+task=playwright
+if [[ "${1:-}" == "--lighthouse" ]]; then
+  task=lighthouse
+  shift
+fi
+
 export E2E_BASE_URL="${E2E_BASE_URL:-$default_url}"
 export CI="${CI:-}"
 
@@ -44,4 +51,4 @@ export CI="${CI:-}"
   ${extra[@]+"${extra[@]}"} \
   -v "$root/e2e:/e2e" -w /e2e \
   "$image" \
-  bash -c 'npm ci --no-audit && npx playwright test "$@"' playwright "$@"
+  bash -c 'npm ci --no-audit && if [[ "$0" == lighthouse ]]; then npx lhci autorun "$@"; else npx playwright test "$@"; fi' "$task" "$@"

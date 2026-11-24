@@ -38,7 +38,7 @@ Status key: **Approved** (owner approved 2026-11-24), **Rejected**. New dependen
 | @playwright/test | End-to-end tests (TST-12) and visual regression (TST-11) | Apache-2.0 | Microsoft, active | Runs against the browsers in the Playwright image below | n/a | Medium: test rewrite | Approved |
 | Playwright container image (`mcr.microsoft.com/playwright`, `e2e/Dockerfile`) | The browsers and fonts for `@playwright/test`, pinned by digest and run as linux/amd64, so visual baselines match on every machine (TST-11, ES-006) | Apache-2.0 | Microsoft, published with each Playwright release | Large image (about 2 GB); used only by `make e2e` and CI, never shipped | Pulled from MCR by digest; Dependabot (docker) proposes updates; a policy test keeps its tag equal to `@playwright/test`. Dependabot opens separate npm and docker pull requests for one Playwright release; each fails the policy test alone, so combine them into one pull request | Low: `npx playwright install` with the same version | **Proposed: needs owner approval** |
 | @axe-core/playwright | Accessibility scans in the gate (TST-13, ES-036) | MPL-2.0 | Deque, active | Small | n/a | Low | Approved |
-| @lhci/cli (Lighthouse CI) | Performance budgets (TST-14) | Apache-2.0 | Google, moderate activity | Moderate | n/a | Low | Approved |
+| @lhci/cli (Lighthouse CI) | Performance budgets (TST-14) | Apache-2.0 | Google, moderate activity | Moderate; runs only in the Playwright image with its Chromium | Results stay on disk (`upload.target: filesystem`), never public storage. Its transitive basic-ftp (FTP is never used) is pinned to a patched version with an npm `override` | Low | Approved |
 
 ## Front end build
 

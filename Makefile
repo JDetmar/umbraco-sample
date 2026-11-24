@@ -8,7 +8,7 @@ SLN := UmbracoSample.slnx
 CONFIG ?= Release
 GITLEAKS ?= gitleaks
 
-.PHONY: help bootstrap restore lockfiles-check build format format-check frontend frontend-test frontend-audit test test-integration e2e e2e-update-snapshots image smoke validate secrets vuln run clean
+.PHONY: help bootstrap restore lockfiles-check build format format-check frontend frontend-test frontend-audit test test-integration e2e e2e-update-snapshots lighthouse image smoke validate secrets vuln run clean
 
 help: ## List targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -61,6 +61,9 @@ e2e: ## End-to-end, accessibility and visual tests against a running site (make 
 
 e2e-update-snapshots: ## Re-approve visual baselines after an intended visual change
 	scripts/e2e.sh --update-snapshots -g 'looks as approved'
+
+lighthouse: ## Lighthouse CI budgets (TST-14) against a running site, in the same pinned image (make run first)
+	scripts/e2e.sh --lighthouse
 
 smoke: ## Smoke-test a running site: make smoke URL=https://host
 	scripts/smoke.sh "$(URL)"
