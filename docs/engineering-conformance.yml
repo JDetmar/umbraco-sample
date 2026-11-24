@@ -157,12 +157,12 @@ deviations:
       - Immediate material-risk checks block the merge event
       - Secret scanning gates shared merge
       - Authorization is enforced outside model-generated text
-    summary: Branch protection with required status checks is not yet enabled on main, so neither CI failures nor the agent envelope are technically enforced at merge.
-    consequence: A change could reach main without passing the authoritative gate, including the secret scan, and an agent's merge authority rests on its own adherence to CLAUDE.md.
-    compensating_controls: None technical. Procedurally, every merge so far has a green CI run and an independent reviewer context recorded in the pull request, and the owner can review and revert any merge from the pull request history.
+    summary: "Since 2026-11-24 two repository rulesets protect main: no deletion or force-push, and six required status checks from GitHub Actions (validate, integration, image, e2e, analyze csharp, analyze actions) on an up-to-date branch. Repository admins can bypass both rulesets, and the agent's merges run with the owner's admin access, so the gate is not enforced against the agent itself."
+    consequence: Non-admin pushes cannot reach main without the authoritative gate, including the secret scan. An admin, or the agent acting with admin access, could still merge past a red check, so the agent's merge authority still rests on its own adherence to CLAUDE.md.
+    compensating_controls: Required checks and no force-push or deletion for everyone without admin rights (rulesets main-1 and main-2). Procedurally, every merge so far has a green CI run and an independent reviewer context recorded in the pull request, and the owner can review and revert any merge from the pull request history.
     owner: repository-owner
     opened: 2026-11-24
-    disposition: Owner enables branch protection on main requiring the CI checks and a linear history; agents cannot change repository settings.
+    disposition: "Owner decides whether to remove the admin bypass from the main rulesets (then every merge, the owner's included, needs green checks), or to give the agent a non-admin identity. Either closes this gap. Agents cannot change repository settings."
 
   - id: DEV-002
     kind: accepted_risk
