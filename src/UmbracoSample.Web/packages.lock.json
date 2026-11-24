@@ -1871,6 +1871,9 @@
           "uSync.Backoffice.Management.Api": "17.6.2"
         }
       },
+      "umbracosample.domain": {
+        "type": "Project"
+      },
       "umbracosample.servicedefaults": {
         "type": "Project",
         "dependencies": {

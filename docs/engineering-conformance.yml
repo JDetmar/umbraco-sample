@@ -12,6 +12,22 @@ owner: repository-owner
 updated: 2026-11-24
 
 clauses:
+  ES-002:
+    status: compliant
+    obligations:
+      - obligation: Invariant-rich pure logic receives property-based testing (SHOULD)
+        status: compliant
+        evidence:
+          - CsCheck properties over the redirect parser (tests/UmbracoSample.Domain.Tests/Redirects). Parsing never throws (5,000 hostile inputs per run). Normalisation is idempotent and ignores case and trailing slashes. Every valid map finds every source (2,000 maps per run). Every parsed map is flat, including targets that reuse a source with different case, slash, query, fragment or percent-encoding.
+      - obligation: Critical domain logic receives mutation testing (SHOULD)
+        status: compliant
+        evidence:
+          - Stryker.NET (`make mutation`, tests/UmbracoSample.Domain.Tests/stryker-config.json) runs weekly in .github/workflows/mutation.yml and fails below a 75% score. A local run on 2026-11-24 scored 89.50% (RedirectMap 88.7%, RedirectTarget 90.7%, SitePath 89.4%). The duplicate, self-redirect and chain checks are written as a plain method so Stryker can mutate them (as an iterator they were all excluded as compile errors); 16 mutants still fail to compile and are not counted. Survivors were reviewed: the empty-target, external-target whitespace and query-normalisation gaps found in review now have tests; the rest are error-message text and equivalent mutants. Stryker's Microsoft Testing Platform runner is marked preview by Stryker, so a falling score is checked by hand before it is trusted. GitHub notifies scheduled-workflow failures to the user who last changed the schedule; the owner confirms after the first run that this is them.
+  ES-007:
+    status: compliant
+    evidence:
+      - The redirect map is an owned parser of hand-edited input. On every pull request, CsCheck generates thousands of hostile inputs per property. These include separators, dot segments, percent-encodings, non-ASCII, control characters, CSV noise, and chains and loops in many spellings. This is generator-based fuzzing, not coverage-guided fuzzing.
+      - Retained regression cases live in tests/UmbracoSample.Domain.Tests/Redirects/corpus (valid-*.csv must parse, invalid-*.csv must be rejected) and run with the fast tests. The corpus README.md documents how to capture a failing CsCheck seed as a case.
   ES-011:
     status: deviation
     obligations:
@@ -46,10 +62,22 @@ clauses:
     evidence:
       - Every third-party action in .github/workflows is pinned to a full commit SHA.
       - Every workflow declares top-level `permissions` with read-only defaults; the policy tests reject unpinned actions, missing permissions and write-all or read-all.
+  ES-018:
+    status: compliant
+    evidence:
+      - "tests/UmbracoSample.Domain.Tests/ArchitectureTests.cs (NetArchTest) fails the fast gate if UmbracoSample.Domain depends on any of: Umbraco, ASP.NET Core, Microsoft.Extensions, EF Core, Microsoft.Data, System.Data, System.Net or System.IO. A committed negative test shows that the same rule rejects a probe type using File and HttpClient. A second test fails if the Domain project file gains any package, project, assembly or framework reference."
   ES-019:
     status: compliant
     evidence:
       - docs/adr/0001 to 0006 record context, alternatives, decision and consequences.
+  ES-020:
+    status: compliant
+    evidence:
+      - The only domain logic so far (the redirect map) lives in src/UmbracoSample.Domain with no framework or package references; the web project is the imperative shell that loads the file and writes the response (ADR 0009). Components stay thin view models, as planned.
+  ES-021:
+    status: compliant
+    evidence:
+      - The redirect map is parsed at startup into SitePath, RedirectTarget and RedirectKind, which can only be built through TryParse; an invalid map stops the site from starting. Component links and images are parsed by LinkModel.TryCreate and ImageModel.TryCreate.
   ES-024:
     status: deviation
     obligations:

@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Pure domain logic with no framework dependencies (ES-020): no Umbraco, no ASP.NET Core, no packages.
+    tests/UmbracoSample.Domain.Tests enforces this with an architecture test (ES-018).
+  -->
+
+</Project>
