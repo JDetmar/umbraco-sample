@@ -56,7 +56,7 @@ public sealed partial class SupplyChainPolicyTests
         var root = RepositoryRoot.Find().FullName;
 
         var missing = RepositoryRoot.Files("*.csproj")
-            .Select(file => Path.GetRelativePath(root, Path.Combine(file.DirectoryName!, "packages.lock.json")).Replace('\\', '/'))
+            .Select(file => Path.GetRelativePath(root, Path.Join(file.DirectoryName!, "packages.lock.json")).Replace('\\', '/'))
             .Where(lockFile => !tracked.Contains(lockFile))
             .ToList();
 
@@ -85,7 +85,7 @@ public sealed partial class SupplyChainPolicyTests
     }
 
     private static IEnumerable<FileInfo> WorkflowFiles() =>
-        new DirectoryInfo(Path.Combine(RepositoryRoot.Find().FullName, ".github", "workflows"))
+        new DirectoryInfo(Path.Join(RepositoryRoot.Find().FullName, ".github", "workflows"))
             .EnumerateFiles("*.y*ml");
 
     private static IEnumerable<string> UsesLines(FileInfo file) =>

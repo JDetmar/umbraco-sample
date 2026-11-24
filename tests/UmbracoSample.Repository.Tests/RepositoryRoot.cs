@@ -6,7 +6,7 @@ internal static class RepositoryRoot
     public static DirectoryInfo Find()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "UmbracoSample.slnx")))
+        while (directory is not null && !File.Exists(Path.Join(directory.FullName, "UmbracoSample.slnx")))
         {
             directory = directory.Parent;
         }
