@@ -1,0 +1,13 @@
+{
+  "name": "umbraco-sample-e2e",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end, accessibility and visual-regression tests. Run through scripts/e2e.sh inside the pinned Playwright image.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.65.1"
+  }
+}

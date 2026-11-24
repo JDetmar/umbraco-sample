@@ -95,6 +95,18 @@ clauses:
       - Umbraco's Serilog pipeline replaces the OpenTelemetry log provider, so structured logs go to stdout as compact JSON (appsettings.json) for the container platform to collect, rather than over OTLP.
       - /health/live, /health/ready (includes Umbraco runtime level) and /health/schema (uSync schema drift) are mapped in every environment; the integration tests assert all three, and unit tests cover every drift outcome, including the vacuous no-handlers case.
       - scripts/smoke.sh is the post-deployment check; CI runs it against the built image with SQL Server on every pull request.
+  ES-036:
+    status: deviation
+    obligations:
+      - obligation: Automated accessibility checks run in the authoritative gate
+        status: deviation
+        deviation: DEV-008
+        evidence:
+          - The e2e CI job runs axe (WCAG 2.0, 2.1 and 2.2 A and AA rules, plus best-practice landmark and heading rules) on every seeded page at desktop and mobile sizes, inside the pinned Playwright image; any violation fails the job (e2e/tests/accessibility.spec.mjs).
+          - Keyboard journeys (skip link, token focus outline) and heading, alt-text and contrast rules are tested (e2e/tests/journeys.spec.mjs, ComponentFixtureTests, frontend/test/tokens.test.mjs).
+      - obligation: Periodic real keyboard and screen-reader assessment (SHOULD)
+        status: deviation
+        deviation: DEV-008
   ES-049:
     status: unknown
     obligations:
@@ -221,12 +233,13 @@ deviations:
     clauses: [ES-036]
     obligations:
       - Automated accessibility checks run in the authoritative gate
-    summary: Components ship with tested heading-structure, alt-text and new-tab rules, but no automated accessibility scan (axe) runs in CI yet.
-    consequence: Contrast, landmark, name/role/value and keyboard problems in rendered pages are not caught by the gate.
-    compensating_controls: Integration tests assert one h1, no skipped heading levels, alt text on rendered images and announced new-tab links on every fixture page.
+      - Periodic real keyboard and screen-reader assessment (SHOULD)
+    summary: The e2e job runs axe on every seeded page, but it becomes an authoritative gate only when branch protection requires it (DEV-001), and the Playwright image it runs in awaits owner approval in docs/dependencies.md. No periodic manual keyboard and screen-reader assessment is scheduled.
+    consequence: Until the job is required, a pull request could merge with an accessibility failure. Automated rules catch roughly a third to a half of real accessibility problems; the rest need people.
+    compensating_controls: The delegation envelope forbids agents merging with a failing check; axe, keyboard journeys and contrast tests run on every pull request.
     owner: repository-owner
     opened: 2026-11-24
-    disposition: Phase 3 adds Playwright with @axe-core/playwright against the fixture pages as a required CI check, then this gap closes.
+    disposition: Close the gate part when branch protection requires the e2e job. Schedule a manual keyboard and screen-reader pass (for example NVDA and VoiceOver on the fixture pages) before the first public release, and record it here.
 
   - id: DEV-010
     kind: gap

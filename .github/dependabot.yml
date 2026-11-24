@@ -28,3 +28,20 @@ updates:
       frontend-build:
         patterns: ["*"]
     open-pull-requests-limit: 5
+
+  - package-ecosystem: npm
+    directory: /e2e
+    schedule:
+      interval: weekly
+    groups:
+      e2e:
+        patterns: ["*"]
+    open-pull-requests-limit: 5
+
+  # Base images: the site image, and the Playwright image that e2e runs in. A Playwright image bump must land
+  # with the matching @playwright/test bump (a policy test fails until both agree).
+  - package-ecosystem: docker
+    directories: ["/e2e", "/src/UmbracoSample.Web"]
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5

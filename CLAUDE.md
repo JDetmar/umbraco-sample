@@ -20,6 +20,8 @@ Use the Makefile targets; CI runs the same ones (ES-052).
 | Fast tests | `make test` |
 | Fast validation before handoff | `make validate` |
 | Integration tests (starts the Aspire stack; needs Docker) | `make test-integration` |
+| End-to-end, accessibility (axe) and visual tests against a running site (`make run` first; needs Docker or Podman, `CONTAINER_RUNTIME=podman`) | `make e2e` |
+| Re-approve visual baselines after an intended visual change | `make e2e-update-snapshots` |
 | Mutation testing of the domain (Stryker.NET; weekly in CI) | `make mutation` |
 | Build the container image | `make image` |
 | Smoke-test a running site | `make smoke URL=<base url>` |
@@ -53,6 +55,7 @@ Agents MUST run `make validate` before handing off a change, or record why it co
 | `tests/UmbracoSample.Web.Tests` | Fast unit and component contract tests |
 | `tests/UmbracoSample.Integration.Tests` | Tests against the real stack through Aspire (`Category=Integration`) |
 | `frontend/` | Design tokens (`tokens/`), stylesheet sources and the build (ADR 0007); output goes to `wwwroot/dist`, never committed |
+| `e2e/` | Playwright journeys, axe scans and visual baselines; run by `scripts/e2e.sh` inside the image pinned in `e2e/Dockerfile` |
 | `scripts/` | Operational scripts, such as the post-deployment smoke test |
 | `docs/components/` | One page per component: fields, rules, fixtures and tests |
 | `docs/adr/` | Architecture decision records (ES-019) |
@@ -63,7 +66,9 @@ Agents MUST run `make validate` before handing off a change, or record why it co
 
 - Every new dependency needs an entry in `docs/dependencies.md` and owner approval before it is merged (ES-015).
 - Visual values come from design tokens in `frontend/tokens`; stylesheets never use raw colours, and every colour pair the components use is contrast-tested.
-- npm dependencies are exact versions with a committed lock file and no install scripts (`frontend/.npmrc`).
+- npm dependencies (in `frontend/` and `e2e/`) are exact versions with a committed lock file and no install scripts.
+- Visual baselines change only on purpose: run `make e2e-update-snapshots`, look at every changed image, and say why in the pull request. Baselines assume the seeded content: if you have edited content in your local back office, recreate the local database before running `make e2e`.
+- `@playwright/test` and the image in `e2e/Dockerfile` are updated together; a policy test fails while their versions differ.
 - No third-party script, style, font, image host or frame without an entry in `Security/ThirdPartyAllowlist.cs` (ADR 0008); the content security policy is built from it, and integration tests fail on anything else. Site markup has no inline script, `<style>`, `style` attribute or `on*` handler.
 - Redirects go in `redirects.csv`, always to the final page: the site refuses to start on a chain, loop, duplicate or unsafe target, and CI follows every rule. Any input that ever breaks the parser is saved under `tests/UmbracoSample.Domain.Tests/Redirects/corpus/`.
 - `UmbracoSample.Domain` never references Umbraco, ASP.NET Core or any package; an architecture test enforces it (ES-018, ES-020).
