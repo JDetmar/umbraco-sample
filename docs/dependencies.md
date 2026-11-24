@@ -15,6 +15,7 @@ Status key: **Approved** (owner approved 2026-11-24), **Rejected**. New dependen
 | Umbraco.StorageProviders.AzureBlob | Media in Blob storage | MIT | Maintained by Umbraco HQ | Small (Azure.Storage.Blobs) | Uses managed identity, no keys | Low | Approved |
 | .NET Aspire ServiceDefaults (OpenTelemetry, health checks, Microsoft.Extensions.Http.Resilience) | Telemetry, health endpoints, timeouts and retries (ES-030, ES-043, ES-044) | MIT / Apache-2.0 | Microsoft and CNCF projects, active | Moderate (OpenTelemetry packages, Polly via resilience) | Well-scrutinised | Low: standard OpenTelemetry and ASP.NET Core APIs | Approved |
 | Azure.Monitor.OpenTelemetry.Exporter | Send telemetry to App Insights | MIT | Microsoft, active | Small | Managed identity auth | Low: swap exporter, instrumentation unchanged | Approved |
+| Azure.Identity | Managed identity credential for Blob media and Application Insights (ES-024) | MIT | Microsoft, active, the standard Azure SDK auth library | Moderate (Azure.Core, MSAL) | Microsoft security response; only `ManagedIdentityCredential` is used, never developer or interactive credentials | Low: any `TokenCredential` fits the same seams | Approved by the owner on 2026-11-24 (decision in the project thread, recorded in pull request 29). Already transitive via Microsoft.Data.SqlClient; now a direct pin |
 
 ## Local orchestration and infrastructure (not in the site image)
 
@@ -60,6 +61,7 @@ Status key: **Approved** (owner approved 2026-11-24), **Rejected**. New dependen
 | pulumi/actions | Preview on PR, up after merge | Apache-2.0 | | Approved |
 | azure/login | OIDC sign-in, no stored secrets | MIT | | Approved |
 | anchore/syft | SBOM for the container image (ES-049) | Apache-2.0 | | Approved |
+| actions/upload-artifact, download-artifact | Hand the smoke-tested image to the separate publish job, so only that job holds a registry write token (ES-017, ES-049) | MIT | GitHub-maintained | Approved by the owner on 2026-11-24 (decision in the project thread, recorded in pull request 28) |
 | Dependabot | Update discovery (ES-016) | GitHub built-in | | Approved |
 
 ## Deliberately not used

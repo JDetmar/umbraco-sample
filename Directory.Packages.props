@@ -6,6 +6,11 @@
     <PackageVersion Include="Umbraco.Cms" Version="17.8.2" />
     <PackageVersion Include="uSync" Version="17.6.2" />
   </ItemGroup>
+  <ItemGroup Label="Azure">
+    <PackageVersion Include="Azure.Identity" Version="1.21.0" />
+    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.10.0" />
+    <PackageVersion Include="Umbraco.StorageProviders.AzureBlob" Version="17.1.0" />
+  </ItemGroup>
   <ItemGroup Label="Aspire">
     <PackageVersion Include="Aspire.Hosting.Dotnet" Version="17.0.0" />
     <PackageVersion Include="Aspire.Hosting.SqlServer" Version="17.0.0" />

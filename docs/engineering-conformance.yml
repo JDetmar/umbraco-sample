@@ -63,6 +63,7 @@ clauses:
     evidence:
       - Every third-party action in .github/workflows is pinned to a full commit SHA.
       - Every workflow declares top-level `permissions` with read-only defaults; the policy tests reject unpinned actions, missing permissions and write-all or read-all.
+      - Job-level write grants are allowlisted by a policy test (Write_permissions_are_granted_only_to_allowlisted_jobs): packages write only to the ci publish job, which runs only on main, checks out nothing and runs no third-party build code; security-events write only to the CodeQL job.
   ES-018:
     status: compliant
     evidence:
@@ -103,6 +104,7 @@ clauses:
     status: compliant
     evidence:
       - ServiceDefaults exports OpenTelemetry traces and metrics over OTLP (vendor-neutral); health-probe requests are filtered out of traces.
+      - When APPLICATIONINSIGHTS_CONNECTION_STRING is set (Azure), ServiceDefaults also exports traces and metrics to Application Insights with the Azure Monitor exporter, authenticated by the workload's managed identity (WorkloadIdentity); OTLP is unchanged for local runs.
       - Umbraco's Serilog pipeline replaces the OpenTelemetry log provider, so structured logs go to stdout as compact JSON (appsettings.json) for the container platform to collect, rather than over OTLP.
       - /health/live, /health/ready (includes Umbraco runtime level) and /health/schema (uSync schema drift) are mapped in every environment; the integration tests assert all three, and unit tests cover every drift outcome, including the vacuous no-handlers case.
       - scripts/smoke.sh is the post-deployment check; CI runs it against the built image with SQL Server on every pull request.
@@ -125,7 +127,10 @@ clauses:
         status: unknown
         evidence:
           - The image carries the source revision as an OCI label and as the OpenTelemetry service.version; CI builds it from pinned base-image digests and records the image ID, an SPDX SBOM, and the stylesheet toolchain (Node version, npm lock-file hash, site.css hash) per run.
-          - No release or registry push exists yet; publishing to a registry and promotion by digest arrive with the deployment pipeline, which needs owner approval.
+          - On main, after every gate passes, the publish job pushes the image that passed the container smoke test (handed over with docker save, no rebuild) to GHCR as sha-<revision> and main, and writes the registry digest, source revision and SBOM artifact link to the run summary.
+          - A main run superseded while still queued is cancelled by the concurrency group, so a revision merged in quick succession may get no sha-<revision> image; the next revision's image includes its changes.
+          - The SBOM is a run artifact, not attached to the registry digest; see DEV-014.
+          - Deployed version is not recorded yet; promotion by digest arrives with the deployment pipeline, which needs owner approval.
   ES-052:
     status: compliant
     evidence:
@@ -299,6 +304,19 @@ deviations:
     owner: repository-owner
     opened: 2026-11-24
     disposition: "Fix declared in infra (ADR 0010): the Container Apps environment enables peer-to-peer encryption, so the ingress-to-container hop is TLS, at no extra charge (mock test The_container_apps_environment_runs_in_the_apps_subnet). Closes when a deployed environment is verified with it enabled."
+
+  - id: DEV-014
+    kind: gap
+    clauses: [ES-049, ES-050]
+    obligations:
+      - Released artifacts are traceable to their SBOM (SHOULD)
+      - Released artifacts are signed or carry build provenance (SHOULD)
+    summary: The image published to GHCR is neither signed nor attested, and its SBOM is a CI run artifact linked from the run summary rather than attached to the registry digest.
+    consequence: A consumer holding only a digest cannot verify who built it or find its SBOM once run artifacts expire (90 days by default).
+    compensating_controls: Images are pinned by digest everywhere they are used; only the main branch, behind required CI, publishes; the run summary records digest, source revision and SBOM link together.
+    owner: repository-owner
+    opened: 2026-11-24
+    disposition: Before the first production deployment, add build provenance and an SBOM attestation bound to the digest (for example actions/attest-build-provenance and actions/attest-sbom), which needs owner approval as new dependencies.
 
   - id: DEV-015
     kind: gap
