@@ -22,7 +22,7 @@ clauses:
       - obligation: Critical domain logic receives mutation testing (SHOULD)
         status: compliant
         evidence:
-          - Stryker.NET (`make mutation`, tests/UmbracoSample.Domain.Tests/stryker-config.json) runs weekly in .github/workflows/mutation.yml and fails below a 75% score. The first local run on 2026-11-24 scored 85.85% (202 mutants tested). Survivors are mostly message-text and equivalent mutants in RedirectTarget and RedirectMap.
+          - Stryker.NET (`make mutation`, tests/UmbracoSample.Domain.Tests/stryker-config.json) runs weekly in .github/workflows/mutation.yml and fails below a 75% score. A local run on 2026-11-24 scored 89.50% (RedirectMap 88.7%, RedirectTarget 90.7%, SitePath 89.4%). The duplicate, self-redirect and chain checks are written as a plain method so Stryker can mutate them (as an iterator they were all excluded as compile errors); 16 mutants still fail to compile and are not counted. Survivors were reviewed: the empty-target, external-target whitespace and query-normalisation gaps found in review now have tests; the rest are error-message text and equivalent mutants. Stryker's Microsoft Testing Platform runner is marked preview by Stryker, so a falling score is checked by hand before it is trusted. The weekly run reports failures to the repository owner through GitHub's scheduled-workflow notifications.
   ES-007:
     status: compliant
     evidence:

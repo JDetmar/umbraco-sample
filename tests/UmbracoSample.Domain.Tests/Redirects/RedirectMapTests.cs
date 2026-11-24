@@ -93,12 +93,46 @@ public sealed class RedirectMapTests
     [InlineData("/naïve")]
     [InlineData("https://exämple.com/")]
     [InlineData("/x\u0001")]
+    [InlineData("https://example.com/x y")]
+    [InlineData("https://example.com/x\ty")]
+    [InlineData("https://example.com/x\u0001")]
+    [InlineData("https://example.com/x\u007f")]
     public void Targets_must_be_ascii_without_whitespace_or_control_characters(string target)
     {
         var (map, errors) = RedirectMap.Parse($"source,target,kind\n/a,{target},permanent\n", Reserved);
 
         map.ShouldBeNull();
         string.Join("; ", errors).ShouldContain("target");
+    }
+
+    [Fact]
+    public void An_empty_target_is_rejected()
+    {
+        var (map, errors) = RedirectMap.Parse("source,target,kind\n/a,,permanent\n", Reserved);
+
+        map.ShouldBeNull();
+        string.Join("; ", errors).ShouldContain("empty");
+    }
+
+    [Fact]
+    public void Find_decodes_the_request_path_only_once()
+    {
+        // The source /a%2541 means the literal path "/a%41". Kestrel has already decoded the request, so decoding again would turn it into "/aA".
+        var (map, errors) = RedirectMap.Parse("source,target,kind\n/a%2541,/new,permanent\n", Reserved);
+
+        errors.ShouldBeEmpty();
+        map!.Find("/a%41").ShouldNotBeNull();
+        map.Find("/aA").ShouldBeNull();
+    }
+
+    [Fact]
+    public void A_character_above_the_basic_plane_survives_next_to_an_escape()
+    {
+        var (map, errors) = RedirectMap.Parse("source,target,kind\n/\U0001F600%2D,/new,permanent\n", Reserved);
+
+        errors.ShouldBeEmpty();
+        map!.Find("/\U0001F600-").ShouldNotBeNull();
+        map.Find("/\uFFFD\uFFFD-").ShouldBeNull();
     }
 
     [Fact]
@@ -114,6 +148,9 @@ public sealed class RedirectMapTests
     [InlineData("/n?a=1#top", "?x=1", "/n?a=1#top")]
     [InlineData("/n#q?", "?x=1", "/n?x=1#q?")]
     [InlineData("/n", "", "/n")]
+    [InlineData("/n", "?", "/n")]
+    [InlineData("/n", "x=1", "/n?x=1")]
+    [InlineData("/n#top", "x=1", "/n?x=1#top")]
     [InlineData("https://example.com/p#s", "?x=1", "https://example.com/p?x=1#s")]
     public void The_request_query_goes_before_any_fragment(string target, string query, string expected)
     {

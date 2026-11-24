@@ -112,10 +112,13 @@ public readonly record struct SitePath
         var bytes = new List<byte>(text.Length);
         for (var i = 0; i < text.Length; i++)
         {
-            var c = text[i];
-            if (c != '%')
+            if (text[i] != '%')
             {
-                bytes.AddRange(System.Text.Encoding.UTF8.GetBytes(c.ToString()));
+                // Encode the whole run up to the next escape, so a surrogate pair (a character above U+FFFF) stays intact.
+                var next = text.IndexOf('%', i);
+                var end = next < 0 ? text.Length : next;
+                bytes.AddRange(System.Text.Encoding.UTF8.GetBytes(text[i..end]));
+                i = end - 1;
                 continue;
             }
 

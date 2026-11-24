@@ -131,32 +131,38 @@ public sealed class RedirectMap
         return errors.Count == 0 ? (new RedirectMap(rules), errors) : (null, errors);
     }
 
-    private static IEnumerable<RedirectError> CrossRuleErrors(List<RedirectRule> rules)
+    private static List<RedirectError> CrossRuleErrors(List<RedirectRule> rules)
     {
+        // A plain method rather than an iterator, so mutation testing can mutate it (Stryker cannot compile some mutants of iterators).
+        var errors = new List<RedirectError>();
         var firstLineBySource = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var rule in rules)
         {
             if (!firstLineBySource.TryAdd(rule.Source.Value, rule.Line))
             {
-                yield return new RedirectError(rule.Line, string.Create(CultureInfo.InvariantCulture, $"source {rule.Source} is already mapped on line {firstLineBySource[rule.Source.Value]}"));
+                errors.Add(new RedirectError(rule.Line, string.Create(CultureInfo.InvariantCulture, $"source {rule.Source} is already mapped on line {firstLineBySource[rule.Source.Value]}")));
             }
         }
 
         foreach (var rule in rules)
         {
-            if (rule.Target.SitePath is not { } targetPath)
+            if (!rule.Target.SitePath.HasValue)
             {
                 continue;
             }
 
+            var targetPath = rule.Target.SitePath.Value;
+
             if (targetPath == rule.Source)
             {
-                yield return new RedirectError(rule.Line, $"source {rule.Source} redirects to itself");
+                errors.Add(new RedirectError(rule.Line, $"source {rule.Source} redirects to itself"));
             }
             else if (firstLineBySource.TryGetValue(targetPath.Value, out var chained))
             {
-                yield return new RedirectError(rule.Line, string.Create(CultureInfo.InvariantCulture, $"target {targetPath} is itself redirected on line {chained}; point this rule at the final page instead"));
+                errors.Add(new RedirectError(rule.Line, string.Create(CultureInfo.InvariantCulture, $"target {targetPath} is itself redirected on line {chained}; point this rule at the final page instead")));
             }
         }
+
+        return errors;
     }
 }
