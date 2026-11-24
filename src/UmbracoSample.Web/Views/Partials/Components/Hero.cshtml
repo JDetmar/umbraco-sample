@@ -1,0 +1,18 @@
+@model UmbracoSample.Web.Components.HeroModel
+<section class="c-hero">
+    <div class="c-hero__body">
+        <h2 class="c-hero__heading">@Model.Heading</h2>
+        @if (Model.Intro is not null)
+        {
+            <p class="c-hero__intro">@Model.Intro</p>
+        }
+        @if (Model.Link is not null)
+        {
+            <p class="c-hero__link">@await Html.PartialAsync("Components/Link", Model.Link)</p>
+        }
+    </div>
+    @if (Model.Image is not null)
+    {
+        <img class="c-hero__image" src="@Model.Image.Url" alt="@Model.Image.Alt" loading="lazy" decoding="async">
+    }
+</section>

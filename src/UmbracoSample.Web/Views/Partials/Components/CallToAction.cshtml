@@ -1,0 +1,9 @@
+@model UmbracoSample.Web.Components.CtaModel
+<section class="c-cta">
+    <h2 class="c-cta__heading">@Model.Heading</h2>
+    @if (Model.Text is not null)
+    {
+        <p class="c-cta__text">@Model.Text</p>
+    }
+    <p class="c-cta__action">@await Html.PartialAsync("Components/Link", Model.Link)</p>
+</section>
