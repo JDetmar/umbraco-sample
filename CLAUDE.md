@@ -29,7 +29,7 @@ Use the Makefile targets; CI runs the same ones (ES-052).
 | Run locally (Aspire: site and SQL Server) | `make run` |
 | Apply formatting | `make format` |
 
-Prerequisites: GNU Make, the exact .NET SDK in `global.json`, Node.js at the exact version in `.nvmrc` (for `make frontend`), Docker or Podman, and gitleaks 8.30.1 (for `make secrets` and `make validate`).
+Prerequisites: GNU Make, the exact .NET SDK in `global.json` (`make bootstrap` restores the pinned local tools, including the Aspire CLI that the AppHost build needs), Node.js at the exact version in `.nvmrc` (for `make frontend`), Docker or Podman, and gitleaks 8.30.1 (for `make secrets` and `make validate`).
 
 `make run` needs one local secret, the admin password for the unattended install:
 

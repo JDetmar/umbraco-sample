@@ -14,9 +14,9 @@ help: ## List targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
 
 bootstrap: restore ## First-time setup: restore tools and packages
-	dotnet tool restore
 
-restore: ## Restore NuGet packages from lock files
+restore: ## Restore local tools (including the pinned Aspire CLI) and NuGet packages from lock files
+	dotnet tool restore
 	dotnet restore $(SLN)
 
 lockfiles-check: restore ## Fail if restore changed or created a lock file (ES-013)
