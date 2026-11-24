@@ -12,7 +12,8 @@ public sealed partial record SiteSettings(
     decimal MonthlyBudget,
     string BudgetContactEmail,
     string Image,
-    bool EnableEdge)
+    bool EnableEdge,
+    string AdminEmail)
 {
     public static SiteSettings From(Config config)
     {
@@ -25,7 +26,8 @@ public sealed partial record SiteSettings(
             MonthlyBudget: decimal.Parse(config.Require("monthlyBudget"), CultureInfo.InvariantCulture),
             BudgetContactEmail: config.Require("budgetContactEmail"),
             Image: config.Require("image"),
-            EnableEdge: bool.Parse(config.Get("enableEdge") ?? "false"));
+            EnableEdge: bool.Parse(config.Get("enableEdge") ?? "false"),
+            AdminEmail: config.Require("adminEmail"));
 
         settings.Validate();
         return settings;
@@ -57,6 +59,11 @@ public sealed partial record SiteSettings(
         if (MonthlyBudget <= 0)
         {
             throw new ArgumentException("monthlyBudget must be positive (ES-047).");
+        }
+
+        if (!AdminEmail.Contains('@', StringComparison.Ordinal))
+        {
+            throw new ArgumentException("adminEmail must be an email address; it is the unattended-install admin login.");
         }
 
         // ES-049: releases are promoted by digest, never by a mutable tag.

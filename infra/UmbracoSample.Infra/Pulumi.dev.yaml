@@ -6,4 +6,5 @@ config:
   umbraco-sample:monthlyBudget: "20"
   umbraco-sample:budgetContactEmail: owner@example.invalid
   umbraco-sample:image: ghcr.io/example/umbraco-sample@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  umbraco-sample:adminEmail: owner@example.invalid
   umbraco-sample:enableEdge: "false"

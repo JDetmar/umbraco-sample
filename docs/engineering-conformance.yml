@@ -211,7 +211,7 @@ deviations:
     compensating_controls: No environment is deployed yet; the site has no media items.
     owner: repository-owner
     opened: 2026-11-24
-    disposition: Before the first deployment, Pulumi generates a per-environment key into Key Vault and the site reads Umbraco:CMS:Imaging:HMACSecretKey from it; Front Door rate limiting covers /media.
+    disposition: "Declared in infra (ADR 0010): the owner sets a per-environment imagingHmacKey Pulumi secret, Pulumi writes it to Key Vault, and the container reads Umbraco:CMS:Imaging:HMACSecretKey as a Key Vault reference (mock test Container_secrets_are_key_vault_references_read_with_the_site_identity). Closes when a deployed environment is verified to reject unsigned resize URLs; Front Door rate limiting covers /media."
 
   - id: DEV-005
     kind: gap
@@ -297,4 +297,4 @@ deviations:
     compensating_controls: The hop stays inside the managed environment's private network; forms are not enabled on a public environment before Phase 5 (threat model 0001, R2).
     owner: repository-owner
     opened: 2026-11-24
-    disposition: "Owner to decide in Phase 5: accept the managed-environment hop as a risk (an owner decision, not an agent one), or enable end-to-end encryption inside the environment (Container Apps peer-to-peer encryption) and record its cost and evidence here."
+    disposition: "Fix declared in infra (ADR 0010): the Container Apps environment enables peer-to-peer encryption, so the ingress-to-container hop is TLS, at no extra charge (mock test The_container_apps_environment_runs_in_the_apps_subnet). Closes when a deployed environment is verified with it enabled."

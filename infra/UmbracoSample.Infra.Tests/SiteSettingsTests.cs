@@ -6,7 +6,7 @@ public sealed class SiteSettingsTests
 {
     private const string Digest = "ghcr.io/example/umbraco-sample@sha256:0000000000000000000000000000000000000000000000000000000000000000";
 
-    private static SiteSettings Valid(string environment = "dev") => new(environment, 0, 3, 20m, "owner@example.invalid", Digest, EnableEdge: false);
+    private static SiteSettings Valid(string environment = "dev") => new(environment, 0, 3, 20m, "owner@example.invalid", Digest, EnableEdge: false, "admin@example.invalid");
 
     [Fact]
     public void Valid_dev_settings_pass() => Should.NotThrow(() => Valid().Validate());
@@ -46,4 +46,10 @@ public sealed class SiteSettingsTests
     [InlineData(-5)]
     public void A_budget_must_be_positive(int amount) =>
         Should.Throw<ArgumentException>(() => (Valid() with { MonthlyBudget = amount }).Validate());
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("admin")]
+    public void The_admin_login_must_be_an_email_address(string email) =>
+        Should.Throw<ArgumentException>(() => (Valid() with { AdminEmail = email }).Validate()).Message.ShouldContain("adminEmail");
 }

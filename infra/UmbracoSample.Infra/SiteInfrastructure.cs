@@ -10,6 +10,8 @@ using Pulumi.AzureNative.Consumption.Inputs;
 using Pulumi.AzureNative.KeyVault;
 using Pulumi.AzureNative.KeyVault.Inputs;
 using Pulumi.AzureNative.ManagedIdentity;
+using Pulumi.AzureNative.Network;
+using Pulumi.AzureNative.Network.Inputs;
 using Pulumi.AzureNative.OperationalInsights;
 using Pulumi.AzureNative.OperationalInsights.Inputs;
 using Pulumi.AzureNative.Resources;
@@ -18,8 +20,12 @@ using Pulumi.AzureNative.Sql.Inputs;
 using Pulumi.AzureNative.Storage;
 using Pulumi.AzureNative.Storage.Inputs;
 using AppSkuName = Pulumi.AzureNative.Sql.Inputs.SkuArgs;
+using KeyVaultSecret = Pulumi.AzureNative.KeyVault.Secret;
+using KeyVaultSecretArgs = Pulumi.AzureNative.KeyVault.SecretArgs;
 using ProbeType = Pulumi.AzureNative.App.Type;
 using SqlPrincipalType = Pulumi.AzureNative.Sql.PrincipalType;
+using SqlVirtualNetworkRule = Pulumi.AzureNative.Sql.VirtualNetworkRule;
+using SqlVirtualNetworkRuleArgs = Pulumi.AzureNative.Sql.VirtualNetworkRuleArgs;
 using StorageAccountArgs = Pulumi.AzureNative.Storage.StorageAccountArgs;
 using StorageKind = Pulumi.AzureNative.Storage.Kind;
 using StorageSkuArgs = Pulumi.AzureNative.Storage.Inputs.SkuArgs;
@@ -39,9 +45,10 @@ public sealed class SiteInfrastructure
     public const string KeyVaultSecretsUser = "4633458b-17de-408a-b874-0445c86b69e6"; // gitleaks:allow public Azure built-in role ID
     public const string MonitoringMetricsPublisher = "3913510d-42f4-4e42-8a64-420c390055eb"; // gitleaks:allow public Azure built-in role ID
 
-    public SiteInfrastructure(SiteSettings settings)
+    public SiteInfrastructure(SiteSettings settings, SiteSecrets secrets)
     {
         ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(secrets);
         settings.Validate();
 
         // Fail closed: the edge (Front Door with WAF and HSTS) is not declared yet, so a stack that needs it cannot deploy without it (DEV-010).
@@ -139,13 +146,31 @@ public sealed class SiteInfrastructure
             Tags = tags,
         });
 
-        // Only Azure services may connect; a private endpoint would cost more than the whole lean target (ADR 0010).
-        _ = new FirewallRule("allow-azure-services", new FirewallRuleArgs
+        // Network: one VNet whose only subnet hosts the Container Apps environment. The subnet has the Microsoft.Sql
+        // service endpoint, and SQL accepts connections from that subnet only: no IP firewall rules, no "allow Azure
+        // services" (ADR 0010). Service endpoints cost nothing; private endpoints are the upgrade if needed.
+        var network = new VirtualNetwork($"{name}-vnet", new Pulumi.AzureNative.Network.VirtualNetworkArgs
+        {
+            ResourceGroupName = group.Name,
+            AddressSpace = new AddressSpaceArgs { AddressPrefixes = { "10.40.0.0/16" } },
+            Tags = tags,
+        });
+
+        var appsSubnet = new Pulumi.AzureNative.Network.Subnet("apps", new Pulumi.AzureNative.Network.SubnetArgs
+        {
+            ResourceGroupName = group.Name,
+            VirtualNetworkName = network.Name,
+            AddressPrefix = "10.40.0.0/23",
+            Delegations = { new DelegationArgs { Name = "container-apps", ServiceName = "Microsoft.App/environments" } },
+            ServiceEndpoints = { new ServiceEndpointPropertiesFormatArgs { Service = "Microsoft.Sql" } },
+        });
+
+        _ = new SqlVirtualNetworkRule("apps-subnet", new SqlVirtualNetworkRuleArgs
         {
             ResourceGroupName = group.Name,
             ServerName = sqlServer.Name,
-            StartIpAddress = "0.0.0.0",
-            EndIpAddress = "0.0.0.0",
+            VirtualNetworkSubnetId = appsSubnet.Id,
+            IgnoreMissingVnetServiceEndpoint = false,
         });
 
         var databaseArgs = new DatabaseArgs
@@ -170,12 +195,25 @@ public sealed class SiteInfrastructure
 
         // The site identity gets exactly the data-plane roles it needs, scoped to the one resource each.
         _ = Grant("media-writer", storage.Id, StorageBlobDataContributor, identity, client);
-        _ = Grant("secrets-reader", vault.Id, KeyVaultSecretsUser, identity, client);
+        var secretsReader = Grant("secrets-reader", vault.Id, KeyVaultSecretsUser, identity, client);
         _ = Grant("telemetry-writer", insights.Id, MonitoringMetricsPublisher, identity, client);
+
+        // Secrets the site needs at first boot. Set by the owner per stack; stored in Key Vault; referenced, never copied,
+        // by the container app (ES-024). The admin password lets the first boot install Umbraco unattended, so the public
+        // installer is never reachable; the HMAC key signs image-processing URLs (DEV-004).
+        var adminPassword = StoreSecret("umbraco-admin-password", vault, group, secrets.AdminPassword);
+        var imagingKey = StoreSecret("umbraco-imaging-hmac-key", vault, group, secrets.ImagingHmacKey);
 
         var environment = new ManagedEnvironment($"{name}-env", new ManagedEnvironmentArgs
         {
             ResourceGroupName = group.Name,
+            VnetConfiguration = new VnetConfigurationArgs { InfrastructureSubnetId = appsSubnet.Id, Internal = false },
+            // TLS on every hop inside the environment, including ingress proxy to site (ES-025; closes DEV-013).
+            PeerTrafficConfiguration = new ManagedEnvironmentPeerTrafficConfigurationArgs
+            {
+                Encryption = new ManagedEnvironmentEncryptionArgs { Enabled = true },
+            },
+            WorkloadProfiles = { new WorkloadProfileArgs { Name = "Consumption", WorkloadProfileType = "Consumption" } },
             AppLogsConfiguration = new AppLogsConfigurationArgs
             {
                 Destination = "log-analytics",
@@ -209,6 +247,11 @@ public sealed class SiteInfrastructure
                     AllowInsecure = false,
                     Transport = IngressTransportMethod.Auto,
                 },
+                Secrets =
+                {
+                    new Pulumi.AzureNative.App.Inputs.SecretArgs { Name = "umbraco-admin-password", KeyVaultUrl = adminPassword.Properties.Apply(p => p.SecretUri), Identity = identity.Id },
+                    new Pulumi.AzureNative.App.Inputs.SecretArgs { Name = "umbraco-imaging-hmac-key", KeyVaultUrl = imagingKey.Properties.Apply(p => p.SecretUri), Identity = identity.Id },
+                },
             },
             Template = new TemplateArgs
             {
@@ -231,6 +274,12 @@ public sealed class SiteInfrastructure
                             },
                             new EnvironmentVarArgs { Name = "ConnectionStrings__umbracoDbDSN_ProviderName", Value = "Microsoft.Data.SqlClient" },
                             new EnvironmentVarArgs { Name = "APPLICATIONINSIGHTS_CONNECTION_STRING", Value = insights.ConnectionString },
+                            new EnvironmentVarArgs { Name = "Umbraco__CMS__Unattended__InstallUnattended", Value = "true" },
+                            new EnvironmentVarArgs { Name = "Umbraco__CMS__Unattended__UpgradeUnattended", Value = "true" },
+                            new EnvironmentVarArgs { Name = "Umbraco__CMS__Unattended__UnattendedUserName", Value = "Site Admin" },
+                            new EnvironmentVarArgs { Name = "Umbraco__CMS__Unattended__UnattendedUserEmail", Value = settings.AdminEmail },
+                            new EnvironmentVarArgs { Name = "Umbraco__CMS__Unattended__UnattendedUserPassword", SecretRef = "umbraco-admin-password" },
+                            new EnvironmentVarArgs { Name = "Umbraco__CMS__Imaging__HMACSecretKey", SecretRef = "umbraco-imaging-hmac-key" },
                         },
                         Probes =
                         {
@@ -242,7 +291,7 @@ public sealed class SiteInfrastructure
                 Scale = new ScaleArgs { MinReplicas = settings.MinReplicas, MaxReplicas = settings.MaxReplicas },
             },
             Tags = tags,
-        });
+        }, new CustomResourceOptions { DependsOn = { secretsReader } });
 
         // ES-047: an alert before the money runs out, at 80% actual and 100% forecast spend.
         _ = new Budget($"{name}-budget", new BudgetArgs
@@ -273,6 +322,15 @@ public sealed class SiteInfrastructure
 
     /// <summary>Storage account names are global, 3-24 lower-case letters and digits.</summary>
     public static string StorageName(string environment) => $"umbsample{environment}media";
+
+    private static KeyVaultSecret StoreSecret(string secretName, Vault vault, ResourceGroup group, Output<string> value) =>
+        new(secretName, new KeyVaultSecretArgs
+        {
+            ResourceGroupName = group.Name,
+            VaultName = vault.Name,
+            SecretName = secretName,
+            Properties = new SecretPropertiesArgs { Value = value },
+        });
 
     private static RoleAssignment Grant(string name, Output<string> scope, string roleId, UserAssignedIdentity identity, Output<GetClientConfigResult> client) =>
         new(name, new RoleAssignmentArgs

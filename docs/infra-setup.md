@@ -6,8 +6,15 @@ These steps need the owner: they create cloud identities, store a secret and cha
 
 1. Create the stacks from `infra/UmbracoSample.Infra`: `pulumi stack init <org>/umbraco-sample/dev` (and `prod` later).
 2. Set the real budget contact, replacing the placeholder: `pulumi config set budgetContactEmail <address> --stack dev`. Keep the committed `Pulumi.dev.yaml` value as the placeholder, or move the value to Pulumi config only.
-3. Set the image once the first image is published: `pulumi config set image ghcr.io/<owner>/umbraco-sample@sha256:<digest> --stack dev`.
-4. Create a Pulumi access token for CI, scoped as narrowly as your plan allows (an organization or team token limited to this project's stacks).
+3. Set the first-boot admin login and the two secrets (encrypted in Pulumi Cloud; Pulumi writes them to Key Vault):
+   ```sh
+   pulumi config set adminEmail <your address> --stack dev
+   pulumi config set --secret umbracoAdminPassword --stack dev   # prompts; a strong password, changed after first sign-in
+   openssl rand -base64 64 | tr -d '\n' | pulumi config set --secret imagingHmacKey --stack dev
+   ```
+   Preview fails until both secrets are set.
+4. Set the image once the first image is published: `pulumi config set image ghcr.io/<owner>/umbraco-sample@sha256:<digest> --stack dev`.
+5. Create a Pulumi access token for CI, scoped as narrowly as your plan allows (an organization or team token limited to this project's stacks).
 
 ## 2. Azure
 
@@ -29,5 +36,4 @@ These steps need the owner: they create cloud identities, store a secret and cha
 ## Before the first `pulumi up`
 
 - Accept ADR 0010, or record the changes you want.
-- Decide the "allow Azure services" SQL firewall rule (ADR 0010, Consequences).
 - Wire the site to Blob storage and Application Insights (ADR 0010, Consequences).

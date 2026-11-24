@@ -16,8 +16,10 @@ flowchart LR
     end
 
     subgraph rg["Resource group per environment (dev, prod)"]
-        subgraph cae["Container Apps environment"]
-            app["Container App: site<br/>Umbraco 17 on .NET 10<br/>image pinned by digest"]
+        subgraph vnet["Virtual network"]
+            subgraph cae["Apps subnet: Container Apps environment<br/>peer-to-peer TLS"]
+                app["Container App: site<br/>Umbraco 17 on .NET 10<br/>image pinned by digest"]
+            end
         end
         id["User-assigned<br/>managed identity"]
         sql[("Azure SQL serverless<br/>Entra-only auth")]
@@ -31,11 +33,13 @@ flowchart LR
 
     visitor -. HTTPS .-> fd
     editor -. HTTPS .-> fd
-    fd -. "HTTPS to ingress;<br/>plain HTTP to container (DEV-013)" .-> app
+    fd -. "HTTPS to ingress,<br/>TLS to container" .-> app
     app -- runs as --> id
+    cae -- "Microsoft.Sql service endpoint;<br/>SQL VNet rule admits only this subnet" --> sql
     id -- "Entra token" --> sql
     id -- "Blob Data Contributor" --> blob
     id -- "Secrets User" --> kv
+    kv -- "admin password, imaging key<br/>(Key Vault references)" --> app
     id -- "Metrics Publisher" --> ai
     app -. "HTTPS, lead form" .-> map
 
