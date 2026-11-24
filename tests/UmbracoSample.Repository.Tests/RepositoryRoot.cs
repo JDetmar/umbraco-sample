@@ -14,6 +14,29 @@ internal static class RepositoryRoot
         return directory ?? throw new InvalidOperationException("Repository root (UmbracoSample.slnx) not found above the test output folder.");
     }
 
+    /// <summary>Paths tracked by Git, relative to the repository root, with forward slashes.</summary>
+    public static IEnumerable<string> TrackedFiles()
+    {
+        var startInfo = new System.Diagnostics.ProcessStartInfo("git", "ls-files -z")
+        {
+            WorkingDirectory = Find().FullName,
+            RedirectStandardOutput = true,
+            UseShellExecute = false,
+        };
+
+        using var git = System.Diagnostics.Process.Start(startInfo)
+            ?? throw new InvalidOperationException("Could not start git.");
+        var output = git.StandardOutput.ReadToEnd();
+
+        // ES-043: a bounded wait; ls-files on this repository takes milliseconds.
+        if (!git.WaitForExit(TimeSpan.FromSeconds(30)) || git.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"git ls-files failed with exit code {git.ExitCode}.");
+        }
+
+        return output.Split('\0', StringSplitOptions.RemoveEmptyEntries);
+    }
+
     public static IEnumerable<FileInfo> Files(string searchPattern) =>
         Find()
             .EnumerateFiles(searchPattern, SearchOption.AllDirectories)

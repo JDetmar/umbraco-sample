@@ -21,7 +21,7 @@ Use the Makefile targets; CI runs the same ones (ES-052).
 | Run locally (Aspire: site and SQL Server) | `make run` |
 | Apply formatting | `make format` |
 
-Prerequisites: the .NET SDK in `global.json`, Docker or Podman, and Node.js 22.
+Prerequisites: GNU Make, the exact .NET SDK in `global.json`, Docker or Podman, and gitleaks 8.30.1 (for `make secrets` and `make validate`).
 
 `make run` needs one local secret, the admin password for the unattended install:
 
@@ -55,7 +55,7 @@ Agents MUST run `make validate` before handing off a change, or record why it co
 
 ## Agent delegation envelope (ES-040, ES-054)
 
-Delegated by the owner on 2026-11-24. Authorization is enforced by GitHub permissions and branch protection, not by this text.
+Delegated by the owner on 2026-11-24. Authorization must be enforced by GitHub permissions and branch protection, not by this text; until branch protection is enabled that enforcement is missing, recorded as DEV-001 in the ledger.
 
 Agents MAY, without asking:
 - Create branches, push commits and open pull requests.
@@ -63,6 +63,11 @@ Agents MAY, without asking:
   1. Every required CI check is green.
   2. A reviewer in a separate agent context, given only the diff, this file and the standard, has reviewed the change, and every finding is fixed or answered in the PR (ES-028: the same agent context is never the sole author and reviewer).
   3. The PR body lists the ES clauses and framework IDs the change touches, with the evidence for each.
+
+Bounds on delegated work (ES-048, ES-054):
+- Blast radius: this repository only. No other repository, cloud subscription, package registry or external service is changed.
+- Every change is a pull request that can be reverted with one revert commit; force-pushes only on the agent's own unmerged branches.
+- An unattended run stops after its stated time budget (8 hours for the first build-out run), and at any point where a step needs owner approval, failing CI cannot be fixed within three attempts, or a finding cannot be resolved without changing scope.
 
 Agents MUST NOT, without the owner's explicit approval:
 - Deploy to any Azure environment or run `pulumi up`.

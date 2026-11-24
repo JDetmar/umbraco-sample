@@ -17,11 +17,12 @@ The reference site needs a mature CMS that supports a component (block) model, k
 
 ## Decision
 
-Umbraco 17 LTS (17.8.x at the time of writing) on .NET 10 LTS. Models Builder runs in `SourceCodeManual` mode so generated models are committed and compiled, and production runs with `Runtime:Mode = Production`.
+Umbraco 17 LTS (17.8.x at the time of writing) on .NET 10 LTS. Models Builder is off (`ModelsMode: Nothing`): views read properties through small hand-written view models per component, so no generated code needs regenerating or checking in CI. Production runs with `Runtime:Mode = Production` and `UpgradeUnattended: false`, so a version upgrade only runs its migrations in a deliberate upgrade release.
 
 ## Consequences
 
 - Block List and Block Grid support the component model (ARC-01).
+- Without Models Builder, property aliases are strings in view models; the content contract tests (TST-05) catch a renamed or removed alias.
 - uSync is needed for schema-in-Git (ARC-03); Umbraco's commercial deploy product is the alternative.
 - Umbraco version upgrades run Umbraco's own database migrations, which are not expand/contract; this is a proposed accepted risk awaiting owner approval in the ledger.
 - Umbraco officially supports SQL Server and SQLite only; production uses Azure SQL.

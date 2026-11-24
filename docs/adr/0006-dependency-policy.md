@@ -16,11 +16,11 @@ Every dependency is a long-term ownership cost and a supply-chain risk. The stan
 
 ## Decision
 
-- `docs/dependencies.md` is the register. A dependency is added only after its entry is approved by the owner.
+- `docs/dependencies.md` is the register. Packages a template adds count as new dependencies too; unregistered ones are removed. A dependency is added only after its entry is approved by the owner.
 - NuGet versions are centrally managed in `Directory.Packages.props`, lock files are committed and CI restores in locked mode. npm uses `package-lock.json` and `npm ci`.
-- The .NET SDK is pinned in `global.json` (`latestPatch`).
+- The .NET SDK is pinned exactly in `global.json` (`rollForward: disable`); CI installs that version.
 - Third-party GitHub Actions are pinned to full commit SHAs with the tag in a comment; tools downloaded in CI are verified against published checksums.
-- Dependabot proposes updates weekly for NuGet, npm and GitHub Actions; `make vuln` fails the build on known-vulnerable packages, including transitive ones.
+- Dependabot proposes updates weekly for NuGet and GitHub Actions, and for npm once the repository has npm packages; `make vuln` fails the build on known-vulnerable packages, including transitive ones.
 - A suppressed vulnerability finding records its rationale and a review or expiry condition in the ledger (ES-016).
 
 ## Consequences

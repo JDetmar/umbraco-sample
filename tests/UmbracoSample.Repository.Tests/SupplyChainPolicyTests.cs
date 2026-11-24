@@ -28,7 +28,13 @@ public sealed partial class SupplyChainPolicyTests
             .Select(file => file.Name)
             .ToList();
 
+        var broad = WorkflowFiles()
+            .Where(file => File.ReadAllLines(file.FullName).Any(line => BroadPermissions().IsMatch(line)))
+            .Select(file => file.Name)
+            .ToList();
+
         missing.ShouldBeEmpty("ES-017: every workflow declares least-privilege top-level permissions.");
+        broad.ShouldBeEmpty("ES-017: write-all and read-all grant more than any job needs; list each permission.");
     }
 
     [Fact]
@@ -45,12 +51,16 @@ public sealed partial class SupplyChainPolicyTests
     [Fact]
     public void Every_project_has_a_committed_lock_file()
     {
+        // Checks what Git tracks, not what is on disk: restore recreates a missing lock file, so a disk check could never fail.
+        var tracked = RepositoryRoot.TrackedFiles().ToHashSet(StringComparer.Ordinal);
+        var root = RepositoryRoot.Find().FullName;
+
         var missing = RepositoryRoot.Files("*.csproj")
-            .Where(file => !File.Exists(Path.Combine(file.DirectoryName!, "packages.lock.json")))
-            .Select(file => file.Name)
+            .Select(file => Path.GetRelativePath(root, Path.Combine(file.DirectoryName!, "packages.lock.json")).Replace('\\', '/'))
+            .Where(lockFile => !tracked.Contains(lockFile))
             .ToList();
 
-        missing.ShouldBeEmpty("ES-013: every project restores from a committed packages.lock.json.");
+        missing.ShouldBeEmpty("ES-013: every project restores from a lock file committed to Git.");
     }
 
     [Fact]
@@ -74,6 +84,9 @@ public sealed partial class SupplyChainPolicyTests
 
     [GeneratedRegex(@"^uses:\s+[\w.-]+/[\w./-]+@[0-9a-f]{40}\s+#\s+\S+")]
     private static partial Regex PinnedUses();
+
+    [GeneratedRegex(@"permissions:\s*(write-all|read-all)")]
+    private static partial Regex BroadPermissions();
 
     [GeneratedRegex(@"<PackageReference\s[^>]*Version\s*=", RegexOptions.IgnoreCase)]
     private static partial Regex InlinePackageVersion();

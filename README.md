@@ -9,7 +9,7 @@ Every requirement in [the engineering rigor framework](docs/engineering-rigor-fr
 
 ## Getting started
 
-Prerequisites: the .NET SDK pinned in `global.json`, Docker (or Podman) and GNU Make.
+Prerequisites: GNU Make, the exact .NET SDK pinned in `global.json`, Docker (or Podman) and gitleaks 8.30.1.
 
 ```sh
 make bootstrap

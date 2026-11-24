@@ -15,19 +15,27 @@ clauses:
   ES-011:
     status: deviation
     obligations:
-      - obligation: Source is version-controlled and releases map to a green mainline revision
+      # "Every release corresponds to a green, identifiable mainline revision" stays unknown until the first release exists.
+      - obligation: Shared mainlines are protected and kept releasable
+        status: deviation
+        deviation: DEV-001
+  ES-012:
+    status: deviation
+    obligations:
+      - obligation: Applicable checks run in an authoritative clean environment before shared merge
         status: compliant
         evidence:
-          - All source is in this repository; no release exists yet.
-      - obligation: Shared mainlines are protected and kept releasable
+          - .github/workflows/ci.yml runs lock-file, format, build, test, secret and vulnerability checks on every pull request; codeql.yml runs static analysis.
+      - obligation: Immediate material-risk checks block the merge event
         status: deviation
         deviation: DEV-001
   ES-013:
     status: compliant
     evidence:
-      - Directory.Packages.props pins every NuGet version; packages.lock.json files are committed; CI restores with RestoreLockedMode.
-      - global.json pins the .NET SDK and the Aspire AppHost SDK.
-      - CI tools are pinned (Actions by commit SHA, gitleaks by version and checksum).
+      - Directory.Packages.props pins every NuGet version; the policy test Package_versions_are_only_set_centrally enforces it.
+      - The policy test Every_project_has_a_committed_lock_file checks lock files against git ls-files; `make lockfiles-check` fails CI when restore changes or creates a lock file.
+      - global.json pins the exact .NET SDK (rollForward disable) and the Aspire AppHost SDK; CI installs that SDK.
+      - CI tools are pinned (Actions by commit SHA, gitleaks by version and SHA-256 checksum).
   ES-015:
     status: compliant
     evidence:
@@ -36,7 +44,7 @@ clauses:
     status: compliant
     evidence:
       - Every third-party action in .github/workflows is pinned to a full commit SHA.
-      - Every workflow declares top-level `permissions` with read-only defaults.
+      - Every workflow declares top-level `permissions` with read-only defaults; the policy tests reject unpinned actions, missing permissions and write-all or read-all.
   ES-019:
     status: compliant
     evidence:
@@ -61,9 +69,15 @@ clauses:
       - CLAUDE.md (and AGENTS.md) are version-controlled and list commands, policies and the agent envelope.
       - The Aspire AppHost provides an isolated local environment with a containerised SQL Server.
   ES-054:
-    status: compliant
-    evidence:
-      - CLAUDE.md "Agent delegation envelope" records the delegated scope, owner, date and exclusions.
+    status: deviation
+    obligations:
+      - obligation: Action-capable agents have an explicitly delegated scope covering actions, resources, blast radius, budgets and approval thresholds
+        status: compliant
+        evidence:
+          - CLAUDE.md "Agent delegation envelope" records the delegated actions, exclusions, blast radius, time budget and stop conditions, delegated by the owner on 2026-11-24.
+      - obligation: Authorization is enforced outside model-generated text
+        status: deviation
+        deviation: DEV-001
   ES-061:
     status: not_applicable
     reason: The repository ships no software that runs on physical devices.
@@ -71,13 +85,15 @@ clauses:
 deviations:
   - id: DEV-001
     kind: gap
-    clauses: [ES-011, ES-012, ES-024]
+    clauses: [ES-011, ES-012, ES-024, ES-054]
     obligations:
       - Shared mainlines are protected and kept releasable
+      - Immediate material-risk checks block the merge event
       - Secret scanning gates shared merge
-    summary: Branch protection with required status checks is not yet enabled on main, so CI failures do not technically block a merge.
-    consequence: A change could reach main without passing the authoritative gate, including the secret scan.
-    compensating_controls: The agent delegation envelope in CLAUDE.md only allows merges with every check green, and the owner reviews history.
+      - Authorization is enforced outside model-generated text
+    summary: Branch protection with required status checks is not yet enabled on main, so neither CI failures nor the agent envelope are technically enforced at merge.
+    consequence: A change could reach main without passing the authoritative gate, including the secret scan, and an agent's merge authority rests on its own adherence to CLAUDE.md.
+    compensating_controls: None technical. Procedurally, every merge so far has a green CI run and an independent reviewer context recorded in the pull request, and the owner can review and revert any merge from the pull request history.
     owner: repository-owner
     opened: 2026-11-24
     disposition: Owner enables branch protection on main requiring the CI checks and a linear history; agents cannot change repository settings.
@@ -107,7 +123,7 @@ deviations:
       - Production schema changes use backward-compatible expand/contract and forward-only corrective migrations
     summary: "PROPOSED, awaiting owner approval: Umbraco version upgrades run Umbraco's own database migrations, which are not expand/contract and cannot be contained by shifting traffic to the previous revision."
     consequence: A failed upgrade may need a database restore rather than a traffic shift, with downtime and possible loss of content edits made since the backup.
-    compensating_controls: Upgrades ship as their own release; a fresh backup is taken immediately before; the upgrade is rehearsed in staging with a restore test; a content freeze covers the upgrade window. Changes to our own content types follow expand/contract through uSync.
+    compensating_controls: Production runs with UpgradeUnattended false, so migrations only run in a deliberate upgrade release; upgrades ship as their own release; a fresh backup is taken immediately before; the upgrade is rehearsed in staging with a restore test; a content freeze covers the upgrade window. Changes to our own content types follow expand/contract through uSync.
     owner: repository-owner
     opened: 2026-11-24
     approver: null
@@ -117,3 +133,16 @@ deviations:
       - A new Umbraco major version.
       - Umbraco adding rollback-safe migrations.
       - A change to the backup or restore procedure.
+
+  - id: DEV-004
+    kind: gap
+    clauses: [ES-024, ES-026]
+    obligations:
+      - Rate, payload and execution limits for public or expensive operations
+      - Secrets remain outside committed source and configuration
+    summary: Image-processing URLs are not signed yet because no per-environment HMAC key is configured, so anyone can request arbitrary resizes.
+    consequence: An attacker could drive expensive image processing and fill the media cache. A key the Umbraco template generated was briefly pushed to a feature branch (commit efedc5b, still reachable by SHA on GitHub); that value is treated as exposed and is never used.
+    compensating_controls: No environment is deployed yet; the site has no media items.
+    owner: repository-owner
+    opened: 2026-11-24
+    disposition: Before the first deployment, Pulumi generates a per-environment key into Key Vault and the site reads Umbraco:CMS:Imaging:HMACSecretKey from it; Front Door rate limiting covers /media.
