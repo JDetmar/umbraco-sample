@@ -69,7 +69,7 @@ clauses:
   ES-019:
     status: compliant
     evidence:
-      - docs/adr/0001 to 0006 record context, alternatives, decision and consequences.
+      - docs/adr/0001 to 0009 and 0011 record context, alternatives, decision and consequences.
   ES-020:
     status: compliant
     evidence:
@@ -234,7 +234,7 @@ deviations:
     obligations:
       - Automated accessibility checks run in the authoritative gate
       - Periodic real keyboard and screen-reader assessment (SHOULD)
-    summary: The e2e job runs axe on every seeded page, but it becomes an authoritative gate only when branch protection requires it (DEV-001), and the Playwright image it runs in awaits owner approval in docs/dependencies.md. No periodic manual keyboard and screen-reader assessment is scheduled.
+    summary: The e2e job runs axe on every seeded page, but it becomes an authoritative gate only when branch protection requires it (DEV-001). No periodic manual keyboard and screen-reader assessment is scheduled.
     consequence: Until the job is required, a pull request could merge with an accessibility failure. Automated rules catch roughly a third to a half of real accessibility problems; the rest need people.
     compensating_controls: The delegation envelope forbids agents merging with a failing check; axe, keyboard journeys and contrast tests run on every pull request.
     owner: repository-owner
