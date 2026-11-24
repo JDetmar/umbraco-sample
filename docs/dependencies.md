@@ -61,7 +61,7 @@ Status key: **Approved** (owner approved 2026-11-24), **Rejected**. New dependen
 | pulumi/actions | Preview on PR, up after merge | Apache-2.0 | | Approved |
 | azure/login | OIDC sign-in, no stored secrets | MIT | | Approved |
 | anchore/syft | SBOM for the container image (ES-049) | Apache-2.0 | | Approved |
-| actions/upload-artifact, download-artifact | Hand the smoke-tested image to the separate publish job, so only that job holds a registry write token (ES-017, ES-049) | MIT | GitHub-maintained | **Proposed: needs owner approval** |
+| actions/upload-artifact, download-artifact | Hand the smoke-tested image to the separate publish job, so only that job holds a registry write token (ES-017, ES-049) | MIT | GitHub-maintained | Approved by the owner on 2026-11-24 (decision in the project thread, recorded in pull request 28) |
 | Dependabot | Update discovery (ES-016) | GitHub built-in | | Approved |
 
 ## Deliberately not used
