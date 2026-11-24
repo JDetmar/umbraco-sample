@@ -20,5 +20,13 @@
     <Content Update="appsettings.Local.json" CopyToPublishDirectory="Never" />
   </ItemGroup>
 
+  <!-- Fixture content and media are synthetic seed data for Development and CI (ES-027). uSync's package targets publish
+       the whole uSync folder, so this runs afterwards and keeps the fixtures out of the publish output and the image. -->
+  <Target Name="KeepFixturesOutOfPublish" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="$([System.String]::new('%(ResolvedFileToPublish.RelativePath)').Replace('\', '/').StartsWith('uSync/v17/Content/fixture-')) Or $([System.String]::new('%(ResolvedFileToPublish.RelativePath)').Replace('\', '/').StartsWith('uSync/v17/Media/fixture-'))" />
+    </ItemGroup>
+  </Target>
+
 
 </Project>

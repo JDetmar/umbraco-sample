@@ -44,6 +44,7 @@ Status key: **Approved** (owner approved 2026-11-24), **Rejected**. New dependen
 | Dependency | Purpose | Licence | Health | Footprint | Security | Exit cost | Status |
 |---|---|---|---|---|---|---|---|
 | Style Dictionary | Design tokens JSON to CSS variables (ARC-05) | Apache-2.0 | Active | Small | Build time only | Low | Approved |
+| HtmlSanitizer (Ganss.Xss) | Server-side allowlist sanitizing of rich-text markup (ES-026, ledger DEV-007) | MIT | Long-running, widely used, single main maintainer, regular releases | Small (AngleSharp) | Its purpose is security; tracks AngleSharp advisories | Low: the sanitizer sits behind Umbraco's IHtmlSanitizer interface | **Proposed: needs owner approval** |
 | Vite | Bundle and minify CSS/JS, bundle-size limits (TST-03) | MIT | Very active | Moderate npm tree | Build time only; lockfile pinned | Low: esbuild directly | Approved |
 
 ## CI tooling (Actions pinned to commit SHAs, least-privilege permissions)

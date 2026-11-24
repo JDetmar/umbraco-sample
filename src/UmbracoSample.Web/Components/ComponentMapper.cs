@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Html;
 
 namespace UmbracoSample.Web.Components;
@@ -22,7 +23,7 @@ public interface IBlockSource
 /// Maps blocks to component models. A block whose required values are missing maps to null and is not rendered,
 /// so a half-filled block never produces broken markup (TST-05 contract: empty, minimal and maximal content).
 /// </summary>
-public static class ComponentMapper
+public static partial class ComponentMapper
 {
     public const string HeroAlias = "heroBlock";
     public const string RichTextAlias = "richTextBlock";
@@ -50,9 +51,13 @@ public static class ComponentMapper
             : null;
 
     private static RichTextModel? RichText(IBlockSource block) =>
-        block.Html("text") is { } html && !string.IsNullOrWhiteSpace(html.ToString())
+        block.Html("text") is { } html && HasVisibleText(html.ToString() ?? string.Empty)
             ? new RichTextModel(html)
             : null;
+
+    /// <summary>An emptied editor leaves markup such as <c>&lt;p&gt;&lt;/p&gt;</c>; that is not content.</summary>
+    internal static bool HasVisibleText(string html) =>
+        !string.IsNullOrWhiteSpace(Tags().Replace(html, string.Empty).Replace("&nbsp;", " ", StringComparison.OrdinalIgnoreCase));
 
     private static CardGridModel? CardGrid(IBlockSource block)
     {
@@ -78,4 +83,7 @@ public static class ComponentMapper
     private static string? Required(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static string? Optional(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    [GeneratedRegex("<[^>]*>")]
+    private static partial Regex Tags();
 }

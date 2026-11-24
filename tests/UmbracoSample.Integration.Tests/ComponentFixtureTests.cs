@@ -58,6 +58,27 @@ public sealed partial class ComponentFixtureTests(SiteFixture site)
     }
 
     [Fact]
+    public async Task Hero_image_renders_with_its_alt_text_and_is_omitted_without_one()
+    {
+        var main = await MainAsync("/fixture-maximal/");
+
+        var images = HeroImage().Matches(main);
+        images.Count.ShouldBe(1, "the hero whose media has no alt text renders without an image");
+        images[0].Value.ShouldContain("alt=\"A synthetic test image of a mountain range at dawn\"");
+        images[0].Value.ShouldContain("src=\"/media/fixtures/hero-with-alt.jpg?");
+        main.ShouldContain("<h2 class=\"c-hero__heading\">Hero whose image has no alt text</h2>");
+    }
+
+    [Fact]
+    public async Task Text_fields_are_html_encoded()
+    {
+        var main = await MainAsync("/fixture-maximal/");
+
+        main.ShouldContain("Encoding check: Tom &amp; &quot;Jerry&quot; &lt;script&gt;alert(1)&lt;/script&gt;");
+        main.ShouldNotContain("<script>alert(1)</script>");
+    }
+
+    [Fact]
     public async Task Links_that_open_a_new_tab_say_so_and_cannot_reach_back()
     {
         var main = await MainAsync("/fixture-maximal/");
@@ -102,6 +123,9 @@ public sealed partial class ComponentFixtureTests(SiteFixture site)
 
     [GeneratedRegex("<h([1-6])[\\s>]")]
     private static partial Regex HeadingTag();
+
+    [GeneratedRegex("<img class=\"c-hero__image\"[^>]*>")]
+    private static partial Regex HeroImage();
 
     [GeneratedRegex("<a [^>]*target=\"_blank\"[^>]*>.*?</a>", RegexOptions.Singleline)]
     private static partial Regex NewTabLink();

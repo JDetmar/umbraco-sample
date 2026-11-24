@@ -10,3 +10,10 @@ condition = "AND"
 paths = ['''(^|/)uSync/v\d+/.*\.config$''']
 regexTarget = "line"
 regexes = ['''Key="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"''']
+
+[[allowlists]]
+description = "uSync item identifiers in JSON values (block keys, element type keys): a secret that is exactly a GUID in a uSync config file is an identifier"
+condition = "AND"
+paths = ['''(^|/)uSync/v\d+/.*\.config$''']
+regexTarget = "secret"
+regexes = ['''^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$''']

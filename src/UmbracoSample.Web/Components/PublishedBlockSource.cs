@@ -7,7 +7,7 @@ using Umbraco.Cms.Core.Strings;
 namespace UmbracoSample.Web.Components;
 
 /// <summary>Reads block values from published Umbraco content. Covered by the integration tests against the fixtures.</summary>
-public sealed class PublishedBlockSource(IPublishedElement element) : IBlockSource
+public sealed partial class PublishedBlockSource(IPublishedElement element, ILogger logger) : IBlockSource
 {
     /// <summary>Hero images are requested at this width; ImageSharp resizes and caches them.</summary>
     public const int ImageWidth = 1600;
@@ -28,7 +28,18 @@ public sealed class PublishedBlockSource(IPublishedElement element) : IBlockSour
             _ => null,
         };
 
-        return link is null ? null : LinkModel.TryCreate(link.Name, link.Url, link.Target);
+        if (link is null)
+        {
+            return null;
+        }
+
+        var model = LinkModel.TryCreate(link.Name, link.Url, link.Target);
+        if (model is null)
+        {
+            LogRejectedLink(logger, element.Key, propertyAlias);
+        }
+
+        return model;
     }
 
     public ImageModel? Image(string propertyAlias)
@@ -47,15 +58,28 @@ public sealed class PublishedBlockSource(IPublishedElement element) : IBlockSour
 
         var url = media.GetCropUrl(width: ImageWidth) ?? media.Url();
         var alt = media.Content.GetProperty("altText")?.GetValue() as string;
-        return ImageModel.TryCreate(url, alt);
+        var image = ImageModel.TryCreate(url, alt);
+        if (image is null)
+        {
+            LogImageWithoutAltText(logger, element.Key, media.Content.Key);
+        }
+
+        return image;
     }
 
     public IReadOnlyList<IBlockSource> Blocks(string propertyAlias) =>
         Value(propertyAlias) is BlockListModel blocks
-            ? [.. blocks.Select(item => new PublishedBlockSource(item.Content))]
+            ? [.. blocks.Select(item => new PublishedBlockSource(item.Content, logger))]
             : [];
 
     private object? Value(string propertyAlias) => element.GetProperty(propertyAlias)?.GetValue();
+
+    // Keys and aliases only, never URLs or content (ES-025).
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Dropped the link in {PropertyAlias} on block {BlockKey}: its URL is not an allowed scheme or site-relative path.")]
+    private static partial void LogRejectedLink(ILogger logger, Guid blockKey, string propertyAlias);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Did not render image {MediaKey} on block {BlockKey}: the media item has no alt text.")]
+    private static partial void LogImageWithoutAltText(ILogger logger, Guid blockKey, Guid mediaKey);
 }
 
 /// <summary>Builds the component models for a page's "blocks" property.</summary>
@@ -75,7 +99,7 @@ public sealed partial class PageComponents(ILogger<PageComponents> logger)
         var models = new List<IComponentModel>(blocks.Count);
         foreach (var block in blocks)
         {
-            if (ComponentMapper.Map(new PublishedBlockSource(block.Content)) is { } model)
+            if (ComponentMapper.Map(new PublishedBlockSource(block.Content, logger)) is { } model)
             {
                 models.Add(model);
             }

@@ -173,3 +173,29 @@ deviations:
     owner: repository-owner
     opened: 2026-11-24
     disposition: Before the first deployment, add an ADR for schema changes (expand in one release, contract in a later one) and a repository test that fails when a uSync diff removes a property while views or view models still change in the same pull request, or decide with the owner to disable deletes during startup import.
+
+  - id: DEV-007
+    kind: gap
+    clauses: [ES-026, ES-035]
+    obligations:
+      - Untrusted or semi-trusted input is validated or encoded at the boundary where it is rendered
+      - Content meets the accessibility baseline
+    summary: Rich-text markup is rendered as stored. The restricted editor offers no images, source editing, inline styles, or headings other than h2 and h3, but markup saved through the Management API or pasted in is not sanitized server-side, so it can carry any tag, attribute or link scheme, and any heading level.
+    consequence: A back-office user (or a compromised back-office account) could store script, unsafe links or a broken heading outline that every visitor receives.
+    compensating_controls: Only authenticated back-office users can save content; links outside rich text go through the LinkModel scheme allowlist; text fields are HTML-encoded (integration test Text_fields_are_html_encoded).
+    owner: repository-owner
+    opened: 2026-11-24
+    disposition: "Proposed for owner approval: register a server-side IHtmlSanitizer built on HtmlSanitizer (Ganss.Xss, MIT) with a tag, attribute and URL-scheme allowlist that also maps headings to h2/h3. Added to docs/dependencies.md as Proposed. Reviewed with the Phase 4 threat model (ES-023)."
+
+  - id: DEV-008
+    kind: gap
+    clauses: [ES-036]
+    obligations:
+      - Automated accessibility checks run in the authoritative gate
+    summary: Components ship with tested heading-structure, alt-text and new-tab rules, but no automated accessibility scan (axe) runs in CI yet.
+    consequence: Contrast, landmark, name/role/value and keyboard problems in rendered pages are not caught by the gate.
+    compensating_controls: Integration tests assert one h1, no skipped heading levels, alt text on rendered images and announced new-tab links on every fixture page.
+    owner: repository-owner
+    opened: 2026-11-24
+    disposition: Phase 3 adds Playwright with @axe-core/playwright against the fixture pages as a required CI check, then this gap closes.
+

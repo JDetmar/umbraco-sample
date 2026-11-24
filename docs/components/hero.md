@@ -11,4 +11,6 @@ A page-opening banner. Element type `heroBlock`, view `Views/Partials/Components
 
 **Not rendered when** the heading is empty.
 
-**Fixtures:** the minimal fixture has the heading only. The maximal fixture adds a long heading, an introduction and a new-tab link. The fixtures have no image, because uSync does not carry media files. Image rendering is covered by the `ImageModel` rule tests.
+**Fixtures:** the minimal fixture has the heading only. The maximal fixture adds a long heading, an introduction, an image with alt text and a new-tab link, followed by a second hero whose image has no alt text and so renders without it.
+
+The image is not lazy-loaded, because a hero is usually above the fold.

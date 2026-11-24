@@ -63,9 +63,12 @@ public sealed class ComponentContractTests
         text.Html.ToString().ShouldBe(markup);
     }
 
-    [Fact]
-    public void Rich_text_with_only_whitespace_is_not_rendered() =>
-        ComponentMapper.Map(new FakeBlockSource(ComponentMapper.RichTextAlias).With("text", "  ")).ShouldBeNull();
+    [Theory]
+    [InlineData("  ")]
+    [InlineData("<p></p>")]
+    [InlineData("<p>&nbsp;</p>\n<p> </p>")]
+    public void Rich_text_without_visible_text_is_not_rendered(string markup) =>
+        ComponentMapper.Map(new FakeBlockSource(ComponentMapper.RichTextAlias).With("text", markup)).ShouldBeNull();
 
     [Fact]
     public void Card_grid_minimal_has_one_card_and_level_two_card_titles()

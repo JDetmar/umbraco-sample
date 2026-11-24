@@ -47,6 +47,9 @@ public sealed record LinkModel(string Text, string Url, bool OpensInNewTab)
 {
     private static readonly string[] AllowedSchemes = [Uri.UriSchemeHttp, Uri.UriSchemeHttps, Uri.UriSchemeMailto, "tel"];
 
+    // Relative URLs are resolved against this host; if the result leaves it, the URL was not really site-relative.
+    private static readonly Uri SentinelBase = new("https://site.invalid/");
+
     /// <summary>
     /// Returns null when there is no usable URL. Only http, https, mailto and tel URLs and site-relative paths are allowed,
     /// so a pasted <c>javascript:</c> or <c>data:</c> URL never reaches a page (ES-026).
@@ -59,11 +62,15 @@ public sealed record LinkModel(string Text, string Url, bool OpensInNewTab)
         }
 
         url = url.Trim();
-        var isRelative = (url.StartsWith('/') && !url.StartsWith("//", StringComparison.Ordinal)) || url.StartsWith('#') || url.StartsWith('?');
-        var isAllowedAbsolute = Uri.TryCreate(url, UriKind.Absolute, out var absolute)
-            && AllowedSchemes.Contains(absolute.Scheme, StringComparer.OrdinalIgnoreCase);
 
-        if (!isRelative && !isAllowedAbsolute)
+        // Browsers drop tabs and newlines and read "\" as "/", which turns "/\evil.example" into "//evil.example".
+        // No legitimate link needs them, so any such URL is rejected outright.
+        if (url.Any(c => char.IsControl(c) || char.IsWhiteSpace(c) || c == '\\'))
+        {
+            return null;
+        }
+
+        if (!IsSiteRelative(url) && !IsAllowedAbsolute(url))
         {
             return null;
         }
@@ -71,6 +78,17 @@ public sealed record LinkModel(string Text, string Url, bool OpensInNewTab)
         var label = string.IsNullOrWhiteSpace(text) ? url : text.Trim();
         return new LinkModel(label, url, string.Equals(target, "_blank", StringComparison.OrdinalIgnoreCase));
     }
+
+    private static bool IsSiteRelative(string url) =>
+        (url.StartsWith('/') || url.StartsWith('#') || url.StartsWith('?'))
+        && Uri.TryCreate(SentinelBase, url, out var resolved)
+        && resolved.Host == SentinelBase.Host;
+
+    private static bool IsAllowedAbsolute(string url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var absolute)
+        && AllowedSchemes.Contains(absolute.Scheme, StringComparer.OrdinalIgnoreCase)
+        && (absolute.Scheme is "mailto" or "tel" || !string.IsNullOrEmpty(absolute.Host))
+        && !url.StartsWith('/');
 }
 
 /// <summary>An image with the alt text that makes it accessible.</summary>

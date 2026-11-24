@@ -13,6 +13,7 @@
     </div>
     @if (Model.Image is not null)
     {
-        <img class="c-hero__image" src="@Model.Image.Url" alt="@Model.Image.Alt" loading="lazy" decoding="async">
+        @* Not lazy-loaded: a hero is usually above the fold, and lazy loading would delay the largest paint. *@
+        <img class="c-hero__image" src="@Model.Image.Url" alt="@Model.Image.Alt" decoding="async">
     }
 </section>

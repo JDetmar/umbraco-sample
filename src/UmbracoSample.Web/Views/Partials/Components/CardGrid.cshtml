@@ -1,7 +1,4 @@
 @model UmbracoSample.Web.Components.CardGridModel
-@{
-    var titleTag = $"h{Model.CardHeadingLevel}";
-}
 <section class="c-card-grid">
     @if (Model.Heading is not null)
     {
@@ -11,17 +8,14 @@
         @foreach (var card in Model.Cards)
         {
             <li class="c-card">
-                @* The tag is one of h2/h3 from CardHeadingLevel, never content. *@
-                @Html.Raw($"<{titleTag} class=\"c-card__title\">")
-                @if (card.Link is not null)
+                @if (Model.CardHeadingLevel == 2)
                 {
-                    @await Html.PartialAsync("Components/Link", card.Link with { Text = card.Title })
+                    <h2 class="c-card__title">@await Html.PartialAsync("Components/CardTitle", card)</h2>
                 }
                 else
                 {
-                    @card.Title
+                    <h3 class="c-card__title">@await Html.PartialAsync("Components/CardTitle", card)</h3>
                 }
-                @Html.Raw($"</{titleTag}>")
                 @if (card.Text is not null)
                 {
                     <p class="c-card__text">@card.Text</p>
