@@ -1,0 +1,49 @@
+using Shouldly;
+
+namespace UmbracoSample.Infra.Tests;
+
+public sealed class SiteSettingsTests
+{
+    private const string Digest = "ghcr.io/example/umbraco-sample@sha256:0000000000000000000000000000000000000000000000000000000000000000";
+
+    private static SiteSettings Valid(string environment = "dev") => new(environment, 0, 3, 20m, "owner@example.invalid", Digest, EnableEdge: false);
+
+    [Fact]
+    public void Valid_dev_settings_pass() => Should.NotThrow(() => Valid().Validate());
+
+    [Theory]
+    [InlineData("ghcr.io/example/umbraco-sample:latest")]
+    [InlineData("ghcr.io/example/umbraco-sample:1.0.0")]
+    [InlineData("umbraco-sample@sha256:00")]
+    [InlineData("ghcr.io/example/umbraco-sample@sha256:ZZ00000000000000000000000000000000000000000000000000000000000000")]
+    public void A_mutable_or_malformed_image_reference_is_rejected(string image) =>
+        Should.Throw<ArgumentException>(() => (Valid() with { Image = image }).Validate()).Message.ShouldContain("digest");
+
+    [Theory]
+    [InlineData("test")]
+    [InlineData("")]
+    [InlineData("Prod")]
+    public void Only_known_environments_are_accepted(string environment) =>
+        Should.Throw<ArgumentException>(() => Valid(environment).Validate());
+
+    [Theory]
+    [InlineData(-1, 3)]
+    [InlineData(4, 3)]
+    [InlineData(0, 0)]
+    public void Replica_bounds_must_be_consistent(int min, int max) =>
+        Should.Throw<ArgumentException>(() => (Valid() with { MinReplicas = min, MaxReplicas = max }).Validate());
+
+    [Fact]
+    public void Prod_keeps_a_warm_replica() =>
+        Should.Throw<ArgumentException>(() => (Valid("prod") with { MinReplicas = 0, EnableEdge = true }).Validate()).Message.ShouldContain("warm");
+
+    [Fact]
+    public void Prod_must_sit_behind_the_edge() =>
+        Should.Throw<ArgumentException>(() => (Valid("prod") with { MinReplicas = 1 }).Validate()).Message.ShouldContain("edge");
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    public void A_budget_must_be_positive(int amount) =>
+        Should.Throw<ArgumentException>(() => (Valid() with { MonthlyBudget = amount }).Validate());
+}

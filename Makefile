@@ -8,7 +8,7 @@ SLN := UmbracoSample.slnx
 CONFIG ?= Release
 GITLEAKS ?= gitleaks
 
-.PHONY: help bootstrap restore lockfiles-check build format format-check frontend frontend-test frontend-audit test test-integration image smoke validate secrets vuln run clean
+.PHONY: help bootstrap restore lockfiles-check build format format-check frontend frontend-test frontend-audit test test-integration image smoke validate secrets vuln run clean infra-test infra-preview
 
 help: ## List targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -54,6 +54,17 @@ test-integration: ## Integration tests: starts the real Aspire stack (needs Dock
 
 image: frontend ## Build the site container image as umbraco-sample:local
 	docker build -f src/UmbracoSample.Web/Dockerfile --build-arg SOURCE_REVISION="$$(git rev-parse HEAD)" -t umbraco-sample:local .
+
+INFRA_SLN := infra/UmbracoSample.Infra.slnx
+
+infra-test: ## Infrastructure: locked restore, format check, build and Pulumi mock tests (no Azure account needed)
+	dotnet restore $(INFRA_SLN) --locked-mode
+	dotnet format $(INFRA_SLN) --verify-no-changes --no-restore
+	dotnet build $(INFRA_SLN) -c $(CONFIG) --no-restore
+	dotnet test --project infra/UmbracoSample.Infra.Tests -c $(CONFIG) --no-build
+
+infra-preview: ## Pulumi preview of a stack: make infra-preview STACK=dev (needs Pulumi Cloud and Azure sign-in; never runs `up`)
+	cd infra/UmbracoSample.Infra && pulumi preview --stack "$(STACK)" --diff --non-interactive
 
 smoke: ## Smoke-test a running site: make smoke URL=https://host
 	scripts/smoke.sh "$(URL)"

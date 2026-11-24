@@ -1,0 +1,13 @@
+<Project>
+  <!-- Infrastructure packages are pinned here, separate from the site, so the site's build never restores the large Azure provider. -->
+  <Import Project="..\Directory.Packages.props" />
+  <PropertyGroup>
+    <!-- Pulumi 3.118.0 references OpenTelemetry 1.9.0, which has moderate advisories (NU1902). Pin the transitive packages to the patched versions the site already uses. -->
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+  <ItemGroup Label="Infrastructure">
+    <PackageVersion Include="Pulumi" Version="3.118.0" />
+    <PackageVersion Include="Pulumi.AzureNative" Version="3.30.0" />
+    <PackageVersion Include="OpenTelemetry.Api" Version="1.17.0" />
+  </ItemGroup>
+</Project>

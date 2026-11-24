@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="UmbracoSample.Infra/UmbracoSample.Infra.csproj" />
+  <Project Path="UmbracoSample.Infra.Tests/UmbracoSample.Infra.Tests.csproj" />
+</Solution>

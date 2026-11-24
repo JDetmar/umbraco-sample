@@ -24,6 +24,8 @@ Use the Makefile targets; CI runs the same ones (ES-052).
 | Smoke-test a running site | `make smoke URL=<base url>` |
 | Run locally (Aspire: site and SQL Server) | `make run` |
 | Apply formatting | `make format` |
+| Infrastructure build and Pulumi mock tests (no cloud account) | `make infra-test` |
+| Preview a stack (owner sign-in to Pulumi Cloud and Azure; never `up`) | `make infra-preview STACK=dev` |
 
 Prerequisites: GNU Make, the exact .NET SDK in `global.json`, Node.js at the exact version in `.nvmrc` (for `make frontend`), Docker or Podman, and gitleaks 8.30.1 (for `make secrets` and `make validate`).
 
@@ -49,6 +51,7 @@ Agents MUST run `make validate` before handing off a change, or record why it co
 | `tests/UmbracoSample.Web.Tests` | Fast unit and component contract tests |
 | `tests/UmbracoSample.Integration.Tests` | Tests against the real stack through Aspire (`Category=Integration`) |
 | `frontend/` | Design tokens (`tokens/`), stylesheet sources and the build (ADR 0007); output goes to `wwwroot/dist`, never committed |
+| `infra/` | Pulumi (C#) project and its mock tests (ADR 0010); owner setup in `docs/infra-setup.md` |
 | `scripts/` | Operational scripts, such as the post-deployment smoke test |
 | `docs/components/` | One page per component: fields, rules, fixtures and tests |
 | `docs/adr/` | Architecture decision records (ES-019) |

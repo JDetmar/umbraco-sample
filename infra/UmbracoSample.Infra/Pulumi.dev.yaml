@@ -1,0 +1,9 @@
+# Dev: scales to zero, smallest SKUs, no edge. Secrets are never stored here; they come from Pulumi Cloud config secrets.
+config:
+  azure-native:location: uksouth
+  umbraco-sample:environment: dev
+  umbraco-sample:minReplicas: "0"
+  umbraco-sample:monthlyBudget: "20"
+  umbraco-sample:budgetContactEmail: owner@example.invalid
+  umbraco-sample:image: ghcr.io/example/umbraco-sample@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  umbraco-sample:enableEdge: "false"
