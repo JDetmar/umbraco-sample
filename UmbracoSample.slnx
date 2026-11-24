@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/UmbracoSample.AppHost/UmbracoSample.AppHost.csproj" />
+    <Project Path="src/UmbracoSample.ServiceDefaults/UmbracoSample.ServiceDefaults.csproj" />
+    <Project Path="src/UmbracoSample.Web/UmbracoSample.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/UmbracoSample.Repository.Tests/UmbracoSample.Repository.Tests.csproj" />
+  </Folder>
+</Solution>

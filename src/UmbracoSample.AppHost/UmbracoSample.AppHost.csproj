@@ -1,0 +1,19 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.6.5">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- Use the NuGet-delivered DCP and dashboard so no separate Aspire CLI install is needed (ES-052). -->
+    <AspireUseCliBundle>false</AspireUseCliBundle>
+    <NoWarn>$(NoWarn);ASPIRE010</NoWarn>
+    <UserSecretsId>c227806e-519e-4278-83eb-dc7810c6cb63</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.SqlServer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\UmbracoSample.Web\UmbracoSample.Web.csproj" />
+  </ItemGroup>
+
+</Project>

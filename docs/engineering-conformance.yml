@@ -1,0 +1,119 @@
+# Engineering conformance ledger.
+#
+# Records evidence and open deviations against the engineering standard (ES-038); it never changes a requirement.
+# - Every clause starts unknown. A clause left out of `clauses` is unknown, and unknown is never conformance.
+# - Mark a clause compliant only with evidence: a check that runs, a test, a document, or a recorded review.
+# - Record a deviation as soon as it is known, with an owner and a target disposition.
+# - Agents never approve an exception, accepted risk or emergency: `approver` and `approval_ref` are filled by the owner.
+
+standard_version: "6.2"
+repository: umbraco-sample
+owner: repository-owner
+updated: 2026-11-24
+
+clauses:
+  ES-011:
+    status: deviation
+    obligations:
+      - obligation: Source is version-controlled and releases map to a green mainline revision
+        status: compliant
+        evidence:
+          - All source is in this repository; no release exists yet.
+      - obligation: Shared mainlines are protected and kept releasable
+        status: deviation
+        deviation: DEV-001
+  ES-013:
+    status: compliant
+    evidence:
+      - Directory.Packages.props pins every NuGet version; packages.lock.json files are committed; CI restores with RestoreLockedMode.
+      - global.json pins the .NET SDK and the Aspire AppHost SDK.
+      - CI tools are pinned (Actions by commit SHA, gitleaks by version and checksum).
+  ES-015:
+    status: compliant
+    evidence:
+      - docs/dependencies.md records health, footprint, licence, security and exit cost for each dependency; owner approved on 2026-11-24.
+  ES-017:
+    status: compliant
+    evidence:
+      - Every third-party action in .github/workflows is pinned to a full commit SHA.
+      - Every workflow declares top-level `permissions` with read-only defaults.
+  ES-019:
+    status: compliant
+    evidence:
+      - docs/adr/0001 to 0006 record context, alternatives, decision and consequences.
+  ES-024:
+    status: deviation
+    obligations:
+      - obligation: Secrets stay out of committed source, configuration, logs and CI definitions
+        status: compliant
+        evidence:
+          - The local admin password is an Aspire secret parameter supplied through user secrets.
+      - obligation: Secret scanning gates shared merge
+        status: deviation
+        deviation: DEV-001
+  ES-052:
+    status: compliant
+    evidence:
+      - Makefile documents bootstrap, build, test, validate and run; CI calls the same targets.
+  ES-053:
+    status: compliant
+    evidence:
+      - CLAUDE.md (and AGENTS.md) are version-controlled and list commands, policies and the agent envelope.
+      - The Aspire AppHost provides an isolated local environment with a containerised SQL Server.
+  ES-054:
+    status: compliant
+    evidence:
+      - CLAUDE.md "Agent delegation envelope" records the delegated scope, owner, date and exclusions.
+  ES-061:
+    status: not_applicable
+    reason: The repository ships no software that runs on physical devices.
+
+deviations:
+  - id: DEV-001
+    kind: gap
+    clauses: [ES-011, ES-012, ES-024]
+    obligations:
+      - Shared mainlines are protected and kept releasable
+      - Secret scanning gates shared merge
+    summary: Branch protection with required status checks is not yet enabled on main, so CI failures do not technically block a merge.
+    consequence: A change could reach main without passing the authoritative gate, including the secret scan.
+    compensating_controls: The agent delegation envelope in CLAUDE.md only allows merges with every check green, and the owner reviews history.
+    owner: repository-owner
+    opened: 2026-11-24
+    disposition: Owner enables branch protection on main requiring the CI checks and a linear history; agents cannot change repository settings.
+
+  - id: DEV-002
+    kind: accepted_risk
+    clauses: [ES-027]
+    obligations:
+      - Raw production data MUST NOT enter development, test, CI, demos, or unmanaged analysis
+    summary: "PROPOSED, awaiting owner approval: published, public page content may be copied from production to staging to test against real pages."
+    consequence: Staging holds a copy of production page content; a mistake in scrubbing could also copy members, users or form data.
+    compensating_controls: Only published content nodes and media are copied; member, user, form and audit tables are excluded and verified empty after copy; dev and CI keep synthetic seed content only.
+    owner: repository-owner
+    opened: 2026-11-24
+    approver: null
+    approval_ref: null
+    threat_model_ref: docs/plan.md, "Where CMS practice departs from the standard", item 1 (to be replaced by a threat model before the copy job exists)
+    review_triggers:
+      - Any member, user or personal data stored in the CMS.
+      - A change to the copy job's scope.
+      - Staging becoming reachable without authentication.
+
+  - id: DEV-003
+    kind: accepted_risk
+    clauses: [ES-014]
+    obligations:
+      - Production schema changes use backward-compatible expand/contract and forward-only corrective migrations
+    summary: "PROPOSED, awaiting owner approval: Umbraco version upgrades run Umbraco's own database migrations, which are not expand/contract and cannot be contained by shifting traffic to the previous revision."
+    consequence: A failed upgrade may need a database restore rather than a traffic shift, with downtime and possible loss of content edits made since the backup.
+    compensating_controls: Upgrades ship as their own release; a fresh backup is taken immediately before; the upgrade is rehearsed in staging with a restore test; a content freeze covers the upgrade window. Changes to our own content types follow expand/contract through uSync.
+    owner: repository-owner
+    opened: 2026-11-24
+    approver: null
+    approval_ref: null
+    threat_model_ref: docs/adr/0001-umbraco-17-lts.md
+    review_triggers:
+      - A new Umbraco major version.
+      - Umbraco adding rollback-safe migrations.
+      - A change to the backup or restore procedure.

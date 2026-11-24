@@ -29,12 +29,12 @@ Status key: **Approved** (owner approved 2026-11-24), **Rejected**. New dependen
 
 | Dependency | Purpose | Licence | Health | Footprint | Security | Exit cost | Status |
 |---|---|---|---|---|---|---|---|
-| xUnit v3 | Unit and integration test runner | Apache-2.0 | Active, .NET Foundation | Small | n/a | Low | Approved |
+| xUnit v3 (`xunit.v3.mtp-v2`) | Unit and integration test runner on Microsoft.Testing.Platform | Apache-2.0 | Active, .NET Foundation | Small | n/a | Low | Approved |
 | Shouldly | Readable assertions | BSD-3 | Active | Small | n/a | Low | Approved (FluentAssertions rejected: v8 moved to a commercial licence) |
 | CsCheck | Property-based tests for redirect rules and form validation (ES-002, ES-008) | Apache-2.0 | Active, small maintainer team | Tiny | n/a | Low | Approved |
 | Stryker.NET | Mutation testing on critical domain logic, scheduled lane (ES-002) | Apache-2.0 | Active | Dotnet tool, CI only | n/a | Low | Approved |
 | WireMock.Net | MAP stub with documented fidelity limits (TST-07, ES-006) | Apache-2.0 | Active | Small | Local only | Low | Approved |
-| NetArchTest.Rules | Executable layering rule: domain never references Umbraco (ES-018) | MIT | Low release activity; ArchUnitNET is the fallback | Tiny | n/a | Low: a few tests | Approved (watch health) |
+| NetArchTest.Rules | Executable layering rule: domain never references Umbraco (ES-018) | MIT | Last release 1.3.2 in May 2021; works, but effectively unmaintained. ArchUnitNET is the fallback | Tiny | n/a | Low: a few tests | Approved (watch health) |
 | @playwright/test | End-to-end tests and visual regression (TST-11, TST-12) | Apache-2.0 | Microsoft, active | Downloads browsers in CI | n/a | Medium: test rewrite | Approved |
 | @axe-core/playwright | Accessibility scans in the gate (TST-13, ES-036) | MPL-2.0 | Deque, active | Small | n/a | Low | Approved |
 | @lhci/cli (Lighthouse CI) | Performance budgets (TST-14) | Apache-2.0 | Google, moderate activity | Moderate | n/a | Low | Approved |

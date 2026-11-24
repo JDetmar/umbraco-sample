@@ -1,0 +1,33 @@
+# Build output
+bin/
+obj/
+artifacts/
+TestResults/
+*.user
+.vs/
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Umbraco runtime state (never committed; schema lives in uSync files)
+src/UmbracoSample.Web/umbraco/Data/
+src/UmbracoSample.Web/umbraco/Logs/
+src/UmbracoSample.Web/umbraco/mediacache/
+src/UmbracoSample.Web/umbraco/models/
+src/UmbracoSample.Web/wwwroot/media/
+src/UmbracoSample.Web/wwwroot/umbraco/
+src/UmbracoSample.Web/appsettings-schema.*.json
+src/UmbracoSample.Web/appsettings-schema.json
+src/UmbracoSample.Web/umbraco-package-schema.json
+appsettings.Local.json
+
+# Node
+node_modules/
+playwright-report/
+test-results/
+.lighthouseci/
+
+# Secrets and local environment
+.env
+*.pfx
+*.key

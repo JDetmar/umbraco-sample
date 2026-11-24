@@ -7,4 +7,16 @@ Every requirement in [the engineering rigor framework](docs/engineering-rigor-fr
 - [Build-out plan](docs/plan.md)
 - [Dependency register](docs/dependencies.md)
 
-Getting started instructions arrive with the first code.
+## Getting started
+
+Prerequisites: the .NET SDK pinned in `global.json`, Docker (or Podman) and GNU Make.
+
+```sh
+make bootstrap
+dotnet user-secrets --project src/UmbracoSample.AppHost set "Parameters:umbraco-admin-password" "<a strong local password>"
+make run
+```
+
+`make run` starts the Aspire dashboard, a SQL Server container and the site, and installs Umbraco unattended with the admin user `admin@example.com`. `make validate` runs the same fast checks as CI.
+
+See [CLAUDE.md](CLAUDE.md) for every command and the repository rules, and [docs/adr](docs/adr) for the decisions behind the stack.
