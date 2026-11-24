@@ -1,0 +1,3 @@
+source,target,kind
+/A,/x,permanent
+/a,/y,temporary

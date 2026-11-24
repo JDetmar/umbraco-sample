@@ -42,9 +42,12 @@ Agents MUST run `make validate` before handing off a change, or record why it co
 | `src/UmbracoSample.Web` | The Umbraco site |
 | `src/UmbracoSample.AppHost` | Aspire orchestration for local development and integration tests |
 | `src/UmbracoSample.ServiceDefaults` | Telemetry, health checks and resilience shared by services |
+| `src/UmbracoSample.Domain` | Pure domain logic with no framework or package references (ADR 0009), such as the redirect map parser |
+| `src/UmbracoSample.Web/redirects.csv` | The redirect map: `source,target,kind`, parsed at startup (ADR 0009) |
 | `src/UmbracoSample.Web/Components` | Component view models and the mapping from blocks; views in `Views/Partials/Components` |
 | `src/UmbracoSample.Web/uSync/v17` | Schema (and synthetic seed content) as code, imported on first boot and checked for drift |
 | `tests/UmbracoSample.Repository.Tests` | Fast policy tests over the repository itself |
+| `tests/UmbracoSample.Domain.Tests` | Property, example and corpus tests for the domain, and the architecture rule that keeps it framework-free |
 | `tests/UmbracoSample.Web.Tests` | Fast unit and component contract tests |
 | `tests/UmbracoSample.Integration.Tests` | Tests against the real stack through Aspire (`Category=Integration`) |
 | `frontend/` | Design tokens (`tokens/`), stylesheet sources and the build (ADR 0007); output goes to `wwwroot/dist`, never committed |
@@ -59,6 +62,8 @@ Agents MUST run `make validate` before handing off a change, or record why it co
 - Every new dependency needs an entry in `docs/dependencies.md` and owner approval before it is merged (ES-015).
 - Visual values come from design tokens in `frontend/tokens`; stylesheets never use raw colours, and every colour pair the components use is contrast-tested.
 - npm dependencies are exact versions with a committed lock file and no install scripts (`frontend/.npmrc`).
+- Redirects go in `redirects.csv`, always to the final page: the site refuses to start on a chain, loop, duplicate or unsafe target, and CI follows every rule. Any input that ever breaks the parser is saved under `tests/UmbracoSample.Domain.Tests/Redirects/corpus/`.
+- `UmbracoSample.Domain` never references Umbraco, ASP.NET Core or any package; an architecture test enforces it (ES-018, ES-020).
 - Package versions live only in `Directory.Packages.props`; lock files are committed and CI restores in locked mode (ES-013).
 - Third-party GitHub Actions are pinned to a full commit SHA with the tag in a comment, and every workflow declares least-privilege `permissions` (ES-017).
 - No secrets in source, config or CI definitions (ES-024). Local secrets go in user secrets.

@@ -1,0 +1,3 @@
+source,target,kind
+/a,/b?x=1#frag,permanent
+/c,https://example.com/d,temporary
