@@ -20,6 +20,8 @@ Use the Makefile targets; CI runs the same ones (ES-052).
 | Fast tests | `make test` |
 | Fast validation before handoff | `make validate` |
 | Integration tests (starts the Aspire stack; needs Docker) | `make test-integration` |
+| End-to-end, accessibility (axe) and visual tests against a running site (`make run` first; needs Docker) | `make e2e` |
+| Re-approve visual baselines after an intended visual change | `make e2e-update-snapshots` |
 | Build the container image | `make image` |
 | Smoke-test a running site | `make smoke URL=<base url>` |
 | Run locally (Aspire: site and SQL Server) | `make run` |
@@ -48,6 +50,7 @@ Agents MUST run `make validate` before handing off a change, or record why it co
 | `tests/UmbracoSample.Web.Tests` | Fast unit and component contract tests |
 | `tests/UmbracoSample.Integration.Tests` | Tests against the real stack through Aspire (`Category=Integration`) |
 | `frontend/` | Design tokens (`tokens/`), stylesheet sources and the build (ADR 0007); output goes to `wwwroot/dist`, never committed |
+| `e2e/` | Playwright journeys, axe scans and visual baselines; run inside the pinned Playwright image by `scripts/e2e.sh` |
 | `scripts/` | Operational scripts, such as the post-deployment smoke test |
 | `docs/components/` | One page per component: fields, rules, fixtures and tests |
 | `docs/adr/` | Architecture decision records (ES-019) |
@@ -58,7 +61,8 @@ Agents MUST run `make validate` before handing off a change, or record why it co
 
 - Every new dependency needs an entry in `docs/dependencies.md` and owner approval before it is merged (ES-015).
 - Visual values come from design tokens in `frontend/tokens`; stylesheets never use raw colours, and every colour pair the components use is contrast-tested.
-- npm dependencies are exact versions with a committed lock file and no install scripts (`frontend/.npmrc`).
+- npm dependencies (in `frontend/` and `e2e/`) are exact versions with a committed lock file and no install scripts.
+- Visual baselines change only on purpose: run `make e2e-update-snapshots`, look at every changed image, and say why in the pull request.
 - Package versions live only in `Directory.Packages.props`; lock files are committed and CI restores in locked mode (ES-013).
 - Third-party GitHub Actions are pinned to a full commit SHA with the tag in a comment, and every workflow declares least-privilege `permissions` (ES-017).
 - No secrets in source, config or CI definitions (ES-024). Local secrets go in user secrets.

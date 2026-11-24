@@ -28,3 +28,12 @@ updates:
       frontend-build:
         patterns: ["*"]
     open-pull-requests-limit: 5
+
+  - package-ecosystem: npm
+    directory: /e2e
+    schedule:
+      interval: weekly
+    groups:
+      e2e:
+        patterns: ["*"]
+    open-pull-requests-limit: 5
