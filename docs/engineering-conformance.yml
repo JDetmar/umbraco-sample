@@ -103,6 +103,7 @@ clauses:
     status: compliant
     evidence:
       - ServiceDefaults exports OpenTelemetry traces and metrics over OTLP (vendor-neutral); health-probe requests are filtered out of traces.
+      - When APPLICATIONINSIGHTS_CONNECTION_STRING is set (Azure), ServiceDefaults also exports traces and metrics to Application Insights with the Azure Monitor exporter, authenticated by the workload's managed identity (WorkloadIdentity); OTLP is unchanged for local runs.
       - Umbraco's Serilog pipeline replaces the OpenTelemetry log provider, so structured logs go to stdout as compact JSON (appsettings.json) for the container platform to collect, rather than over OTLP.
       - /health/live, /health/ready (includes Umbraco runtime level) and /health/schema (uSync schema drift) are mapped in every environment; the integration tests assert all three, and unit tests cover every drift outcome, including the vacuous no-handlers case.
       - scripts/smoke.sh is the post-deployment check; CI runs it against the built image with SQL Server on every pull request.
