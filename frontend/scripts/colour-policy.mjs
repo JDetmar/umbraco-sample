@@ -24,7 +24,7 @@ export function rawColourDeclarations(css) {
   const withoutRoot = withoutTokenBlock(withoutComments);
   const violations = [];
 
-  for (const match of withoutRoot.matchAll(/(--?[a-z][a-z0-9-]*)\s*:\s*([^;{}]+)/gi)) {
+  for (const match of withoutRoot.matchAll(/((?:--)?[a-z][a-z0-9-]*)\s*:\s*([^;{}]+)/gi)) {
     const [, property, value] = match;
     if (!colourProperty.test(property)) continue;
 
