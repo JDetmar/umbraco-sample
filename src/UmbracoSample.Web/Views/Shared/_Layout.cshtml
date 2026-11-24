@@ -1,0 +1,31 @@
+@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage
+@{
+    var title = Model.Value<string>("title") ?? Model.Name;
+    var description = Model.Value<string>("metaDescription");
+}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>@title</title>
+    @if (!string.IsNullOrWhiteSpace(description))
+    {
+        <meta name="description" content="@description">
+    }
+    <link rel="canonical" href="@Model.Url(mode: UrlMode.Absolute)">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true">
+</head>
+<body>
+    <a class="skip-link" href="#main">Skip to main content</a>
+    <header class="site-header">
+        <a class="site-header__brand" href="/">Umbraco sample</a>
+    </header>
+    <main id="main" tabindex="-1">
+        @RenderBody()
+    </main>
+    <footer class="site-footer">
+        <p>A reference implementation. Content is synthetic.</p>
+    </footer>
+</body>
+</html>

@@ -8,7 +8,7 @@ SLN := UmbracoSample.slnx
 CONFIG ?= Release
 GITLEAKS ?= gitleaks
 
-.PHONY: help bootstrap restore lockfiles-check build format format-check test validate secrets vuln run clean
+.PHONY: help bootstrap restore lockfiles-check build format format-check test test-integration image smoke validate secrets vuln run clean
 
 help: ## List targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -33,8 +33,21 @@ format: ## Apply formatting and code style fixes
 format-check: ## Fail if formatting or code style would change
 	dotnet format $(SLN) --verify-no-changes --no-restore
 
+FAST_TEST_PROJECTS := $(filter-out %Integration.Tests,$(wildcard tests/*.Tests))
+
 test: ## Fast tests: unit and policy tests, no containers
-	dotnet test --solution $(SLN) -c $(CONFIG) --no-build --filter-not-trait "Category=Integration"
+	@for project in $(FAST_TEST_PROJECTS); do \
+		dotnet test --project "$$project" -c $(CONFIG) --no-build || exit 1; \
+	done
+
+test-integration: ## Integration tests: starts the real Aspire stack (needs Docker)
+	dotnet test --project tests/UmbracoSample.Integration.Tests -c $(CONFIG) --no-build
+
+image: ## Build the site container image as umbraco-sample:local
+	docker build -f src/UmbracoSample.Web/Dockerfile --build-arg SOURCE_REVISION="$$(git rev-parse HEAD)" -t umbraco-sample:local .
+
+smoke: ## Smoke-test a running site: make smoke URL=https://host
+	scripts/smoke.sh "$(URL)"
 
 secrets: ## Scan committed history on every fetched ref for secrets
 	$(GITLEAKS) git --redact --no-banner .

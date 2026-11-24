@@ -14,8 +14,9 @@ namespace Microsoft.Extensions.Hosting;
 // To learn more about using this project, see https://aka.ms/aspire/service-defaults
 public static class Extensions
 {
-    private const string HealthEndpointPath = "/health";
-    private const string AlivenessEndpointPath = "/alive";
+    private const string HealthPathPrefix = "/health";
+    private const string ReadinessEndpointPath = "/health/ready";
+    private const string LivenessEndpointPath = "/health/live";
 
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
@@ -53,8 +54,7 @@ public static class Extensions
                     .AddAspNetCoreInstrumentation(tracing =>
                         // Exclude health check requests from tracing
                         tracing.Filter = context =>
-                            !context.Request.Path.StartsWithSegments(HealthEndpointPath)
-                            && !context.Request.Path.StartsWithSegments(AlivenessEndpointPath)
+                            !context.Request.Path.StartsWithSegments(HealthPathPrefix)
                     )
                     // Uncomment the following line to enable gRPC instrumentation (requires the OpenTelemetry.Instrumentation.GrpcNetClient package)
                     //.AddGrpcClientInstrumentation()
@@ -94,21 +94,25 @@ public static class Extensions
         return builder;
     }
 
+    /// <summary>
+    /// Maps liveness and readiness probes in every environment so the container host can use them (ES-030).
+    /// The default response writer returns only the overall status (Healthy, Degraded, Unhealthy), never check details,
+    /// so the endpoints disclose nothing beyond availability.
+    /// </summary>
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
-        // Adding health checks endpoints to applications in non-development environments has security implications.
-        // See https://aka.ms/aspire/healthchecks for details before enabling these endpoints in non-development environments.
-        if (app.Environment.IsDevelopment())
+        // Readiness: every check except those tagged "schema" must pass before the instance receives traffic.
+        // Schema drift is reported on its own endpoint (see the web project) so it alerts without taking the site down.
+        app.MapHealthChecks(ReadinessEndpointPath, new HealthCheckOptions
         {
-            // All health checks must pass for app to be considered ready to accept traffic after starting
-            app.MapHealthChecks(HealthEndpointPath);
+            Predicate = r => !r.Tags.Contains("schema")
+        });
 
-            // Only health checks tagged with the "live" tag must pass for app to be considered alive
-            app.MapHealthChecks(AlivenessEndpointPath, new HealthCheckOptions
-            {
-                Predicate = r => r.Tags.Contains("live")
-            });
-        }
+        // Liveness: only checks tagged "live"; a failing dependency must not get a healthy process restarted.
+        app.MapHealthChecks(LivenessEndpointPath, new HealthCheckOptions
+        {
+            Predicate = r => r.Tags.Contains("live")
+        });
 
         return app;
     }

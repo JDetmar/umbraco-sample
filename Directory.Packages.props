@@ -4,9 +4,11 @@
   </PropertyGroup>
   <ItemGroup Label="Umbraco">
     <PackageVersion Include="Umbraco.Cms" Version="17.8.2" />
+    <PackageVersion Include="uSync" Version="17.6.2" />
   </ItemGroup>
   <ItemGroup Label="Aspire">
     <PackageVersion Include="Aspire.Hosting.SqlServer" Version="13.6.5" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.6.5" />
   </ItemGroup>
   <ItemGroup Label="Tests">
     <PackageVersion Include="xunit.v3.mtp-v2" Version="4.0.2" />
