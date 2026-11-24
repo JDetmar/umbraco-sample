@@ -183,7 +183,7 @@ deviations:
       - Content meets the accessibility baseline
     summary: Rich-text markup is rendered as stored. The restricted editor offers no images, source editing, inline styles, or headings other than h2 and h3, but markup saved through the Management API or pasted in is not sanitized server-side, so it can carry any tag, attribute or link scheme, and any heading level.
     consequence: A back-office user (or a compromised back-office account) could store script, unsafe links or a broken heading outline that every visitor receives.
-    compensating_controls: Only authenticated back-office users can save content; links outside rich text go through the LinkModel scheme allowlist; text fields are HTML-encoded (integration test Text_fields_are_html_encoded).
+    compensating_controls: "Only authenticated back-office users can save content; links outside rich text go through the LinkModel scheme allowlist; text fields are HTML-encoded (integration test Text_fields_are_html_encoded); site pages, including previews, carry a content security policy with no inline script, so injected inline script and event handlers do not run in current browsers (ADR 0008). The policy trusts this origin (script-src 'self'), so media uploads are an allowlist of image and PDF extensions, with script, markup, SVG and stylesheet extensions also denied (UploadPolicyTests). Residual: a script element pointing at a script file already on this origin still runs, and back-office users with Settings access can create files under /scripts; both need a back-office account and are closed by sanitizing rich text."
     owner: repository-owner
     opened: 2026-11-24
     disposition: "Proposed for owner approval: register a server-side IHtmlSanitizer built on HtmlSanitizer (Ganss.Xss, MIT) with a tag, attribute and URL-scheme allowlist that also maps headings to h2/h3. Added to docs/dependencies.md as Proposed. Reviewed with the Phase 4 threat model (ES-023)."
@@ -200,3 +200,38 @@ deviations:
     opened: 2026-11-24
     disposition: Phase 3 adds Playwright with @axe-core/playwright against the fixture pages as a required CI check, then this gap closes.
 
+  - id: DEV-010
+    kind: gap
+    clauses: [ES-025]
+    obligations:
+      - Sensitive data is encrypted in transit
+    summary: The site does not send Strict-Transport-Security. The container sees plain HTTP behind the edge, so HSTS is planned at Front Door (ADR 0008).
+    consequence: Until the edge sends it, a visitor's first request over http can be downgraded. No environment is deployed yet, so nothing is exposed today.
+    compensating_controls: Nothing is deployed. Back-office sign-in will only be reachable over HTTPS through the edge (ADR 0004).
+    owner: repository-owner
+    opened: 2026-11-24
+    disposition: "In Phase 5, Front Door sends HSTS (max-age at least one year, includeSubDomains once every subdomain is HTTPS) and redirects http to https, and the post-deployment smoke test asserts both. Alternative recorded in ADR 0008: ForwardedHeaders plus UseHsts in the app."
+
+  - id: DEV-011
+    kind: gap
+    clauses: [ES-030]
+    obligations:
+      - Production paths are diagnosable after deployment
+    summary: The content security policy has no reporting endpoint, so violations in production (a blocked tag, a broken page) are invisible.
+    consequence: A policy that blocks something editors added, or an attack it stopped, goes unnoticed until someone reports a broken page.
+    compensating_controls: Integration tests fail on any resource or inline code the policy would block on the seeded pages.
+    owner: repository-owner
+    opened: 2026-11-24
+    disposition: With the Application Insights work in Phase 5, add a Reporting-Endpoints header and report-to directive that send violation reports to a small endpoint that logs them (bounded and rate limited, ES-026), with an alert on volume.
+
+  - id: DEV-012
+    kind: gap
+    clauses: [ES-026]
+    obligations:
+      - Outputs are encoded appropriately at trust boundaries
+    summary: "Two surfaces sit outside the strict site policy: the back office (/umbraco) gets only a minimal policy (object-src, base-uri, frame-ancestors), because Umbraco owns its scripts; and Umbraco's built-in 404 page uses an inline style block that the site policy blocks, so it renders unstyled."
+    consequence: Script injection in the back office is constrained only by Umbraco's own defences; the 404 page looks broken.
+    compensating_controls: The back office requires authentication and gets nosniff, framing and referrer headers; Umbraco 17 emits nonces for its own scripts.
+    owner: repository-owner
+    opened: 2026-11-24
+    disposition: Add a custom 404 page (document type, template and the Error404Collection setting) styled from the site stylesheet before the first deployment. Revisit a fuller back-office policy built on Umbraco's ICspNonceService when Umbraco documents one as supported. Extend the test extractor to SVG image/use href and a ping, check preconnect against the union of directives before the first CDN is allowlisted, and add an integration test that a .js upload is refused through the Management API.

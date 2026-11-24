@@ -11,5 +11,6 @@ Lightweight records of significant decisions (ES-019). Each records context, alt
 | [0005](0005-test-stack.md) | Test stack | Accepted |
 | [0006](0006-dependency-policy.md) | Dependency policy | Accepted |
 | [0007](0007-front-end-build.md) | Front-end build: design tokens and one stylesheet, built outside the image | Proposed |
+| [0008](0008-security-headers-and-third-party-allowlist.md) | Security headers, content security policy and the third-party allowlist | Proposed |
 
 New records copy [template.md](template.md).
