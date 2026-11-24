@@ -81,12 +81,9 @@ public sealed class SiteSettingsTests
             foreach (var line in File.ReadAllLines(file).Where(l => !l.TrimStart().StartsWith('#')))
             {
                 System.Text.RegularExpressions.Regex.IsMatch(line, @"[\w.+-]+@[\w-]+\.[\w.]+").ShouldBeFalse($"{Path.GetFileName(file)}: emails are set with --secret (public repository).");
-                foreach (var key in new[] { "Email:", "sqlAdminGroup", "umbracoAdminPassword:", "imagingHmacKey:" })
+                foreach (var key in new[] { "Email:", "sqlAdminGroup", "umbracoAdminPassword:", "imagingHmacKey:" }.Where(k => line.Contains(k, StringComparison.Ordinal)))
                 {
-                    if (line.Contains(key, StringComparison.Ordinal))
-                    {
-                        line.ShouldContain("secure:", customMessage: $"{Path.GetFileName(file)}: {key} must be set with --secret.");
-                    }
+                    line.ShouldContain("secure:", customMessage: $"{Path.GetFileName(file)}: {key} must be set with --secret.");
                 }
             }
         }
