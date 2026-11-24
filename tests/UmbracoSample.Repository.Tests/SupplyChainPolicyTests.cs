@@ -92,12 +92,24 @@ public sealed partial class SupplyChainPolicyTests
         var root = RepositoryRoot.Find().FullName;
         var ci = File.ReadAllText(Path.Join(root, ".nvmrc")).Trim();
         using var package = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Join(root, "frontend", "package.json")));
-        var engine = package.RootElement.GetProperty("engines").GetProperty("node").GetString();
+        var engine = package.RootElement.GetProperty("engines").GetProperty("node").GetString() ?? string.Empty;
+        using var lockFile = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Join(root, "frontend", "package-lock.json")));
+        var lockedEngine = lockFile.RootElement.GetProperty("packages").GetProperty("").GetProperty("engines").GetProperty("node").GetString();
 
-        ExactVersion().IsMatch(ci).ShouldBeTrue("ES-013: CI installs an exact Node version from .nvmrc.");
-        var major = ci.Split('.')[0];
-        engine.ShouldBe($"^{major}.0.0", "engines accepts the CI Node major only, so a different major fails fast (ADR 0007).");
-        (int.Parse(major, System.Globalization.CultureInfo.InvariantCulture) % 2).ShouldBe(0, "ADR 0007: Node follows even-numbered (LTS) lines only.");
+        ReleaseVersion().IsMatch(ci).ShouldBeTrue("ES-013: CI installs an exact, non-prerelease Node version from .nvmrc.");
+        var range = NodeEngineRange().Match(engine);
+        range.Success.ShouldBeTrue("engines is '>=<first LTS of the major> <<major + 1>.0.0' (ADR 0007).");
+        var ciVersion = Version.Parse(ci);
+        var lower = Version.Parse(range.Groups["lower"].Value);
+        lower.Major.ShouldBe(ciVersion.Major, "engines and .nvmrc are on the same Node major.");
+        (lower <= ciVersion).ShouldBeTrue(".nvmrc lies inside the engines range.");
+        range.Groups["upper"].Value.ShouldBe((ciVersion.Major + 1).ToString(System.Globalization.CultureInfo.InvariantCulture), "the range stops at the next major.");
+        lockedEngine.ShouldBe(engine, "package-lock.json records the same engines as package.json; regenerate it.");
+
+        var setupNodeSteps = WorkflowFiles().SelectMany(file => File.ReadAllLines(file.FullName)).Count(line => line.Contains("uses: actions/setup-node@", StringComparison.Ordinal));
+        var readNvmrc = WorkflowFiles().SelectMany(file => File.ReadAllLines(file.FullName)).Count(line => line.Trim() == "node-version-file: .nvmrc");
+        setupNodeSteps.ShouldBeGreaterThan(0);
+        readNvmrc.ShouldBe(setupNodeSteps, "every CI setup-node step installs the exact version in .nvmrc.");
     }
 
     [Fact]
@@ -167,6 +179,12 @@ public sealed partial class SupplyChainPolicyTests
 
     [GeneratedRegex(@"^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$")]
     private static partial Regex ExactVersion();
+
+    [GeneratedRegex(@"^\d+\.\d+\.\d+$")]
+    private static partial Regex ReleaseVersion();
+
+    [GeneratedRegex(@"^>=(?<lower>\d+\.\d+\.\d+) <(?<upper>\d+)\.0\.0$")]
+    private static partial Regex NodeEngineRange();
 
     [GeneratedRegex(@"^FROM mcr\.microsoft\.com/playwright:v(?<version>\d+\.\d+\.\d+)-noble@sha256:[0-9a-f]{64}$")]
     private static partial Regex PlaywrightImage();
