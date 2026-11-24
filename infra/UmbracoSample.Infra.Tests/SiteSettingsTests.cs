@@ -6,6 +6,8 @@ public sealed class SiteSettingsTests
 {
     private const string Digest = "ghcr.io/example/umbraco-sample@sha256:1111111111111111111111111111111111111111111111111111111111111111";
 
+    private static readonly string[] OwnerKeys = ["Email:", "sqlAdminGroup", "umbracoAdminPassword:", "imagingHmacKey:"];
+
     private static SiteSettings Valid(string environment = "dev") => new(environment, 0, 1, 20m, Digest, EnableEdge: false);
 
     [Fact]
@@ -81,7 +83,7 @@ public sealed class SiteSettingsTests
             foreach (var line in File.ReadAllLines(file).Where(l => !l.TrimStart().StartsWith('#')))
             {
                 System.Text.RegularExpressions.Regex.IsMatch(line, @"[\w.+-]+@[\w-]+\.[\w.]+").ShouldBeFalse($"{Path.GetFileName(file)}: emails are set with --secret (public repository).");
-                foreach (var key in new[] { "Email:", "sqlAdminGroup", "umbracoAdminPassword:", "imagingHmacKey:" }.Where(k => line.Contains(k, StringComparison.Ordinal)))
+                foreach (var key in OwnerKeys.Where(k => line.Contains(k, StringComparison.Ordinal)))
                 {
                     line.ShouldContain("secure:", customMessage: $"{Path.GetFileName(file)}: {key} must be set with --secret.");
                 }
