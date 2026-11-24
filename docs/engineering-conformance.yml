@@ -63,7 +63,7 @@ clauses:
     evidence:
       - Every third-party action in .github/workflows is pinned to a full commit SHA.
       - Every workflow declares top-level `permissions` with read-only defaults; the policy tests reject unpinned actions, missing permissions and write-all or read-all.
-      - Job-level write grants are allowlisted by a policy test (Write_permissions_are_granted_only_to_allowlisted_jobs): packages write only to the ci publish job, which runs only on main, checks out nothing and runs no third-party build code; security-events write only to the CodeQL job; id-token write only to the infra preview job, for OIDC sign-in to Azure (no stored Azure secret), which runs only on main or a manual run.
+      - Job-level write grants are allowlisted by a policy test (Write_permissions_are_granted_only_to_allowlisted_jobs): packages write only to the ci publish job, which runs only on main, checks out nothing and runs no third-party build code; security-events write only to the CodeQL job; id-token write only to the infra preview job, for OIDC sign-in to Azure and Pulumi Cloud (no stored Azure or Pulumi secret), which runs only on main or a manual run.
   ES-018:
     status: compliant
     evidence:
@@ -264,9 +264,12 @@ deviations:
       - Sensitive data is encrypted in transit
     summary: The site does not send Strict-Transport-Security. The container sees plain HTTP behind the edge, so HSTS is planned at Front Door (ADR 0008).
     consequence: Until the edge sends it, a visitor's first request over http can be downgraded. The infrastructure (ADR 0010) makes a dev stack deployable without the edge, so a deployed dev site, including its back office, would be public over HTTPS without HSTS or a WAF.
-    compensating_controls: Prod cannot deploy without the edge (SiteSettings.Validate). Dev uses synthetic content only, the lead form stays off, the Container Apps ingress refuses plain HTTP, and Umbraco installs unattended so the installer is never public. Threat model 0002, R1, asks the owner to accept this for dev.
+    compensating_controls: Prod cannot deploy without the edge (SiteSettings.Validate). Dev uses synthetic content only, the lead form stays off, the Container Apps ingress refuses plain HTTP, and Umbraco installs unattended so the installer is never public. The owner accepted this for dev only on 2026-11-24 (threat model 0002, R1); it does not extend to prod.
     owner: repository-owner
     opened: 2026-11-24
+    approver: repository-owner
+    approval_ref: Owner accepted the dev exposure in the project thread on 2026-11-24 (threat model 0002, R1), recorded in pull request 15; the gap stays open for prod
+    threat_model_ref: docs/threat-models/0002-azure-environment.md
     disposition: "In Phase 5, Front Door sends HSTS (max-age at least one year, includeSubDomains once every subdomain is HTTPS) and redirects http to https, and the post-deployment smoke test asserts both. Alternative recorded in ADR 0008: ForwardedHeaders plus UseHsts in the app."
 
   - id: DEV-011
@@ -319,15 +322,21 @@ deviations:
     disposition: Before the first production deployment, add build provenance and an SBOM attestation bound to the digest (for example actions/attest-build-provenance and actions/attest-sbom), which needs owner approval as new dependencies.
 
   - id: DEV-015
-    kind: gap
+    kind: accepted_risk
     clauses: [ES-030, ES-047]
     obligations:
       - Services scale and recover without losing user sessions
-    summary: The site runs as a single replica. Umbraco has no shared data-protection key ring and no explicit server roles, so a second replica would break back-office sign-in and antiforgery tokens, and both replicas would run scheduled publishing.
+    summary: Accepted by the owner for dev only (2026-11-24). The site runs as a single replica. Umbraco has no shared data-protection key ring and no explicit server roles, so a second replica would break back-office sign-in and antiforgery tokens, and both replicas would run scheduled publishing.
     consequence: No horizontal scaling; a replica restart signs editors out and drops in-flight requests. A replica stuck in Umbraco's BootFailed state stays alive but unready until restarted.
     compensating_controls: SiteSettings refuses maxReplicas above 1; multiple revisions allow rollback; a startup probe gives a resuming database five minutes.
     owner: repository-owner
     opened: 2026-11-24
+    approver: repository-owner
+    approval_ref: Owner decision in the project thread on 2026-11-24 (threat model 0002, R3), recorded in pull request 15
+    threat_model_ref: docs/threat-models/0002-azure-environment.md
+    review_triggers:
+      - Any stack other than dev, or prod traffic.
+      - Raising maxReplicas above 1.
     disposition: Before prod traffic, persist the data-protection key ring to Blob storage protected by Key Vault (managed identity), set SchedulingPublisher and Subscriber server roles, make liveness fail when Umbraco's runtime level is BootFailed, then lift the replica limit.
 
   - id: DEV-016
@@ -340,5 +349,5 @@ deviations:
     compensating_controls: The token lives only in the infra-preview environment (main only, owner review); preview runs only on main or a manual run; the token has a 90-day expiry and a rotation reminder (docs/infra-setup.md).
     owner: repository-owner
     opened: 2026-11-24
-    disposition: Replace with Pulumi OIDC token exchange (pulumi/auth-actions) once the owner approves it as a dependency.
+    disposition: "Fix in place: the owner approved pulumi/auth-actions on 2026-11-24 (threat model 0002, R2), and the infra preview job now exchanges its GitHub OIDC token for a short-lived Pulumi token; no PULUMI_ACCESS_TOKEN is stored. Closes when the first preview has run this way."
 

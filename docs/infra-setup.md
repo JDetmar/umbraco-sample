@@ -21,7 +21,7 @@ These steps need the owner: they create cloud identities, store a secret and cha
    ```
 4. Check before committing: `git diff infra/UmbracoSample.Infra/Pulumi.dev.yaml` should show only `secure:` values for these keys. Commit the file through a pull request so CI previews use the same config.
 5. Make the GHCR package public once CI first publishes it from main (GitHub, your profile, Packages, umbraco-sample, Package settings, Change visibility). New packages start private, and a public package lets Container Apps pull without a stored registry credential. Then set the image, using the digest from the main CI run's summary: `pulumi config set image ghcr.io/<owner>/umbraco-sample@sha256:<digest> --stack dev`.
-6. Create a Pulumi access token for CI, scoped as narrowly as your plan allows (a team token with read access to this project's stacks if your plan has it), with a 90-day expiry. Put a reminder in your calendar to rotate it (DEV-016).
+6. Let CI sign in with OIDC instead of a stored token. In Pulumi Cloud, Settings, OIDC Issuers, register `https://token.actions.githubusercontent.com` (audience: your Pulumi organization name) and add one policy: allow organization tokens when `sub` equals `repo:<owner>/umbraco-sample:environment:infra-preview`. Nothing else can get a token, and each token lasts about two hours. If your plan has teams, a team token for a team with read access to this project's stacks is narrower; switch `requested-token-type` in `infra.yml` to match.
 
 ## 2. Azure
 
@@ -32,8 +32,7 @@ These steps need the owner: they create cloud identities, store a secret and cha
 ## 3. GitHub repository
 
 1. Create an environment named `infra-preview`, restricted to the `main` branch, with yourself as a required reviewer. The workflow previews only `main` or a manual run, because preview decrypts stack secrets; the environment rules enforce that even if the workflow changes.
-2. In that environment, add the secret `PULUMI_ACCESS_TOKEN`.
-3. Add repository variables: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `PULUMI_ORG`, and finally `PULUMI_PREVIEW_ENABLED=true`.
+2. Add repository variables: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `PULUMI_ORG`, and finally `PULUMI_PREVIEW_ENABLED=true`.
 
 ## 4. Check
 

@@ -1,6 +1,6 @@
 # Threat model 0002: the Azure environment and its delivery path
 
-- Status: **Proposed. Needs the owner's review and decisions on the open risks before the first `pulumi up` (ES-023).**
+- Status: **Open risks decided by the owner on 2026-11-24 (section 5).** R1 and R3 are accepted for dev only; R2 is fixed by OIDC.
 - Date: 2026-11-24
 - Scope: one environment as declared in `infra/UmbracoSample.Infra` (ADR 0010), the CI image publish and the infrastructure preview
 - Clauses: ES-022, ES-023, ES-024, ES-025, ES-047, ES-049, ES-054; framework ENV-01, OPS-01, OPS-03
@@ -18,7 +18,7 @@ One resource group per environment: a Container Apps environment in a delegated 
 | 3 | Site to SQL, Blob, Key Vault, Application Insights | Azure services, reached with the site's managed identity | Trusted; each grant scoped to one resource |
 | 4 | Apps subnet to SQL public endpoint | Only the apps subnet, by virtual network rule | Network-restricted, then Entra-only authentication |
 | 5 | CI to GHCR | The `publish` job's short-lived token, `main` only | Reviewed code only |
-| 6 | CI to Pulumi Cloud and Azure | Pulumi token (decrypts stack secrets) and OIDC Reader identity | Reviewed code only (`main` or manual run) |
+| 6 | CI to Pulumi Cloud and Azure | Short-lived Pulumi token from OIDC exchange (decrypts stack secrets) and OIDC Reader identity | Reviewed code only (`main` or manual run, `infra-preview` environment) |
 | 7 | Owner workstation to Pulumi Cloud and Azure | The owner, the only one who runs `up` | Trusted |
 
 ## 3. Assets
@@ -38,7 +38,7 @@ One resource group per environment: a Container Apps environment in a delegated 
 |---|---|---|---|
 | T1 | Spoofing: a caller other than the site connects to SQL | Virtual network rule admits only the apps subnet; Entra-only authentication; no SQL logins | Anything else running in the subnet; only the site runs there |
 | T2 | Elevation: a site compromise takes over the database server | The site is a contained `db_owner` user in one database; an owner group administers the server | The site can still read and change all site data |
-| T3 | Information disclosure: secrets leak from configuration | Secrets are Key Vault references; values never in the app definition; mock test `Secret_values_reach_only_key_vault` | Anyone with Key Vault Secrets User or the Pulumi token can read them |
+| T3 | Information disclosure: secrets leak from configuration | Secrets are Key Vault references; values never in the app definition; mock test `Secret_values_reach_only_key_vault` | Anyone with Key Vault Secrets User or a Pulumi token for the stack can read them; CI's token is short-lived and issued only to the `infra-preview` environment |
 | T4 | Information disclosure: pull-request code prints stack secrets during preview | Preview runs only on `main` or a manual run; the environment requires the owner's review | A reviewed but malicious change on `main`; mitigated by review (ES-028) |
 | T5 | Tampering: a build dependency publishes its own image | Registry write token only in the `publish` job, which runs no build code, on `main` after every gate | Stacks pin digests, so a tag overwrite does not deploy |
 | T6 | Spoofing or brute force on the back office before the edge exists | Unattended install (no public installer); Umbraco lockout; HTTPS ingress | No WAF or HSTS yet (DEV-010); dev only, synthetic content |
@@ -48,8 +48,8 @@ One resource group per environment: a Container Apps environment in a delegated 
 
 ## 5. Open risks for the owner
 
-These need an owner decision (accept, or fix first). Agents do not accept risks (CLAUDE.md).
+Each needed an owner decision (accept, or fix first). Agents do not accept risks (CLAUDE.md). The owner decided all three on 2026-11-24, in the project thread.
 
-- **R1. Public back office without WAF or HSTS in dev (T6, DEV-010).** Recommendation: accept for dev with synthetic content and forms off; prod is already blocked without the edge.
-- **R2. Long-lived Pulumi token that can decrypt stack secrets (T3, T4, DEV-016).** Recommendation: accept with a 90-day expiry and environment review until `pulumi/auth-actions` is approved.
-- **R3. Single replica (T7, DEV-015).** Recommendation: accept for dev; revisit before prod traffic.
+- **R1. Public back office without WAF or HSTS in dev (T6, DEV-010).** Recommendation: accept for dev with synthetic content and forms off; prod is already blocked without the edge. **Owner decision (2026-11-24): accepted for dev only.** Prod still requires the edge.
+- **R2. Long-lived Pulumi token that can decrypt stack secrets (T3, T4, DEV-016).** Recommendation: accept with a 90-day expiry and environment review until `pulumi/auth-actions` is approved. **Owner decision (2026-11-24): fix first. `pulumi/auth-actions` is approved;** the preview job exchanges its GitHub OIDC token for a short-lived Pulumi token, and no Pulumi token is stored. DEV-016 closes when the first preview runs this way.
+- **R3. Single replica (T7, DEV-015).** Recommendation: accept for dev; revisit before prod traffic. **Owner decision (2026-11-24): accepted for dev only.** Prod traffic still waits for the DEV-015 work.

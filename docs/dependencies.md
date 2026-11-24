@@ -60,6 +60,7 @@ Status key: **Approved** (owner approved 2026-11-24), **Rejected**. New dependen
 | gitleaks (CLI binary, checksum-verified) | Secret scanning gate (ES-024) | MIT | CLI rather than gitleaks-action, which needs a licence for organisation accounts | Approved |
 | pulumi/actions | Preview on PR, up after merge | Apache-2.0 | | Approved |
 | azure/login | OIDC sign-in, no stored secrets | MIT | | Approved |
+| pulumi/auth-actions | Exchange the GitHub OIDC token for a short-lived Pulumi Cloud token, so CI stores no Pulumi token (ES-024, closes DEV-016) | Apache-2.0 | Pulumi-maintained; used only in the infra preview job | Approved by the owner on 2026-11-24 (decision in the project thread, threat model 0002 R2, recorded in pull request 15) |
 | anchore/syft | SBOM for the container image (ES-049) | Apache-2.0 | | Approved |
 | actions/upload-artifact, download-artifact | Hand the smoke-tested image to the separate publish job, so only that job holds a registry write token (ES-017, ES-049) | MIT | GitHub-maintained | Approved by the owner on 2026-11-24 (decision in the project thread, recorded in pull request 28) |
 | Dependabot | Update discovery (ES-016) | GitHub built-in | | Approved |
