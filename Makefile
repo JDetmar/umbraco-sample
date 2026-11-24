@@ -8,7 +8,7 @@ SLN := UmbracoSample.slnx
 CONFIG ?= Release
 GITLEAKS ?= gitleaks
 
-.PHONY: help bootstrap restore lockfiles-check build format format-check frontend frontend-test frontend-audit test test-integration image smoke validate secrets vuln run clean
+.PHONY: help bootstrap restore lockfiles-check build format format-check frontend frontend-test frontend-audit test mutation test-integration e2e e2e-update-snapshots lighthouse image smoke validate secrets vuln run clean
 
 help: ## List targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -30,8 +30,9 @@ frontend: ## Build design tokens and the site stylesheet (needs the Node version
 frontend-test: ## Token contrast and stylesheet rules
 	cd frontend && npm ci && npm test
 
-frontend-audit: ## Fail on npm advisories of moderate or above that the ledger has not assessed (ES-016)
+frontend-audit: ## Fail on npm advisories of moderate or above that the ledger has not assessed, in frontend/ and e2e/ (ES-016)
 	cd frontend && npm run audit
+	cd e2e && node ../frontend/scripts/audit.mjs
 
 build: ## Build the solution (warnings are errors)
 	dotnet build $(SLN) -c $(CONFIG) --no-restore
@@ -49,11 +50,24 @@ test: ## Fast tests: unit and policy tests, no containers
 		dotnet test --project "$$project" -c $(CONFIG) --no-build || exit 1; \
 	done
 
+mutation: ## Mutation testing of the domain (Stryker.NET, ES-002); fails below the break threshold in stryker-config.json
+	dotnet tool restore
+	cd tests/UmbracoSample.Domain.Tests && dotnet stryker --config-file stryker-config.json --output ../../artifacts/mutation
+
 test-integration: ## Integration tests: starts the real Aspire stack (needs Docker)
 	dotnet test --project tests/UmbracoSample.Integration.Tests -c $(CONFIG) --no-build
 
 image: frontend ## Build the site container image as umbraco-sample:local
 	docker build -f src/UmbracoSample.Web/Dockerfile --build-arg SOURCE_REVISION="$$(git rev-parse HEAD)" -t umbraco-sample:local .
+
+e2e: ## End-to-end, accessibility and visual tests against a running site (make run first; needs Docker or Podman)
+	scripts/e2e.sh
+
+e2e-update-snapshots: ## Re-approve visual baselines after an intended visual change
+	scripts/e2e.sh --update-snapshots -g 'looks as approved'
+
+lighthouse: ## Lighthouse CI budgets (TST-14) against a running site, in the same pinned image (make run first)
+	scripts/e2e.sh --lighthouse
 
 smoke: ## Smoke-test a running site: make smoke URL=https://host
 	scripts/smoke.sh "$(URL)"

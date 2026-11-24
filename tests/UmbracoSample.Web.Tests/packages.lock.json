@@ -2584,6 +2584,9 @@
           "xunit.v3.runner.common": "[4.0.2]"
         }
       },
+      "umbracosample.domain": {
+        "type": "Project"
+      },
       "umbracosample.servicedefaults": {
         "type": "Project",
         "dependencies": {
@@ -2599,6 +2602,7 @@
         "type": "Project",
         "dependencies": {
           "Umbraco.Cms": "[17.8.2, )",
+          "UmbracoSample.Domain": "[1.0.0, )",
           "UmbracoSample.ServiceDefaults": "[1.0.0, )",
           "uSync": "[17.6.2, )"
         }

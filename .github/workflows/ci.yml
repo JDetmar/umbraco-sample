@@ -169,3 +169,52 @@ jobs:
             echo "Stylesheet toolchain: Node $(node --version), frontend/package-lock.json sha256 $(sha256sum frontend/package-lock.json | cut -d' ' -f1)"
             echo "site.css sha256: $(sha256sum src/UmbracoSample.Web/wwwroot/dist/site.css | cut -d' ' -f1)"
           } >> "${GITHUB_STEP_SUMMARY}"
+
+  e2e:
+    name: e2e (journeys, accessibility, visual regression)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: make frontend
+      - run: make restore
+      - run: make build
+
+      - name: Start the site (Aspire, SQL Server, synthetic seed content)
+        run: |
+          # Throwaway admin password for this job only (ES-024). The name has a hyphen, so it is passed with env,
+          # because bash cannot export it.
+          admin_password="Ad1-$(openssl rand -hex 16)"
+          echo "::add-mask::${admin_password}"
+          ASPIRE_ALLOW_UNSECURED_TRANSPORT=true env "Parameters__umbraco-admin-password=${admin_password}" \
+            nohup dotnet run --project src/UmbracoSample.AppHost -c Release --no-build --launch-profile http > apphost.log 2>&1 &
+          # Ready means the runtime is up; the seeded fixture page answering means the uSync import has finished too.
+          for _ in $(seq 1 60); do
+            if curl -sf --max-time 5 http://localhost:43835/health/ready > /dev/null \
+              && curl -sf --max-time 10 http://localhost:43835/fixture-maximal/ > /dev/null; then exit 0; fi
+            sleep 5
+          done
+          echo "The site and its seed content were not ready within 5 minutes." >&2
+          tail -n 100 apphost.log
+          exit 1
+
+      - name: Playwright in the pinned image
+        run: make e2e
+
+      - name: Lighthouse budgets in the pinned image
+        run: make lighthouse
+
+      - name: Show the site log on failure
+        if: failure()
+        run: tail -n 200 apphost.log || true

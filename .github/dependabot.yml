@@ -5,6 +5,17 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Stay on LTS lines (ADR 0001, ADR 0011): .NET and Umbraco majors are deliberate upgrade projects, not bumps.
+    # Minor and patch updates inside the LTS line still arrive; majors of everything else are unaffected.
+    ignore:
+      - dependency-name: "Microsoft.AspNetCore.*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.Extensions.*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Umbraco.*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "uSync*"
+        update-types: ["version-update:semver-major"]
     groups:
       umbraco:
         patterns: ["Umbraco.*"]
@@ -27,4 +38,28 @@ updates:
     groups:
       frontend-build:
         patterns: ["*"]
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: npm
+    directory: /e2e
+    schedule:
+      interval: weekly
+    groups:
+      e2e:
+        patterns: ["*"]
+    open-pull-requests-limit: 5
+
+  # Base images: the site image, and the Playwright image that e2e runs in. A Playwright image bump must land
+  # with the matching @playwright/test bump (a policy test fails until both agree).
+  - package-ecosystem: docker
+    directories: ["/e2e", "/src/UmbracoSample.Web"]
+    schedule:
+      interval: weekly
+    # The .NET base images follow the LTS line too (ADR 0011): 10.0.x patches arrive, 11.0 does not.
+    # global.json pins the exact SDK, so an SDK image bump must change global.json in the same pull request.
+    ignore:
+      - dependency-name: "dotnet/sdk"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "dotnet/aspnet"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
     open-pull-requests-limit: 5

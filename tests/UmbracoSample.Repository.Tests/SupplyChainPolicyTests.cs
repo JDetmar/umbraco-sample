@@ -39,11 +39,13 @@ public sealed partial class SupplyChainPolicyTests
         broad.ShouldBeEmpty("ES-017: write-all and read-all grant more than any job needs; list each permission.");
     }
 
-    [Fact]
-    public void Npm_dependencies_are_exact_and_locked()
+    [Theory]
+    [InlineData("frontend")]
+    [InlineData("e2e")]
+    public void Npm_dependencies_are_exact_and_locked(string folder)
     {
         var root = RepositoryRoot.Find().FullName;
-        using var package = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Join(root, "frontend", "package.json")));
+        using var package = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Join(root, folder, "package.json")));
 
         var ranges = NpmDependencySections
             .Where(section => package.RootElement.TryGetProperty(section, out _))
@@ -53,17 +55,35 @@ public sealed partial class SupplyChainPolicyTests
             .ToList();
 
         ranges.ShouldBeEmpty("ES-013: npm dependencies are pinned to exact versions.");
-        RepositoryRoot.TrackedFiles().ShouldContain("frontend/package-lock.json", "ES-013: the npm lock file is committed.");
+        RepositoryRoot.TrackedFiles().ShouldContain($"{folder}/package-lock.json", "ES-013: the npm lock file is committed.");
+    }
+
+    [Fact]
+    public void The_playwright_image_is_pinned_by_digest_and_matches_the_library()
+    {
+        var root = RepositoryRoot.Find().FullName;
+        var from = File.ReadAllLines(Path.Join(root, "e2e", "Dockerfile")).Single(line => line.StartsWith("FROM ", StringComparison.Ordinal));
+        using var package = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Join(root, "e2e", "package.json")));
+        var library = package.RootElement.GetProperty("devDependencies").GetProperty("@playwright/test").GetString();
+
+        var match = PlaywrightImage().Match(from);
+        match.Success.ShouldBeTrue("ES-013: the Playwright image is pinned by tag and sha256 digest.");
+        match.Groups["version"].Value.ShouldBe(library, "the browsers in the image must match @playwright/test; update both together.");
     }
 
     [Fact]
     public void Npm_never_runs_install_scripts_and_enforces_the_node_version()
     {
-        var npmrc = File.ReadAllLines(Path.Join(RepositoryRoot.Find().FullName, "frontend", ".npmrc"));
+        var root = RepositoryRoot.Find().FullName;
+        var frontend = File.ReadAllLines(Path.Join(root, "frontend", ".npmrc"));
+        var e2e = File.ReadAllLines(Path.Join(root, "e2e", ".npmrc"));
 
-        npmrc.ShouldContain("ignore-scripts=true", "ES-013: dependency install scripts are arbitrary code; none are needed.");
-        npmrc.ShouldContain("engine-strict=true");
-        npmrc.ShouldContain("save-exact=true");
+        frontend.ShouldContain("ignore-scripts=true", "ES-013: dependency install scripts are arbitrary code; none are needed.");
+        frontend.ShouldContain("engine-strict=true");
+        frontend.ShouldContain("save-exact=true");
+        // e2e runs on the Node inside the pinned Playwright image, so it pins the image rather than the engine.
+        e2e.ShouldContain("ignore-scripts=true");
+        e2e.ShouldContain("save-exact=true");
     }
 
     [Fact]
@@ -133,6 +153,9 @@ public sealed partial class SupplyChainPolicyTests
 
     [GeneratedRegex(@"^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$")]
     private static partial Regex ExactVersion();
+
+    [GeneratedRegex(@"^FROM mcr\.microsoft\.com/playwright:v(?<version>\d+\.\d+\.\d+)-noble@sha256:[0-9a-f]{64}$")]
+    private static partial Regex PlaywrightImage();
 
     [GeneratedRegex(@"permissions:\s*(write-all|read-all)")]
     private static partial Regex BroadPermissions();
