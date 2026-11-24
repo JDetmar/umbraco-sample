@@ -156,8 +156,8 @@ public sealed class SiteInfrastructure
             {
                 AdministratorType = AdministratorType.ActiveDirectory,
                 AzureADOnlyAuthentication = true,
-                Login = settings.SqlAdminGroupName,
-                Sid = settings.SqlAdminGroupObjectId,
+                Login = secrets.SqlAdminGroupName,
+                Sid = secrets.SqlAdminGroupObjectId,
                 TenantId = client.Apply(c => c.TenantId),
                 PrincipalType = SqlPrincipalType.Group,
             },
@@ -304,7 +304,7 @@ public sealed class SiteInfrastructure
                             new EnvironmentVarArgs { Name = "Umbraco__CMS__Unattended__InstallUnattended", Value = "true" },
                             new EnvironmentVarArgs { Name = "Umbraco__CMS__Unattended__UpgradeUnattended", Value = "true" },
                             new EnvironmentVarArgs { Name = "Umbraco__CMS__Unattended__UnattendedUserName", Value = "Site Admin" },
-                            new EnvironmentVarArgs { Name = "Umbraco__CMS__Unattended__UnattendedUserEmail", Value = settings.AdminEmail },
+                            new EnvironmentVarArgs { Name = "Umbraco__CMS__Unattended__UnattendedUserEmail", Value = secrets.AdminEmail },
                             new EnvironmentVarArgs { Name = "Umbraco__CMS__Unattended__UnattendedUserPassword", SecretRef = "umbraco-admin-password" },
                             new EnvironmentVarArgs { Name = "Umbraco__CMS__Imaging__HMACSecretKey", SecretRef = "umbraco-imaging-hmac-key" },
                         },
@@ -337,8 +337,8 @@ public sealed class SiteInfrastructure
             TimePeriod = new BudgetTimePeriodArgs { StartDate = "2026-11-01T00:00:00Z" },
             Notifications =
             {
-                ["actual-80"] = new NotificationArgs { Enabled = true, Operator = OperatorType.GreaterThan, Threshold = 80, ContactEmails = { settings.BudgetContactEmail } },
-                ["forecast-100"] = new NotificationArgs { Enabled = true, Operator = OperatorType.GreaterThan, Threshold = 100, ThresholdType = ThresholdType.Forecasted, ContactEmails = { settings.BudgetContactEmail } },
+                ["actual-80"] = new NotificationArgs { Enabled = true, Operator = OperatorType.GreaterThan, Threshold = 80, ContactEmails = { secrets.BudgetContactEmail } },
+                ["forecast-100"] = new NotificationArgs { Enabled = true, Operator = OperatorType.GreaterThan, Threshold = 100, ThresholdType = ThresholdType.Forecasted, ContactEmails = { secrets.BudgetContactEmail } },
             },
         });
 

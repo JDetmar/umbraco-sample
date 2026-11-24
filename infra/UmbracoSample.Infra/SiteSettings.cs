@@ -10,12 +10,8 @@ public sealed partial record SiteSettings(
     int MinReplicas,
     int MaxReplicas,
     decimal MonthlyBudget,
-    string BudgetContactEmail,
     string Image,
-    bool EnableEdge,
-    string AdminEmail,
-    string SqlAdminGroupName,
-    string SqlAdminGroupObjectId)
+    bool EnableEdge)
 {
     public static SiteSettings From(Config config)
     {
@@ -26,12 +22,8 @@ public sealed partial record SiteSettings(
             MinReplicas: int.Parse(config.Get("minReplicas") ?? "0", CultureInfo.InvariantCulture),
             MaxReplicas: int.Parse(config.Get("maxReplicas") ?? "1", CultureInfo.InvariantCulture),
             MonthlyBudget: decimal.Parse(config.Require("monthlyBudget"), CultureInfo.InvariantCulture),
-            BudgetContactEmail: config.Require("budgetContactEmail"),
             Image: config.Require("image"),
-            EnableEdge: bool.Parse(config.Get("enableEdge") ?? "false"),
-            AdminEmail: config.Require("adminEmail"),
-            SqlAdminGroupName: config.Require("sqlAdminGroupName"),
-            SqlAdminGroupObjectId: config.Require("sqlAdminGroupObjectId"));
+            EnableEdge: bool.Parse(config.Get("enableEdge") ?? "false"));
 
         settings.Validate();
         return settings;
@@ -71,15 +63,7 @@ public sealed partial record SiteSettings(
             throw new ArgumentException("monthlyBudget must be positive (ES-047).");
         }
 
-        if (!AdminEmail.Contains('@', StringComparison.Ordinal))
-        {
-            throw new ArgumentException("adminEmail must be an email address; it is the unattended-install admin login.");
-        }
 
-        if (string.IsNullOrWhiteSpace(SqlAdminGroupName) || !Guid.TryParse(SqlAdminGroupObjectId, out _))
-        {
-            throw new ArgumentException("sqlAdminGroupName and sqlAdminGroupObjectId must name the owner Entra group that administers SQL.");
-        }
 
         if (Image.EndsWith("@sha256:" + new string('0', 64), StringComparison.Ordinal))
         {

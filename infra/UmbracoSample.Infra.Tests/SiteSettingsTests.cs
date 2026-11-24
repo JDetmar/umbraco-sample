@@ -6,7 +6,7 @@ public sealed class SiteSettingsTests
 {
     private const string Digest = "ghcr.io/example/umbraco-sample@sha256:1111111111111111111111111111111111111111111111111111111111111111";
 
-    private static SiteSettings Valid(string environment = "dev") => new(environment, 0, 1, 20m, "owner@example.invalid", Digest, EnableEdge: false, "admin@example.invalid", "owners-sql", "00000000-0000-0000-0000-0000000000aa");
+    private static SiteSettings Valid(string environment = "dev") => new(environment, 0, 1, 20m, Digest, EnableEdge: false);
 
     [Fact]
     public void Valid_dev_settings_pass() => Should.NotThrow(() => Valid().Validate());
@@ -47,11 +47,6 @@ public sealed class SiteSettingsTests
     public void A_budget_must_be_positive(int amount) =>
         Should.Throw<ArgumentException>(() => (Valid() with { MonthlyBudget = amount }).Validate());
 
-    [Theory]
-    [InlineData("")]
-    [InlineData("admin")]
-    public void The_admin_login_must_be_an_email_address(string email) =>
-        Should.Throw<ArgumentException>(() => (Valid() with { AdminEmail = email }).Validate()).Message.ShouldContain("adminEmail");
 
     [Fact]
     public void Scaling_out_is_refused_until_umbraco_can_share_state() =>
@@ -61,9 +56,39 @@ public sealed class SiteSettingsTests
     public void The_placeholder_digest_is_refused() =>
         Should.Throw<ArgumentException>(() => (Valid() with { Image = "ghcr.io/example/umbraco-sample@sha256:0000000000000000000000000000000000000000000000000000000000000000" }).Validate()).Message.ShouldContain("placeholder");
 
+
     [Theory]
-    [InlineData("", "00000000-0000-0000-0000-0000000000aa")]
-    [InlineData("owners-sql", "not-a-guid")]
-    public void An_owner_group_must_administer_sql(string groupName, string objectId) =>
-        Should.Throw<ArgumentException>(() => (Valid() with { SqlAdminGroupName = groupName, SqlAdminGroupObjectId = objectId }).Validate()).Message.ShouldContain("sqlAdminGroup");
+    [InlineData("")]
+    [InlineData("admin")]
+    [InlineData("Admin <admin@example.invalid>")]
+    public void Owner_emails_must_be_plain_addresses(string email) =>
+        Should.Throw<ArgumentException>(() => SiteSecrets.Email("adminEmail", email)).Message.ShouldContain("adminEmail");
+
+    [Fact]
+    public void The_sql_admin_group_needs_a_name_and_an_object_id()
+    {
+        Should.Throw<ArgumentException>(() => SiteSecrets.NotBlank("sqlAdminGroupName", " "));
+        Should.Throw<ArgumentException>(() => SiteSecrets.ObjectId("sqlAdminGroupObjectId", "not-a-guid"));
+        SiteSecrets.ObjectId("sqlAdminGroupObjectId", "00000000-0000-0000-0000-0000000000aa").ShouldNotBeEmpty();
+    }
+
+    [Fact]
+    public void Committed_stack_files_hold_no_owner_identifying_plain_values()
+    {
+        var folder = Path.GetFullPath(Path.Join(AppContext.BaseDirectory, "../../../../UmbracoSample.Infra"));
+        foreach (var file in Directory.GetFiles(folder, "Pulumi.*.yaml"))
+        {
+            foreach (var line in File.ReadAllLines(file).Where(l => !l.TrimStart().StartsWith('#')))
+            {
+                System.Text.RegularExpressions.Regex.IsMatch(line, @"[\w.+-]+@[\w-]+\.[\w.]+").ShouldBeFalse($"{Path.GetFileName(file)}: emails are set with --secret (public repository).");
+                foreach (var key in new[] { "Email:", "sqlAdminGroup", "umbracoAdminPassword:", "imagingHmacKey:" })
+                {
+                    if (line.Contains(key, StringComparison.Ordinal))
+                    {
+                        line.ShouldContain("secure:", customMessage: $"{Path.GetFileName(file)}: {key} must be set with --secret.");
+                    }
+                }
+            }
+        }
+    }
 }

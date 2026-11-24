@@ -5,19 +5,21 @@ These steps need the owner: they create cloud identities, store a secret and cha
 ## 1. Pulumi Cloud
 
 1. Create the stacks from `infra/UmbracoSample.Infra`: `pulumi stack init <org>/umbraco-sample/dev` (and `prod` later).
-2. Set the real budget contact, replacing the placeholder: `pulumi config set budgetContactEmail <address> --stack dev`. Keep the committed `Pulumi.dev.yaml` value as the placeholder, or move the value to Pulumi config only.
-3. Set the first-boot admin login and the two secrets (encrypted in Pulumi Cloud; Pulumi writes them to Key Vault):
+2. Set the stack's values. **This repository is public**, and `pulumi config set` writes to the committed `Pulumi.<stack>.yaml`. So everything that is a credential or identifies you or your tenant is set with `--secret`: the file then holds only ciphertext that only your Pulumi Cloud stack can decrypt, and a policy test fails if a plain email or group lands there.
    ```sh
-   pulumi config set adminEmail <your address> --stack dev
-   pulumi config set --secret umbracoAdminPassword --stack dev   # prompts; a strong password, changed after first sign-in
+   cd infra/UmbracoSample.Infra
+   pulumi config set --secret budgetContactEmail <your address> --stack dev
+   pulumi config set --secret adminEmail <your address> --stack dev            # first back-office login
+   pulumi config set --secret umbracoAdminPassword --stack dev                 # prompts; changed after first sign-in
    openssl rand -base64 64 | tr -d '\n' | pulumi config set --secret imagingHmacKey --stack dev
    ```
-   Preview fails until both secrets are set. Lifetimes: the admin password is used only by the first install; change it in the back office after first sign-in and treat the Key Vault copy as stale (rotate it with `config set` and `up` if it may have leaked). Rotate the imaging key yearly or on suspected exposure; rotating it invalidates cached image URLs.
-4. Create an Entra security group for SQL administration (you, and later anyone else who administers the database), and set it:
+   Lifetimes: the admin password is used only by the first install; change it in the back office after first sign-in and treat the Key Vault copy as stale (rotate it with `config set` and `up` if it may have leaked). Rotate the imaging key yearly or on suspected exposure; rotating it invalidates cached image URLs.
+3. Create an Entra security group for SQL administration (you, and later anyone else who administers the database), and set it, also as secrets:
    ```sh
-   pulumi config set sqlAdminGroupName <group display name> --stack dev
-   pulumi config set sqlAdminGroupObjectId <group object id> --stack dev
+   pulumi config set --secret sqlAdminGroupName <group display name> --stack dev
+   pulumi config set --secret sqlAdminGroupObjectId <group object id> --stack dev
    ```
+4. Check before committing: `git diff infra/UmbracoSample.Infra/Pulumi.dev.yaml` should show only `secure:` values for these keys. Commit the file through a pull request so CI previews use the same config.
 5. Make the GHCR package public once CI first publishes it from main (GitHub, your profile, Packages, umbraco-sample, Package settings, Change visibility). New packages start private, and a public package lets Container Apps pull without a stored registry credential. Then set the image, using the digest from the main CI run's summary: `pulumi config set image ghcr.io/<owner>/umbraco-sample@sha256:<digest> --stack dev`.
 6. Create a Pulumi access token for CI, scoped as narrowly as your plan allows (a team token with read access to this project's stacks if your plan has it), with a 90-day expiry. Put a reminder in your calendar to rotate it (DEV-016).
 

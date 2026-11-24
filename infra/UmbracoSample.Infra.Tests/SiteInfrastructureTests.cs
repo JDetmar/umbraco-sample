@@ -10,18 +10,26 @@ public sealed class SiteInfrastructureTests
 {
     private const string Digest = "ghcr.io/example/umbraco-sample@sha256:1111111111111111111111111111111111111111111111111111111111111111";
 
-    private static readonly SiteSettings Dev = new("dev", 0, 1, 20m, "owner@example.invalid", Digest, EnableEdge: false, "admin@example.invalid", "owners-sql", "00000000-0000-0000-0000-0000000000aa");
+    private static readonly SiteSettings Dev = new("dev", 0, 1, 20m, Digest, EnableEdge: false);
 
     private static readonly string DevSuffix = SiteInfrastructure.Suffix(RecordingMocks.SubscriptionId, "dev");
 
     private const string AdminPassword = "mock-admin-password-value";
     private const string ImagingKey = "mock-imaging-hmac-key-value";
 
+    private static SiteSecrets Secrets() => new(
+        Output.CreateSecret(AdminPassword),
+        Output.CreateSecret(ImagingKey),
+        Output.CreateSecret("admin@example.invalid"),
+        Output.CreateSecret("owner@example.invalid"),
+        Output.CreateSecret("owners-sql"),
+        Output.CreateSecret("00000000-0000-0000-0000-0000000000aa"));
+
     private static async Task<RecordingMocks> Declare(SiteSettings settings)
     {
         var mocks = new RecordingMocks();
         await Deployment.TestAsync(mocks, new TestOptions { IsPreview = false, ProjectName = "umbraco-sample", StackName = settings.Environment },
-            () => new SiteInfrastructure(settings, new SiteSecrets(Output.CreateSecret(AdminPassword), Output.CreateSecret(ImagingKey))).Outputs);
+            () => new SiteInfrastructure(settings, Secrets()).Outputs);
         return mocks;
     }
 
@@ -190,7 +198,7 @@ public sealed class SiteInfrastructureTests
         await Deployment.TestAsync(new RecordingMocks(), new TestOptions { IsPreview = false, ProjectName = "umbraco-sample", StackName = "dev" },
             () =>
             {
-                infrastructure = new SiteInfrastructure(Dev, new SiteSecrets(Output.CreateSecret(AdminPassword), Output.CreateSecret(ImagingKey)));
+                infrastructure = new SiteInfrastructure(Dev, Secrets());
                 return infrastructure.Outputs;
             });
 
@@ -286,7 +294,7 @@ public sealed class SiteInfrastructureTests
     [Fact]
     public async Task A_stack_that_needs_the_edge_fails_until_the_edge_is_declared()
     {
-        var prod = new SiteSettings("prod", 1, 1, 60m, "owner@example.invalid", Digest, EnableEdge: true, "admin@example.invalid", "owners-sql", "00000000-0000-0000-0000-0000000000aa");
+        var prod = new SiteSettings("prod", 1, 1, 60m, Digest, EnableEdge: true);
 
         await Should.ThrowAsync<Exception>(() => Declare(prod));
     }
