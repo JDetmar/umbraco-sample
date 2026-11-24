@@ -87,6 +87,20 @@ public sealed partial class SupplyChainPolicyTests
     }
 
     [Fact]
+    public void Node_engine_range_matches_the_ci_version()
+    {
+        var root = RepositoryRoot.Find().FullName;
+        var ci = File.ReadAllText(Path.Join(root, ".nvmrc")).Trim();
+        using var package = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Join(root, "frontend", "package.json")));
+        var engine = package.RootElement.GetProperty("engines").GetProperty("node").GetString();
+
+        ExactVersion().IsMatch(ci).ShouldBeTrue("ES-013: CI installs an exact Node version from .nvmrc.");
+        var major = ci.Split('.')[0];
+        engine.ShouldBe($"^{major}.0.0", "engines accepts the CI Node major only, so a different major fails fast (ADR 0007).");
+        (int.Parse(major, System.Globalization.CultureInfo.InvariantCulture) % 2).ShouldBe(0, "ADR 0007: Node follows even-numbered (LTS) lines only.");
+    }
+
+    [Fact]
     public void Package_versions_are_only_set_centrally()
     {
         var violations = RepositoryRoot.Files("*.csproj")

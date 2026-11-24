@@ -53,7 +53,7 @@ clauses:
       - global.json pins the exact .NET SDK (rollForward disable) and the Aspire AppHost SDK; CI installs that SDK.
       - Local tools (Stryker, the Aspire CLI) are pinned in .config/dotnet-tools.json with rollForward false and restored by `make restore`; the policy test Aspire_cli_tool_sdk_and_packages_share_one_version keeps the Aspire CLI, SDK and packages on one version (ADR 0012).
       - CI tools are pinned (Actions by commit SHA, gitleaks by version and SHA-256 checksum).
-      - npm dependencies are exact versions with a committed lock file, installed by `npm ci` with install scripts disabled; Node is pinned in .nvmrc with engine-strict. Policy tests Npm_dependencies_are_exact_and_locked and Npm_never_runs_install_scripts_and_enforces_the_node_version.
+      - npm dependencies are exact versions with a committed lock file, installed by `npm ci` with install scripts disabled; CI installs the exact Node version in .nvmrc; package.json engines accepts that LTS major only, with engine-strict. Policy tests Npm_dependencies_are_exact_and_locked, Npm_never_runs_install_scripts_and_enforces_the_node_version and Node_engine_range_matches_the_ci_version.
   ES-015:
     status: compliant
     evidence:

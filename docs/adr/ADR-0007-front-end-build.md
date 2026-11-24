@@ -18,14 +18,14 @@ Components need shared visual decisions (colour, spacing, type) that designers a
 ## Decision
 
 - `frontend/` holds the token JSON (`tokens/`), the stylesheet sources (`src/`) and the build configuration. Style Dictionary turns tokens into CSS custom properties. Vite bundles and minifies them into `src/UmbracoSample.Web/wwwroot/dist/site.css`. That file is build output and is not committed.
-- Node is pinned exactly in `.nvmrc` and `package.json` `engines`, with `engine-strict`. CI installs that version.
+- Node follows the active LTS line (26), consistent with ADR 0011; only even-numbered majors are LTS, and a policy test enforces that. CI installs the exact version in `.nvmrc`. `package.json` `engines` accepts any release of that major (`^26.0.0`) with `engine-strict`, so contributors are not blocked by a patch mismatch while a different major still fails fast. A policy test keeps the two on the same major.
 - npm dependencies are exact versions with a committed lock file, installed with `npm ci`, and with `ignore-scripts=true`, so no dependency runs code at install time. Policy tests enforce all three.
 - `make frontend` builds the stylesheet as part of `make validate`, `make run` and `make image`, and in every CI job before the .NET build or the image build. `make build` stays .NET-only, so `make build && make test-integration` on a clean checkout needs `make frontend` first. The Dockerfile copies the built file and fails clearly if it is missing, so the image needs no Node stage. The guard checks presence only: a local `docker build` without `make image` can copy a stale stylesheet; CI always rebuilds it in the same job.
 - Rules on tokens are tests, run against the built stylesheet: WCAG contrast for every colour pair, a check that every colour used for text or background is in a tested pair, and no raw colour value (hex, named, rgb, hsl, oklch, lab, hwb, color()) outside the token definitions. A bundle-size budget (10 KB gzipped) fails the build.
 
 ## Consequences
 
-- Contributors need Node 24.22.3 as well as the .NET SDK.
+- Contributors need Node 26 as well as the .NET SDK.
 - The image is built from a pre-built context, so its provenance includes the CI step that ran `make frontend`. That step runs in the same job, from the same commit.
 - Dependabot proposes npm updates weekly. `make frontend-audit` fails CI on any advisory of moderate severity or above unless the ledger assesses it, and fails if the audit cannot run. Each exception in `frontend/scripts/audit.mjs` must name a ledger entry and expire; there are none today.
 - Style Dictionary 5.8.0 depends on glob and minimatch versions with moderate advisories (GHSA-3g3m-2fjr-6pw4, GHSA-g3hv-75wg-m249). `package.json` `overrides` pins the patched glob 14.0.6 and minimatch 11.0.9; the token build and its tests pass with them. Dependabot does not bump overrides, so remove them once a Style Dictionary release depends on patched versions itself.
