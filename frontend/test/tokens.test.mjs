@@ -60,7 +60,7 @@ test('the built stylesheet sets colours only through tokens', () => {
 });
 
 test('the colour policy catches every kind of raw colour', () => {
-  for (const raw of ['color:red', 'color:#fff', 'background:oklch(70% .1 200)', 'border:1px solid rgb(0 0 0)', 'outline:2px solid hsl(0 0% 0%)', 'box-shadow:0 0 2px color(srgb 1 0 0)', 'color:lab(50% 0 0)', 'color:hwb(0 0% 0%)', 'background-color:white', '--c:red', 'background-image:linear-gradient(red,blue)', 'border-image:linear-gradient(red,blue) 1']) {
+  for (const raw of ['color:red', 'color:#fff', 'background:oklch(70% .1 200)', 'border:1px solid rgb(0 0 0)', 'outline:2px solid hsl(0 0% 0%)', 'box-shadow:0 0 2px color(srgb 1 0 0)', 'color:lab(50% 0 0)', 'color:hwb(0 0% 0%)', 'background-color:white', '--c:red', '--brand-2:red', 'background-image:linear-gradient(red,blue)', 'border-image:linear-gradient(red,blue) 1']) {
     assert.equal(rawColourDeclarations(`.x{${raw}}`).length, 1, `missed ${raw}`);
   }
   // Only the first :root (the generated tokens) is exempt; a hand-written one later is checked.
