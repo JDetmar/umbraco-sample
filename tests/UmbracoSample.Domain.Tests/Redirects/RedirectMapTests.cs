@@ -97,6 +97,8 @@ public sealed class RedirectMapTests
     [InlineData("https://example.com/x\ty")]
     [InlineData("https://example.com/x\u0001")]
     [InlineData("https://example.com/x\u007f")]
+    [InlineData("https://example.com/a\\b")]
+    [InlineData("https://example.com/a\"b")]
     public void Targets_must_be_ascii_without_whitespace_or_control_characters(string target)
     {
         var (map, errors) = RedirectMap.Parse($"source,target,kind\n/a,{target},permanent\n", Reserved);
