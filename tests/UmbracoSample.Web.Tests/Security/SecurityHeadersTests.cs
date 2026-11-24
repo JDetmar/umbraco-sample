@@ -83,7 +83,7 @@ public sealed class SecurityHeadersTests
     [InlineData("/umbraco")]
     [InlineData("/umbraco/backoffice")]
     [InlineData("/UMBRACO/management/api/v1/server/status")]
-    public void Back_office_responses_get_the_general_headers_but_not_the_site_policy(string path)
+    public void Back_office_responses_get_the_general_headers_and_only_the_minimal_policy(string path)
     {
         var context = Request(path);
 
@@ -92,7 +92,7 @@ public sealed class SecurityHeadersTests
         var headers = context.Response.Headers;
         headers.XContentTypeOptions.ToString().ShouldBe("nosniff");
         headers.XFrameOptions.ToString().ShouldBe("SAMEORIGIN");
-        headers.ContainsKey("Content-Security-Policy").ShouldBeFalse();
+        headers.ContentSecurityPolicy.ToString().ShouldBe(SecurityHeaders.BackOfficePolicy);
         headers.ContainsKey("Cross-Origin-Opener-Policy").ShouldBeFalse();
     }
 
@@ -103,15 +103,14 @@ public sealed class SecurityHeadersTests
     }
 
     [Fact]
-    public void Preview_requests_keep_the_other_headers_but_drop_the_policy()
+    public void Preview_requests_keep_the_site_policy()
     {
         var context = Request("/fixture-maximal/");
         context.Request.Headers.Cookie = $"{Umbraco.Cms.Core.Constants.Web.PreviewCookieName}=preview";
 
         SecurityHeaders.Apply(context.Request, context.Response.Headers, "policy");
 
-        context.Response.Headers.ContainsKey("Content-Security-Policy").ShouldBeFalse();
-        context.Response.Headers.XContentTypeOptions.ToString().ShouldBe("nosniff");
+        context.Response.Headers.ContentSecurityPolicy.ToString().ShouldBe("policy");
     }
 
     private static DefaultHttpContext Request(string path)

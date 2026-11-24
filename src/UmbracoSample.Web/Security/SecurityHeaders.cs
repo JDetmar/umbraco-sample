@@ -4,8 +4,8 @@ using Microsoft.AspNetCore.Http;
 namespace UmbracoSample.Web.Security;
 
 /// <summary>
-/// Response headers that harden site pages (TST-09, ES-026). Site pages get a strict content security policy with no
-/// inline script or style; the back office, which ships its own scripts, gets the headers that do not constrain it.
+/// Response headers that harden site pages (TST-09, ES-026). Site pages, including previews, get a strict content security
+/// policy with no inline script or style; the back office, which ships its own scripts, gets a minimal policy.
 /// </summary>
 public static class SecurityHeaders
 {
@@ -34,6 +34,9 @@ public static class SecurityHeaders
         ["Permissions-Policy"] = "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
         ["Cross-Origin-Opener-Policy"] = "same-origin",
     };
+
+    /// <summary>The policy for back-office paths: no plugins, no base-URL hijack, no framing by other sites.</summary>
+    public const string BackOfficePolicy = "object-src 'none'; base-uri 'self'; frame-ancestors 'self'";
 
     /// <summary>Builds the content security policy for site pages from the third-party allowlist.</summary>
     public static string ContentSecurityPolicy(IEnumerable<ThirdPartyOrigin> allowlist)
@@ -104,6 +107,8 @@ public static class SecurityHeaders
 
         if (IsBackOffice(request.Path))
         {
+            // Umbraco owns the back office's scripts and styles; this minimal policy constrains only what never breaks it.
+            headers.ContentSecurityPolicy = BackOfficePolicy;
             return;
         }
 
@@ -112,12 +117,8 @@ public static class SecurityHeaders
             headers[name] = value;
         }
 
-        // Back-office preview renders site pages for signed-in editors and injects Umbraco's preview script.
-        // Umbraco honours the preview cookie only with a back-office session, so dropping the policy here
-        // only affects editors (and anyone who sets the cookie in their own browser).
-        if (!request.Cookies.ContainsKey(Umbraco.Cms.Core.Constants.Web.PreviewCookieName))
-        {
-            headers.ContentSecurityPolicy = contentSecurityPolicy;
-        }
+        // Preview is not exempt: Umbraco 17's preview badge is a same-origin script that styles itself with
+        // adopted stylesheets, which style-src does not govern, so it works under the site policy.
+        headers.ContentSecurityPolicy = contentSecurityPolicy;
     }
 }

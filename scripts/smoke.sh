@@ -32,6 +32,16 @@ check_contains() {
   echo "ok   $path"
 }
 
+check_header_absent_text() {
+  local path="$1" header="$2" forbidden="$3" headers
+  headers="$(curl "${curl_opts[@]}" --dump-header - --output /dev/null "$base_url$path" | tr -d '\r')"
+  if grep -i "^$header:" <<<"$headers" | grep -qi -- "$forbidden"; then
+    echo "FAIL $path: header '$header' must not contain '$forbidden'" >&2
+    exit 1
+  fi
+  echo "ok   $path $header has no $forbidden"
+}
+
 check_header() {
   local path="$1" header="$2" expected="$3" headers
   headers="$(curl "${curl_opts[@]}" --dump-header - --output /dev/null "$base_url$path" | tr -d '\r')"
@@ -51,5 +61,7 @@ check_contains /dist/site.css "--color-text"
 check_contains / "${SMOKE_HOME_MARKER:-class=\"skip-link\"}"
 # Security headers (TST-09, ADR 0008): the strict policy and nosniff reach visitors through the edge.
 check_header / "Content-Security-Policy" "default-src 'self'"
+check_header / "Content-Security-Policy" "frame-ancestors 'self'"
+check_header_absent_text / "Content-Security-Policy" "unsafe-"
 check_header / "X-Content-Type-Options" "nosniff"
 echo "Smoke test passed for $base_url"

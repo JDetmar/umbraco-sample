@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Shouldly;
+using UmbracoSample.Tests.Support;
 
 namespace UmbracoSample.Integration.Tests;
 
@@ -36,6 +37,36 @@ public sealed partial class SecurityTests(SiteFixture site)
     }
 
     [Fact]
+    public async Task Not_found_responses_get_the_site_policy()
+    {
+        using var response = await site.Web.GetAsync("/this-page-does-not-exist/", TestContext.Current.CancellationToken);
+
+        ((int)response.StatusCode).ShouldBe(404);
+        Header(response, "Content-Security-Policy").ShouldStartWith("default-src 'self'");
+        Header(response, "X-Content-Type-Options").ShouldBe("nosniff");
+    }
+
+    [Fact]
+    public async Task A_preview_cookie_does_not_remove_the_policy()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/");
+        request.Headers.Add("Cookie", "UMB_PREVIEW=preview");
+
+        using var response = await site.Web.SendAsync(request, TestContext.Current.CancellationToken);
+
+        Header(response, "Content-Security-Policy").ShouldStartWith("default-src 'self'");
+    }
+
+    [Fact]
+    public async Task The_back_office_gets_the_minimal_policy()
+    {
+        using var response = await site.Web.GetAsync("/umbraco", TestContext.Current.CancellationToken);
+
+        Header(response, "Content-Security-Policy").ShouldBe("object-src 'none'; base-uri 'self'; frame-ancestors 'self'");
+        Header(response, "X-Frame-Options").ShouldBe("SAMEORIGIN");
+    }
+
+    [Fact]
     public async Task Static_files_and_health_endpoints_get_the_headers_too()
     {
         foreach (var path in new[] { "/dist/site.css", "/health/live" })
@@ -52,38 +83,25 @@ public sealed partial class SecurityTests(SiteFixture site)
     {
         using var response = await site.Web.GetAsync(path, TestContext.Current.CancellationToken);
         var html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        var directives = Header(response, "Content-Security-Policy")
-            .Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            .Select(part => part.Split(' ', 2))
-            .ToDictionary(part => part[0], part => part.Length > 1 ? part[1].Split(' ') : []);
+        var policy = Header(response, "Content-Security-Policy");
+        var page = new Uri(site.Web.BaseAddress!, path);
 
-        foreach (Match reference in ResourceReference().Matches(html))
+        var references = ResourceReferences.InHtml(html).ToList();
+
+        // Same-origin stylesheets are fetched too: an @import or url() inside them loads third-party content.
+        foreach (var stylesheet in references.Where(reference => reference.Directive == "style-src").Select(reference => new Uri(page, reference.Url)).ToList())
         {
-            var directive = reference.Groups["tag"].Value.ToLowerInvariant() switch
+            if (stylesheet.GetLeftPart(UriPartial.Authority) == page.GetLeftPart(UriPartial.Authority))
             {
-                "script" => "script-src",
-                "img" or "source" => "img-src",
-                "iframe" => "frame-src",
-                "link" => "style-src",
-                _ => "default-src",
-            };
-
-            foreach (var url in Urls(reference.Groups["url"].Value, reference.Groups["attr"].Value))
-            {
-                // Protocol-relative URLs load from another host. On Linux, "/path" parses as an absolute file URI,
-                // so only http and https count as absolute here.
-                var candidate = url.StartsWith("//", StringComparison.Ordinal) ? "https:" + url : url;
-                if (!Uri.TryCreate(candidate, UriKind.Absolute, out var uri)
-                    || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
-                    || uri.Host == site.Web.BaseAddress!.Host)
-                {
-                    continue; // Relative, data: or same-site: allowed by 'self' (and data: for images).
-                }
-
-                var origin = uri.GetLeftPart(UriPartial.Authority);
-                directives[directive].ShouldContain(origin, $"{path} loads {url} from an origin the allowlist does not approve for {directive}");
+                var css = await site.Web.GetStringAsync(stylesheet, TestContext.Current.CancellationToken);
+                references.AddRange(ResourceReferences.InCss(css).Select(reference => reference with { Url = new Uri(stylesheet, reference.Url).ToString() }));
             }
         }
+
+        references.ShouldNotBeEmpty("the page links at least its stylesheet, so the extractor ran");
+        ResourceReferences.NotAllowed(references, policy, page)
+            .Select(reference => $"{reference.Source} {reference.Directive} {reference.Url}")
+            .ShouldBeEmpty($"{path} loads something its policy does not allow; add it to ThirdPartyAllowlist with a purpose, or remove it");
     }
 
     [Theory]
@@ -101,16 +119,8 @@ public sealed partial class SecurityTests(SiteFixture site)
     private static string Header(HttpResponseMessage response, string name) =>
         response.Headers.TryGetValues(name, out var values) ? string.Join(", ", values) : string.Empty;
 
-    private static IEnumerable<string> Urls(string value, string attribute) =>
-        attribute.Equals("srcset", StringComparison.OrdinalIgnoreCase)
-            ? value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Select(candidate => candidate.Split(' ')[0])
-            : [value];
-
-    // Elements that make the browser fetch something; anchors are navigation, not loads.
-    [GeneratedRegex("<(?<tag>script|img|source|iframe|link|embed|object|video|audio)\\b[^>]*?\\s(?<attr>src|srcset|href|data)=\"(?<url>[^\"]*)\"", RegexOptions.IgnoreCase)]
-    private static partial Regex ResourceReference();
-
-    [GeneratedRegex("<script\\b(?![^>]*\\ssrc=)[^>]*>", RegexOptions.IgnoreCase)]
+    // Data blocks such as JSON-LD do not execute, so the policy does not block them.
+    [GeneratedRegex("<script\\b(?![^>]*\\ssrc=)(?![^>]*\\stype=[\"']?application/(ld\\+)?json)[^>]*>", RegexOptions.IgnoreCase)]
     private static partial Regex InlineScript();
 
     [GeneratedRegex("<[a-z][^>]*\\sstyle=", RegexOptions.IgnoreCase)]
