@@ -1,9 +1,13 @@
 using UmbracoSample.Web.Health;
 using UmbracoSample.Web.Redirects;
+using UmbracoSample.Web.Security;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+
+// Do not advertise the server software (TST-09).
+builder.WebHost.ConfigureKestrel(kestrel => kestrel.AddServerHeader = false);
 
 builder.CreateUmbracoBuilder()
     .AddBackOffice()
@@ -18,6 +22,7 @@ WebApplication app = builder.Build();
 
 await app.BootUmbracoAsync();
 
+app.UseSecurityHeaders();
 app.UseRedirectMap(redirects);
 
 app.MapDefaultEndpoints();

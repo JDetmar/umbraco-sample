@@ -30,6 +30,7 @@ public sealed class RedirectTests(SiteFixture site)
         ((int)redirect.StatusCode).ShouldBe((int)rule.Kind);
         var location = redirect.Headers.Location!.OriginalString;
         location.ShouldBe(rule.Target.LocationFor("?from=test"), "the request query is kept unless the target sets its own");
+        redirect.Headers.GetValues("X-Content-Type-Options").ShouldBe(["nosniff"], "TST-09: redirect responses carry the security headers too");
 
         if (rule.Target.SitePath is null)
         {
