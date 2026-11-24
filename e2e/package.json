@@ -1,0 +1,18 @@
+{
+  "name": "umbraco-sample-e2e",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end, accessibility and visual-regression tests. Run through scripts/e2e.sh inside the pinned Playwright image.",
+  "scripts": {
+    "test": "playwright test",
+    "lighthouse": "lhci autorun"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@lhci/cli": "0.16.1",
+    "@playwright/test": "1.65.1"
+  },
+  "overrides": {
+    "basic-ftp": "6.2.6"
+  }
+}

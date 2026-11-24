@@ -34,7 +34,7 @@ One Pulumi project, `infra/UmbracoSample.Infra`, with one stack per environment 
 
 Settings are parsed and validated before any resource is declared (`SiteSettings.Validate`): known environment names, consistent replica bounds, a positive budget, a digest-pinned image, and for prod at least one warm replica and the edge.
 
-**The edge (Front Door Standard with WAF and HSTS) is not declared yet.** A stack with `enableEdge: true` fails before declaring anything, so prod cannot be deployed without its edge (DEV-010).
+**The edge (Front Door Standard with WAF and HSTS) is not declared yet.** A stack with `enableEdge: true` fails before declaring anything, so prod cannot be deployed without its edge (DEV-010). Behind the edge, Container Apps ingress forwards plain HTTP to the container inside the environment; that hop is gap DEV-013, for the owner to accept or close with in-environment encryption before forms go live.
 
 **Checks before deploy.** `make infra-test` restores in locked mode, checks formatting, builds, and runs Pulumi mock tests that assert the security-relevant inputs (no shared keys, Entra-only SQL, RBAC vault, scoped roles, digest image, HTTPS ingress, budget, tags, free-tier dev database). It needs no cloud account and runs on every infra change. `pulumi preview` of `dev` runs in CI only after the owner enables it (`docs/infra-setup.md`), with OIDC to Azure. Nothing in CI runs `pulumi up`.
 

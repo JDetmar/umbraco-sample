@@ -1,16 +1,38 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.6.5">
+<Project Sdk="Aspire.AppHost.Sdk/17.0.0">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <!-- Use the NuGet-delivered DCP and dashboard so no separate Aspire CLI install is needed (ES-052). -->
-    <AspireUseCliBundle>false</AspireUseCliBundle>
     <NoWarn>$(NoWarn);ASPIRE010</NoWarn>
+    <!-- Aspire 17 needs the Aspire CLI (ADR 0012). It is a pinned local tool in .config/dotnet-tools.json, restored by
+         `dotnet tool restore` (make bootstrap), so no global install is needed (ES-013, ES-052). The version here must
+         match the manifest; a policy test checks it. -->
+    <AspireCliVersion>17.0.0</AspireCliVersion>
+    <_AspireCliRid Condition="$([MSBuild]::IsOSPlatform('OSX')) and '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'">osx-arm64</_AspireCliRid>
+    <_AspireCliRid Condition="$([MSBuild]::IsOSPlatform('OSX')) and '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' != 'Arm64'">osx-x64</_AspireCliRid>
+    <_AspireCliRid Condition="$([MSBuild]::IsOSPlatform('Linux')) and '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'">linux-arm64</_AspireCliRid>
+    <_AspireCliRid Condition="$([MSBuild]::IsOSPlatform('Linux')) and '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' != 'Arm64'">linux-x64</_AspireCliRid>
+    <_AspireCliRid Condition="$([MSBuild]::IsOSPlatform('Windows')) and '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' == 'Arm64'">win-arm64</_AspireCliRid>
+    <_AspireCliRid Condition="$([MSBuild]::IsOSPlatform('Windows')) and '$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)' != 'Arm64'">win-x64</_AspireCliRid>
+    <_AspireCliExe Condition="$([MSBuild]::IsOSPlatform('Windows'))">aspire.exe</_AspireCliExe>
+    <_AspireCliExe Condition="!$([MSBuild]::IsOSPlatform('Windows'))">aspire</_AspireCliExe>
+    <AspireCliPath Condition="'$(AspireCliPath)' == ''">$(NuGetPackageRoot)aspire.cli.$(_AspireCliRid)/$(AspireCliVersion)/tools/any/$(_AspireCliRid)/$(_AspireCliExe)</AspireCliPath>
     <UserSecretsId>c227806e-519e-4278-83eb-dc7810c6cb63</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.Dotnet" />
     <PackageReference Include="Aspire.Hosting.SqlServer" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
   </ItemGroup>
+
+  <!-- Fail early with the fix, instead of ASPIRE013, when the tool was not restored or the platform is not mapped. -->
+  <Target Name="CheckAspireCli" BeforeTargets="PrepareForBuild;Restore">
+    <Error Condition="'$(_AspireCliRid)' == ''" Text="No Aspire CLI runtime is mapped for this platform; add one in UmbracoSample.AppHost.csproj (ADR 0012)." />
+  </Target>
+  <Target Name="CheckAspireCliRestored" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('$(AspireCliPath)')" Text="Aspire CLI not found at $(AspireCliPath). Run 'make bootstrap' (dotnet tool restore) first (ADR 0012)." />
+  </Target>
 
   <ItemGroup>
     <ProjectReference Include="..\UmbracoSample.Web\UmbracoSample.Web.csproj" />

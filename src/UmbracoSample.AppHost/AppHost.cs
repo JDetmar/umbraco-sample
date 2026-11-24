@@ -18,7 +18,7 @@ var imagingKey = builder.AddParameter(
     new GenerateParameterDefault { MinLength = 64, Special = false },
     secret: true);
 
-builder.AddProject<Projects.UmbracoSample_Web>("web")
+builder.AddDotnetProject("web", "../UmbracoSample.Web/UmbracoSample.Web.csproj")
     .WithReference(db)
     .WaitFor(db)
     .WithEnvironment("ConnectionStrings__umbracoDbDSN_ProviderName", "Microsoft.Data.SqlClient")

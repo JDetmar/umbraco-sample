@@ -51,6 +51,7 @@ clauses:
       - Directory.Packages.props pins every NuGet version; the policy test Package_versions_are_only_set_centrally enforces it.
       - The policy test Every_project_has_a_committed_lock_file checks lock files against git ls-files; `make lockfiles-check` fails CI when restore changes or creates a lock file.
       - global.json pins the exact .NET SDK (rollForward disable) and the Aspire AppHost SDK; CI installs that SDK.
+      - Local tools (Stryker, the Aspire CLI) are pinned in .config/dotnet-tools.json with rollForward false and restored by `make restore`; the policy test Aspire_cli_tool_sdk_and_packages_share_one_version keeps the Aspire CLI, SDK and packages on one version (ADR 0012).
       - CI tools are pinned (Actions by commit SHA, gitleaks by version and SHA-256 checksum).
       - npm dependencies are exact versions with a committed lock file, installed by `npm ci` with install scripts disabled; Node is pinned in .nvmrc with engine-strict. Policy tests Npm_dependencies_are_exact_and_locked and Npm_never_runs_install_scripts_and_enforces_the_node_version.
   ES-015:
@@ -69,7 +70,7 @@ clauses:
   ES-019:
     status: compliant
     evidence:
-      - docs/adr/0001 to 0006 record context, alternatives, decision and consequences.
+      - Every docs/adr/ADR-NNNN-*.md records context, alternatives, decision and consequences; the policy test Every_record_is_named_ADR_NNNN_and_listed_in_the_index checks naming, the index and unique numbers.
   ES-020:
     status: compliant
     evidence:
@@ -88,6 +89,15 @@ clauses:
       - obligation: Secret scanning gates shared merge
         status: deviation
         deviation: DEV-001
+  ES-025:
+    status: deviation
+    obligations:
+      - obligation: Sensitive data is encrypted in transit
+        status: deviation
+        deviation: DEV-010
+      - obligation: Sensitive data is encrypted in transit
+        status: deviation
+        deviation: DEV-013
   ES-030:
     status: compliant
     evidence:
@@ -95,6 +105,18 @@ clauses:
       - Umbraco's Serilog pipeline replaces the OpenTelemetry log provider, so structured logs go to stdout as compact JSON (appsettings.json) for the container platform to collect, rather than over OTLP.
       - /health/live, /health/ready (includes Umbraco runtime level) and /health/schema (uSync schema drift) are mapped in every environment; the integration tests assert all three, and unit tests cover every drift outcome, including the vacuous no-handlers case.
       - scripts/smoke.sh is the post-deployment check; CI runs it against the built image with SQL Server on every pull request.
+  ES-036:
+    status: deviation
+    obligations:
+      - obligation: Automated accessibility checks run in the authoritative gate
+        status: deviation
+        deviation: DEV-008
+        evidence:
+          - The e2e CI job runs axe (WCAG 2.0, 2.1 and 2.2 A and AA rules, plus best-practice landmark and heading rules) on every seeded page at desktop and mobile sizes, inside the pinned Playwright image; any violation fails the job (e2e/tests/accessibility.spec.mjs).
+          - Keyboard journeys (skip link, token focus outline) and heading, alt-text and contrast rules are tested (e2e/tests/journeys.spec.mjs, ComponentFixtureTests, frontend/test/tokens.test.mjs).
+      - obligation: Periodic real keyboard and screen-reader assessment (SHOULD)
+        status: deviation
+        deviation: DEV-008
   ES-049:
     status: unknown
     obligations:
@@ -172,7 +194,7 @@ deviations:
     opened: 2026-11-24
     approver: null
     approval_ref: null
-    threat_model_ref: docs/adr/0001-umbraco-17-lts.md
+    threat_model_ref: docs/adr/ADR-0001-umbraco-17-lts.md
     review_triggers:
       - A new Umbraco major version.
       - Umbraco adding rollback-safe migrations.
@@ -221,12 +243,13 @@ deviations:
     clauses: [ES-036]
     obligations:
       - Automated accessibility checks run in the authoritative gate
-    summary: Components ship with tested heading-structure, alt-text and new-tab rules, but no automated accessibility scan (axe) runs in CI yet.
-    consequence: Contrast, landmark, name/role/value and keyboard problems in rendered pages are not caught by the gate.
-    compensating_controls: Integration tests assert one h1, no skipped heading levels, alt text on rendered images and announced new-tab links on every fixture page.
+      - Periodic real keyboard and screen-reader assessment (SHOULD)
+    summary: The e2e job runs axe on every seeded page, but it becomes an authoritative gate only when branch protection requires it (DEV-001). No periodic manual keyboard and screen-reader assessment is scheduled.
+    consequence: Until the job is required, a pull request could merge with an accessibility failure. Automated rules catch roughly a third to a half of real accessibility problems; the rest need people.
+    compensating_controls: The delegation envelope forbids agents merging with a failing check; axe, keyboard journeys and contrast tests run on every pull request.
     owner: repository-owner
     opened: 2026-11-24
-    disposition: Phase 3 adds Playwright with @axe-core/playwright against the fixture pages as a required CI check, then this gap closes.
+    disposition: Close the gate part when branch protection requires the e2e job. Schedule a manual keyboard and screen-reader pass (for example NVDA and VoiceOver on the fixture pages) before the first public release, and record it here.
 
   - id: DEV-010
     kind: gap
@@ -263,3 +286,15 @@ deviations:
     owner: repository-owner
     opened: 2026-11-24
     disposition: Add a custom 404 page (document type, template and the Error404Collection setting) styled from the site stylesheet before the first deployment. Revisit a fuller back-office policy built on Umbraco's ICspNonceService when Umbraco documents one as supported. Extend the test extractor to SVG image/use href and a ping, check preconnect against the union of directives before the first CDN is allowlisted, and add an integration test that a .js upload is refused through the Management API.
+
+  - id: DEV-013
+    kind: gap
+    clauses: [ES-025]
+    obligations:
+      - Sensitive data is encrypted in transit
+    summary: "Planned topology: Front Door to the Container Apps ingress is HTTPS, but inside the Container Apps environment the ingress forwards plain HTTP to the site container. Lead form submissions (personal data, threat model 0001) cross that hop unencrypted."
+    consequence: Anything able to observe traffic inside the Container Apps environment's network could read submissions. Nothing is deployed yet, so nothing is exposed today.
+    compensating_controls: The hop stays inside the managed environment's private network; forms are not enabled on a public environment before Phase 5 (threat model 0001, R2).
+    owner: repository-owner
+    opened: 2026-11-24
+    disposition: "Owner to decide in Phase 5: accept the managed-environment hop as a risk (an owner decision, not an agent one), or enable end-to-end encryption inside the environment (Container Apps peer-to-peer encryption) and record its cost and evidence here."

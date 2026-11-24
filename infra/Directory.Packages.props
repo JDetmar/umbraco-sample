@@ -8,6 +8,6 @@
   <ItemGroup Label="Infrastructure">
     <PackageVersion Include="Pulumi" Version="3.118.0" />
     <PackageVersion Include="Pulumi.AzureNative" Version="3.30.0" />
-    <PackageVersion Include="OpenTelemetry.Api" Version="1.17.0" />
+    <PackageVersion Include="OpenTelemetry.Api" Version="1.21.0" />
   </ItemGroup>
 </Project>
