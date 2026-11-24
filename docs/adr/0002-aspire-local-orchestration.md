@@ -1,6 +1,6 @@
 # 0002. .NET Aspire for local orchestration and integration tests
 
-- Status: Accepted
+- Status: Accepted; version paragraph superseded by ADR 0012
 - Date: 2026-11-24
 - Decider: owner
 - Clauses: ES-019, ES-006, ES-030, ES-052, ES-053
