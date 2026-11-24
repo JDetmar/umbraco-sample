@@ -1,6 +1,7 @@
 using UmbracoSample.Web.Health;
 using UmbracoSample.Web.Redirects;
 using UmbracoSample.Web.Security;
+using UmbracoSample.Web.Storage;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,7 @@ builder.CreateUmbracoBuilder()
     .AddBackOffice()
     .AddWebsite()
     .AddComposers()
+    .AddMediaStorage(builder.Configuration)
     .Build();
 
 // Parse the redirect map before booting, so an invalid map stops the site (ES-021).
