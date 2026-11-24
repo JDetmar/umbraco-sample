@@ -161,6 +161,11 @@ jobs:
         if: always()
         run: docker logs web 2>&1 | tail -n 200 || true
 
-      - name: Record image ID
+      - name: Record image inventory (ES-049)
         run: |
-          echo "Image ID: $(docker image inspect umbraco-sample:ci --format '{{.Id}}')" >> "${GITHUB_STEP_SUMMARY}"
+          {
+            echo "Image ID: $(docker image inspect umbraco-sample:ci --format '{{.Id}}')"
+            echo "Source revision: ${GITHUB_SHA}"
+            echo "Stylesheet toolchain: Node $(node --version), frontend/package-lock.json sha256 $(sha256sum frontend/package-lock.json | cut -d' ' -f1)"
+            echo "site.css sha256: $(sha256sum src/UmbracoSample.Web/wwwroot/dist/site.css | cut -d' ' -f1)"
+          } >> "${GITHUB_STEP_SUMMARY}"

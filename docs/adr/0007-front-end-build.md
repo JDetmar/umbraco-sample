@@ -20,12 +20,13 @@ Components need shared visual decisions (colour, spacing, type) that designers a
 - `frontend/` holds the token JSON (`tokens/`), the stylesheet sources (`src/`) and the build configuration. Style Dictionary turns tokens into CSS custom properties. Vite bundles and minifies them into `src/UmbracoSample.Web/wwwroot/dist/site.css`. That file is build output and is not committed.
 - Node is pinned exactly in `.nvmrc` and `package.json` `engines`, with `engine-strict`. CI installs that version.
 - npm dependencies are exact versions with a committed lock file, installed with `npm ci`, and with `ignore-scripts=true`, so no dependency runs code at install time. Policy tests enforce all three.
-- `make frontend` builds the stylesheet before `make build`, `make run` and `make image`. CI does the same in every job. The Dockerfile copies the built file and fails clearly if it is missing, so the image needs no Node stage.
-- Rules on tokens are tests: WCAG contrast for every colour pair the components use, and no raw colour values in stylesheets. A bundle-size budget (10 KB gzipped) fails the build.
+- `make frontend` builds the stylesheet as part of `make validate`, `make run` and `make image`, and in every CI job before the .NET build or the image build. `make build` stays .NET-only, so `make build && make test-integration` on a clean checkout needs `make frontend` first. The Dockerfile copies the built file and fails clearly if it is missing, so the image needs no Node stage. The guard checks presence only: a local `docker build` without `make image` can copy a stale stylesheet; CI always rebuilds it in the same job.
+- Rules on tokens are tests, run against the built stylesheet: WCAG contrast for every colour pair, a check that every colour used for text or background is in a tested pair, and no raw colour value (hex, named, rgb, hsl, oklch, lab, hwb, color()) outside the token definitions. A bundle-size budget (10 KB gzipped) fails the build.
 
 ## Consequences
 
 - Contributors need Node 24.22.3 as well as the .NET SDK.
 - The image is built from a pre-built context, so its provenance includes the CI step that ran `make frontend`. That step runs in the same job, from the same commit.
-- Dependabot proposes npm updates weekly. Moderate advisories in build-time dependencies are recorded in the ledger (DEV-006). `make frontend-audit` fails CI on high or critical ones.
+- Dependabot proposes npm updates weekly. `make frontend-audit` fails CI on any advisory of moderate severity or above unless the ledger assesses it; each exception in `frontend/scripts/audit.mjs` names its ledger entry and expires (DEV-006).
+- ARC-05 is only partly met: tokens are code, but nothing syncs them from a design tool (Figma). That sync is a separate decision if a design team needs it.
 - Revisit if the site needs JavaScript bundles, or if a Node stage can use a mirrored base image.

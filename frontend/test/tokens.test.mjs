@@ -1,8 +1,9 @@
-// Token rules (ARC-05, CMP-04, ES-035): colour pairs the components use meet WCAG 2.2 contrast,
-// and component styles use tokens, never raw colours.
+// Token rules (ARC-05, CMP-01, ES-035): colour pairs the components use meet WCAG 2.2 contrast,
+// and the built stylesheet uses tokens, never raw colours.
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
+import { coloursInUse, rawColourDeclarations } from '../scripts/colour-policy.mjs';
 
 const tokens = JSON.parse(readFileSync(new URL('../build/tokens.json', import.meta.url), 'utf8'));
 
@@ -46,11 +47,30 @@ test('contrast calculation matches known WCAG values', () => {
   assert.equal(contrast('#777777', '#ffffff').toFixed(2), '4.48');
 });
 
-test('stylesheets use colour tokens, not raw colour values', () => {
-  const files = ['base.css', ...readdirSync(new URL('../src/components/', import.meta.url)).map((f) => `components/${f}`)];
-  const rawColour = /#[0-9a-f]{3,8}\b|\brgba?\(|\bhsla?\(/i;
-  for (const file of files) {
-    const css = readFileSync(new URL(`../src/${file}`, import.meta.url), 'utf8');
-    assert.doesNotMatch(css, rawColour, `${file} contains a raw colour; add a token instead`);
+const builtCss = readFileSync(new URL('../../src/UmbracoSample.Web/wwwroot/dist/site.css', import.meta.url), 'utf8');
+
+test('colour tokens are opaque six-digit hex values', () => {
+  for (const [name, value] of Object.entries(tokens).filter(([key]) => key.startsWith('Color'))) {
+    assert.match(value, /^#[0-9a-f]{6}$/i, `${name} must be #rrggbb so contrast is computed on the real colour`);
   }
+});
+
+test('the built stylesheet sets colours only through tokens', () => {
+  assert.deepEqual(rawColourDeclarations(builtCss), []);
+});
+
+test('the colour policy catches every kind of raw colour', () => {
+  for (const raw of ['color:red', 'color:#fff', 'background:oklch(70% .1 200)', 'border:1px solid rgb(0 0 0)', 'outline:2px solid hsl(0 0% 0%)', 'box-shadow:0 0 2px color(srgb 1 0 0)', 'color:lab(50% 0 0)', 'color:hwb(0 0% 0%)', 'background-color:white']) {
+    assert.equal(rawColourDeclarations(`.x{${raw}}`).length, 1, `missed ${raw}`);
+  }
+  for (const ok of ['color:var(--color-text)', 'border:1px solid var(--color-border)', 'outline:var(--focus-width) solid var(--color-focus)', 'background:transparent', 'color:currentcolor', 'text-decoration:underline']) {
+    assert.deepEqual(rawColourDeclarations(`.x{${ok}}`), [], `wrongly flagged ${ok}`);
+  }
+});
+
+test('every colour the stylesheet uses for text or background is covered by a contrast pair', () => {
+  const covered = new Set(pairs.flatMap(([fg, bg]) => [fg, bg]));
+  const toTokenName = (cssName) => cssName.replace(/(^|-)([a-z])/g, (_, __, c) => c.toUpperCase());
+  const uncovered = [...coloursInUse(builtCss)].map(toTokenName).filter((name) => !covered.has(name));
+  assert.deepEqual(uncovered, [], 'add a contrast pair for each colour used as text or background');
 });

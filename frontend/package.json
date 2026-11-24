@@ -9,7 +9,8 @@
   "scripts": {
     "tokens": "style-dictionary build --config style-dictionary.config.mjs",
     "build": "npm run tokens && vite build && node scripts/check-bundle-size.mjs",
-    "test": "npm run tokens && node --test \"test/**/*.test.mjs\""
+    "audit": "node scripts/audit.mjs",
+    "test": "npm run build && node --test \"test/**/*.test.mjs\""
   },
   "devDependencies": {
     "style-dictionary": "5.8.0",

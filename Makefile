@@ -30,8 +30,8 @@ frontend: ## Build design tokens and the site stylesheet (needs the Node version
 frontend-test: ## Token contrast and stylesheet rules
 	cd frontend && npm ci && npm test
 
-frontend-audit: ## Fail on high or critical npm advisories (ES-016)
-	cd frontend && npm audit --audit-level=high
+frontend-audit: ## Fail on npm advisories of moderate or above that the ledger has not assessed (ES-016)
+	cd frontend && npm run audit
 
 build: ## Build the solution (warnings are errors)
 	dotnet build $(SLN) -c $(CONFIG) --no-restore

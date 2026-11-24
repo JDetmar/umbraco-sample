@@ -73,7 +73,7 @@ clauses:
       - obligation: Releases identify source revision, builder/toolchain, artifact digest and deployed version
         status: unknown
         evidence:
-          - The image carries the source revision as an OCI label and as the OpenTelemetry service.version; CI builds it from pinned base-image digests and records the image ID and an SPDX SBOM per run.
+          - The image carries the source revision as an OCI label and as the OpenTelemetry service.version; CI builds it from pinned base-image digests and records the image ID, an SPDX SBOM, and the stylesheet toolchain (Node version, npm lock-file hash, site.css hash) per run.
           - No release or registry push exists yet; publishing to a registry and promotion by digest arrive with the deployment pipeline, which needs owner approval.
   ES-052:
     status: compliant
@@ -182,10 +182,11 @@ deviations:
       - Known vulnerabilities in dependencies are assessed and dispositioned
     summary: "npm audit reports moderate advisories in transitive build-time dependencies of Style Dictionary 5.8.0: glob (GHSA-3g3m-2fjr-6pw4) and minimatch (GHSA-g3hv-75wg-m249). The only fix npm offers is a downgrade to Style Dictionary 3."
     consequence: Both are denial-of-service or traversal issues reachable only through glob patterns. Style Dictionary globs this repository's own token files at build time; no untrusted input reaches them, and nothing from these packages ships in the site.
-    compensating_controls: Build-time only; `make frontend-audit` fails CI on any high or critical advisory; Dependabot proposes npm updates weekly.
+    compensating_controls: Build-time only. `make frontend-audit` fails CI on any advisory of moderate severity or above except these two, and their exceptions in frontend/scripts/audit.mjs expire on 2027-02-24. Dependabot proposes npm updates weekly. npm overrides were considered and do not help, because @bundled-es-modules/glob bundles glob and minimatch into its own code.
     owner: repository-owner
     opened: 2026-11-24
-    disposition: Take the Style Dictionary release that updates its bundled glob when Dependabot proposes it, then close this gap. The owner may instead accept the risk.
+    review_by: 2027-02-24
+    disposition: Take the Style Dictionary release that updates its bundled glob when Dependabot proposes it, then close this gap. If none exists by the review date, the owner decides whether to accept the risk or change tools.
 
   - id: DEV-007
     kind: gap
