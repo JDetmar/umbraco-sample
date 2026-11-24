@@ -1,0 +1,11 @@
+# Redirect map (TST-08, ADR 0009). One rule per row: source,target,kind.
+# - source: an old site-relative path; matching ignores case and trailing slashes, and the request query is kept.
+# - target: the final page (a site path, optionally with a query) or an absolute https URL. Never another source.
+# - kind: permanent (301) or temporary (302).
+# The site refuses to start if this file is invalid, and the integration tests follow every rule to a live page.
+# These rows are synthetic examples that point at the seeded fixture pages.
+source,target,kind
+/old-home,/,permanent
+/legacy/components,/fixture-maximal/,permanent
+/legacy/components/minimal,/fixture-minimal/,permanent
+/campaign/spring,/fixture-minimal/?utm_source=redirect,temporary

@@ -13,6 +13,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\UmbracoSample.AppHost\UmbracoSample.AppHost.csproj" />
+    <ProjectReference Include="..\..\src\UmbracoSample.Domain\UmbracoSample.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\src\UmbracoSample.Web\redirects.csv" Link="redirects.csv" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared\ResourceReferences.cs" Link="Shared\ResourceReferences.cs" />
   </ItemGroup>
 
   <ItemGroup>

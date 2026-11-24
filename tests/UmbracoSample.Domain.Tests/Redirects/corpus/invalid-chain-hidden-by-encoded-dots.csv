@@ -1,0 +1,3 @@
+source,target,kind
+/a,/x/%2e%2e/old,permanent
+/old,/new,permanent

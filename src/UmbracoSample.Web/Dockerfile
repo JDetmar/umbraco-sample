@@ -9,10 +9,12 @@ ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 CI=true
 # Restore first, from committed lock files only, so the layer caches until dependencies change.
 COPY global.json Directory.Build.props Directory.Packages.props .editorconfig ./
 COPY src/UmbracoSample.ServiceDefaults/*.csproj src/UmbracoSample.ServiceDefaults/packages.lock.json src/UmbracoSample.ServiceDefaults/
+COPY src/UmbracoSample.Domain/*.csproj src/UmbracoSample.Domain/packages.lock.json src/UmbracoSample.Domain/
 COPY src/UmbracoSample.Web/*.csproj src/UmbracoSample.Web/packages.lock.json src/UmbracoSample.Web/
 RUN dotnet restore src/UmbracoSample.Web/UmbracoSample.Web.csproj
 
 COPY src/UmbracoSample.ServiceDefaults/ src/UmbracoSample.ServiceDefaults/
+COPY src/UmbracoSample.Domain/ src/UmbracoSample.Domain/
 COPY src/UmbracoSample.Web/ src/UmbracoSample.Web/
 # The stylesheet is built before the image (make frontend, or the CI step), so this image needs no Node toolchain.
 RUN test -f src/UmbracoSample.Web/wwwroot/dist/site.css || { echo 'Run make frontend before building the image.' >&2; exit 1; }
