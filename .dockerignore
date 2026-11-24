@@ -7,3 +7,12 @@ src/UmbracoSample.Web/wwwroot/media/
 .git/
 artifacts/
 tests/
+**/appsettings.Local.json
+**/*.pfx
+**/*.pem
+**/.env
+**/.env.*
+src/UmbracoSample.Web/umbraco/models/
+src/UmbracoSample.Web/appsettings-schema*.json
+.vs/
+.idea/

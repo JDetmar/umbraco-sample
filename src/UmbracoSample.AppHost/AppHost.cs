@@ -2,7 +2,10 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 // The database lives only as long as this run: every start installs Umbraco and imports the uSync schema and
 // synthetic seed content from source, so local runs and integration tests always begin from Git (ES-027, ES-053).
-var sql = builder.AddSqlServer("sql");
+// Pinned by digest (ES-013); CI's container smoke test uses the same digest.
+var sql = builder.AddSqlServer("sql")
+    .WithImageTag("2022-latest")
+    .WithImageSHA256("4525e3efac9f3e241cb003bb2ff2a82818b502f37e12049d788b1a9fa7e13b7f");
 var db = sql.AddDatabase("umbracoDbDSN", "umbraco");
 
 var adminPassword = builder.AddParameter("umbraco-admin-password", secret: true);

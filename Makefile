@@ -33,8 +33,12 @@ format: ## Apply formatting and code style fixes
 format-check: ## Fail if formatting or code style would change
 	dotnet format $(SLN) --verify-no-changes --no-restore
 
-test: ## Fast tests: unit and policy tests, no containers (exit code 8 = a project with only integration tests)
-	dotnet test --solution $(SLN) -c $(CONFIG) --no-build --filter-not-trait "Category=Integration" --ignore-exit-code 8
+FAST_TEST_PROJECTS := $(filter-out %Integration.Tests,$(wildcard tests/*.Tests))
+
+test: ## Fast tests: unit and policy tests, no containers
+	@for project in $(FAST_TEST_PROJECTS); do \
+		dotnet test --project "$$project" -c $(CONFIG) --no-build; \
+	done
 
 test-integration: ## Integration tests: starts the real Aspire stack (needs Docker)
 	dotnet test --project tests/UmbracoSample.Integration.Tests -c $(CONFIG) --no-build

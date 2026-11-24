@@ -68,7 +68,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      # Pinned by digest (ES-013); the same image Aspire runs locally.
+      # Pinned by digest (ES-013); the AppHost pins the same digest for local runs and the integration job.
       SQL_IMAGE: mcr.microsoft.com/mssql/server:2022-latest@sha256:4525e3efac9f3e241cb003bb2ff2a82818b502f37e12049d788b1a9fa7e13b7f
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -102,10 +102,19 @@ jobs:
           echo "::add-mask::${admin_password}"
           docker network create smoke
           docker run -d --name sql --network smoke -e ACCEPT_EULA=Y -e "MSSQL_SA_PASSWORD=${sa_password}" "${SQL_IMAGE}"
+          db_ready=false
           for _ in $(seq 1 30); do
-            if docker exec sql /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "${sa_password}" -Q "IF DB_ID('umbraco') IS NULL CREATE DATABASE umbraco" >/dev/null 2>&1; then break; fi
+            if docker exec sql /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "${sa_password}" -Q "IF DB_ID('umbraco') IS NULL CREATE DATABASE umbraco" >/dev/null 2>&1; then
+              db_ready=true
+              break
+            fi
             sleep 5
           done
+          if [ "${db_ready}" != true ]; then
+            echo "SQL Server did not accept connections within 150 seconds." >&2
+            docker logs sql 2>&1 | tail -n 50
+            exit 1
+          fi
           docker run -d --name web --network smoke -p 8080:8080 \
             -e "ConnectionStrings__umbracoDbDSN=Server=sql;Database=umbraco;User Id=sa;Password=${sa_password};TrustServerCertificate=true" \
             -e ConnectionStrings__umbracoDbDSN_ProviderName=Microsoft.Data.SqlClient \
@@ -121,6 +130,7 @@ jobs:
       - name: Smoke test (ES-030)
         env:
           SMOKE_RETRIES: "30"
+          SMOKE_HOME_MARKER: "<h1>Umbraco sample</h1>"
         run: scripts/smoke.sh http://localhost:8080
 
       - name: Container logs

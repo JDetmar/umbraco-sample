@@ -62,8 +62,9 @@ clauses:
   ES-030:
     status: compliant
     evidence:
-      - ServiceDefaults exports OpenTelemetry traces, metrics and logs over OTLP (vendor-neutral); health-probe requests are filtered out of traces.
-      - /health/live, /health/ready and /health/schema (uSync schema drift) are mapped in every environment; the integration tests assert all three.
+      - ServiceDefaults exports OpenTelemetry traces and metrics over OTLP (vendor-neutral); health-probe requests are filtered out of traces.
+      - Umbraco's Serilog pipeline replaces the OpenTelemetry log provider, so structured logs go to stdout as compact JSON (appsettings.json) for the container platform to collect, rather than over OTLP.
+      - /health/live, /health/ready (includes Umbraco runtime level) and /health/schema (uSync schema drift) are mapped in every environment; the integration tests assert all three, and unit tests cover every drift outcome, including the vacuous no-handlers case.
       - scripts/smoke.sh is the post-deployment check; CI runs it against the built image with SQL Server on every pull request.
   ES-049:
     status: unknown
@@ -137,7 +138,7 @@ deviations:
       - Production schema changes use backward-compatible expand/contract and forward-only corrective migrations
     summary: "PROPOSED, awaiting owner approval: Umbraco version upgrades run Umbraco's own database migrations, which are not expand/contract and cannot be contained by shifting traffic to the previous revision."
     consequence: A failed upgrade may need a database restore rather than a traffic shift, with downtime and possible loss of content edits made since the backup.
-    compensating_controls: Production runs with UpgradeUnattended false, so migrations only run in a deliberate upgrade release; upgrades ship as their own release; a fresh backup is taken immediately before; the upgrade is rehearsed in staging with a restore test; a content freeze covers the upgrade window. Changes to our own content types follow expand/contract through uSync.
+    compensating_controls: Production runs with UpgradeUnattended false, so migrations only run in a deliberate upgrade release; upgrades ship as their own release; a fresh backup is taken immediately before; the upgrade is rehearsed in staging with a restore test; a content freeze covers the upgrade window. Expand/contract for our own content types is not yet enforced (DEV-005).
     owner: repository-owner
     opened: 2026-11-24
     approver: null
@@ -160,3 +161,15 @@ deviations:
     owner: repository-owner
     opened: 2026-11-24
     disposition: Before the first deployment, Pulumi generates a per-environment key into Key Vault and the site reads Umbraco:CMS:Imaging:HMACSecretKey from it; Front Door rate limiting covers /media.
+
+  - id: DEV-005
+    kind: gap
+    clauses: [ES-014]
+    obligations:
+      - Production schema changes use backward-compatible expand/contract and forward-only corrective migrations
+    summary: Production imports uSync settings at every startup, and nothing yet stops a single change from removing a document-type property (and its content) in the same release that stops using it.
+    consequence: A rollout that removes a property cannot be contained by shifting traffic back to the previous revision, because the data is already gone.
+    compensating_controls: No environment is deployed yet; /health/schema reports drift; every change is reviewed.
+    owner: repository-owner
+    opened: 2026-11-24
+    disposition: Before the first deployment, add an ADR for schema changes (expand in one release, contract in a later one) and a repository test that fails when a uSync diff removes a property while views or view models still change in the same pull request, or decide with the owner to disable deletes during startup import.

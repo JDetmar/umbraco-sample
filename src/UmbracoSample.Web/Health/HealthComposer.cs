@@ -8,7 +8,9 @@ public sealed class HealthComposer : IComposer
 {
     public void Compose(IUmbracoBuilder builder) =>
         builder.Services.AddHealthChecks()
-            .AddCheck<SchemaDriftHealthCheck>("schema-drift", tags: [SchemaDriftHealthCheck.Tag]);
+            // ES-043: every check has a deadline. Readiness includes the runtime check; drift has its own endpoint.
+            .AddCheck<UmbracoRuntimeHealthCheck>("umbraco-runtime", timeout: TimeSpan.FromSeconds(5))
+            .AddCheck<SchemaDriftHealthCheck>("schema-drift", tags: [SchemaDriftHealthCheck.Tag], timeout: TimeSpan.FromSeconds(10));
 }
 
 /// <summary>Maps the schema drift endpoint.</summary>

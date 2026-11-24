@@ -1,8 +1,8 @@
-# syntax=docker/dockerfile:1
 # Build once, promote the same image by digest to every environment (ES-049). Base images are pinned by digest (ES-013).
 # Build from the repository root:  docker build -f src/UmbracoSample.Web/Dockerfile .
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:8c6edfb26c85153f236d26efebd9ad349aec403583f343f201ee67838b23658d AS build
+# The SDK tag matches global.json exactly (rollForward disable); the digest pins it.
+FROM mcr.microsoft.com/dotnet/sdk:10.0.404@sha256:8c6edfb26c85153f236d26efebd9ad349aec403583f343f201ee67838b23658d AS build
 WORKDIR /src
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 CI=true
 
