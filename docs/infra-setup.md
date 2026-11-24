@@ -36,4 +36,4 @@ These steps need the owner: they create cloud identities, store a secret and cha
 ## Before the first `pulumi up`
 
 - Accept ADR 0010, or record the changes you want.
-- Wire the site to Blob storage and Application Insights (ADR 0010, Consequences).
+- Merge the site's Blob storage and Application Insights wiring (pull request 29) and let main publish an image that includes it.

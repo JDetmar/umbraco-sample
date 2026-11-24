@@ -274,6 +274,9 @@ public sealed class SiteInfrastructure
                             },
                             new EnvironmentVarArgs { Name = "ConnectionStrings__umbracoDbDSN_ProviderName", Value = "Microsoft.Data.SqlClient" },
                             new EnvironmentVarArgs { Name = "APPLICATIONINSIGHTS_CONNECTION_STRING", Value = insights.ConnectionString },
+                            // Media in Blob storage via the managed identity: the endpoint only, never a key (MediaStorage in the site).
+                            new EnvironmentVarArgs { Name = "Umbraco__Storage__AzureBlob__Media__ConnectionString", Value = storage.PrimaryEndpoints.Apply(e => e.Blob) },
+                            new EnvironmentVarArgs { Name = "Umbraco__Storage__AzureBlob__Media__ContainerName", Value = media.Name },
                             new EnvironmentVarArgs { Name = "Umbraco__CMS__Unattended__InstallUnattended", Value = "true" },
                             new EnvironmentVarArgs { Name = "Umbraco__CMS__Unattended__UpgradeUnattended", Value = "true" },
                             new EnvironmentVarArgs { Name = "Umbraco__CMS__Unattended__UnattendedUserName", Value = "Site Admin" },

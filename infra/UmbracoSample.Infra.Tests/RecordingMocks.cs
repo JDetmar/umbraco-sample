@@ -25,6 +25,11 @@ internal sealed class RecordingMocks : IMocks
         state.TryAdd("fullyQualifiedDomainName", $"{args.Name}.database.example");
         state.TryAdd("latestRevisionFqdn", $"{args.Name}.example");
         state.TryAdd("connectionString", "InstrumentationKey=mock");
+        if (args.Type == "azure-native:storage:StorageAccount")
+        {
+            state["primaryEndpoints"] = ImmutableDictionary<string, object>.Empty.Add("blob", $"https://{args.Name}.blob.core.windows.net/");
+        }
+
         if (args.Type == "azure-native:keyvault:Secret")
         {
             // Key Vault returns the secret's URI, never its value, as resource state.

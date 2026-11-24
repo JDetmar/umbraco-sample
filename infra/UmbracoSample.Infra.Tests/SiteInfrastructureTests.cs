@@ -73,6 +73,15 @@ public sealed class SiteInfrastructureTests
     }
 
     [Fact]
+    public async Task Media_goes_to_the_private_container_by_endpoint_never_by_key()
+    {
+        var env = Env(await Declare(Dev));
+
+        env["Umbraco__Storage__AzureBlob__Media__ConnectionString"]["value"].ShouldBe("https://umbsampledevmedia.blob.core.windows.net/");
+        env["Umbraco__Storage__AzureBlob__Media__ContainerName"]["value"].ShouldBe("media");
+    }
+
+    [Fact]
     public async Task Container_secrets_are_key_vault_references_read_with_the_site_identity()
     {
         var mocks = await Declare(Dev);
