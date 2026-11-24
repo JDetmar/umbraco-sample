@@ -83,6 +83,10 @@ jobs:
     name: image (build, SBOM, container smoke test)
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    permissions:
+      contents: read
+      # Only the publish step, which runs on main after the smoke test, uses this (ES-049).
+      packages: write
     env:
       # Pinned by digest (ES-013); the AppHost pins the same digest for local runs and the integration job.
       SQL_IMAGE: mcr.microsoft.com/mssql/server:2022-latest@sha256:4525e3efac9f3e241cb003bb2ff2a82818b502f37e12049d788b1a9fa7e13b7f
@@ -168,6 +172,31 @@ jobs:
             echo "Source revision: ${GITHUB_SHA}"
             echo "Stylesheet toolchain: Node $(node --version), frontend/package-lock.json sha256 $(sha256sum frontend/package-lock.json | cut -d' ' -f1)"
             echo "site.css sha256: $(sha256sum src/UmbracoSample.Web/wwwroot/dist/site.css | cut -d' ' -f1)"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      # The image that passed the smoke test above is the image published: no rebuild, so the digest names
+      # exactly what was tested (ES-049). Only main publishes; deploys pin this digest (ADR 0010).
+      - name: Publish to GHCR (main only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          repository="ghcr.io/${GITHUB_REPOSITORY,,}"
+          printf '%s' "${GH_TOKEN}" | docker login ghcr.io --username "${GITHUB_ACTOR}" --password-stdin
+          docker tag umbraco-sample:ci "${repository}:sha-${GITHUB_SHA}"
+          docker tag umbraco-sample:ci "${repository}:main"
+          docker push "${repository}:sha-${GITHUB_SHA}"
+          docker push "${repository}:main"
+          digest_ref="$(docker image inspect umbraco-sample:ci --format '{{range .RepoDigests}}{{println .}}{{end}}' | grep "^${repository}@sha256:" | head -n 1)"
+          docker logout ghcr.io
+          if [ -z "${digest_ref}" ]; then
+            echo "Pushed, but no registry digest was recorded." >&2
+            exit 1
+          fi
+          {
+            echo "### Published image"
+            echo
+            echo "Set in a Pulumi stack with: \`pulumi config set image ${digest_ref} --stack <stack>\`"
           } >> "${GITHUB_STEP_SUMMARY}"
 
   e2e:

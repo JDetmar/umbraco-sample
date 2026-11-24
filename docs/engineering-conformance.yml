@@ -124,7 +124,8 @@ clauses:
         status: unknown
         evidence:
           - The image carries the source revision as an OCI label and as the OpenTelemetry service.version; CI builds it from pinned base-image digests and records the image ID, an SPDX SBOM, and the stylesheet toolchain (Node version, npm lock-file hash, site.css hash) per run.
-          - No release or registry push exists yet; publishing to a registry and promotion by digest arrive with the deployment pipeline, which needs owner approval.
+          - On main, CI pushes the image that passed the container smoke test (no rebuild) to GHCR as sha-<revision> and main, and writes its registry digest to the run summary; stacks pin that digest (infra SiteSettings rejects tags).
+          - Deployed version is not recorded yet; promotion by digest arrives with the deployment pipeline, which needs owner approval.
   ES-052:
     status: compliant
     evidence:
