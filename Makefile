@@ -92,7 +92,7 @@ vuln: ## Fail on known-vulnerable NuGet packages, including transitive ones
 	@if grep -q "has the following vulnerable packages" artifacts/vulnerable-packages.txt; then \
 		echo "Vulnerable packages found (ES-016)."; exit 1; fi
 
-validate: lockfiles-check format-check frontend frontend-test build test secrets ## Fast pre-handoff check (ES-053); CI runs the same
+validate: lockfiles-check format-check frontend frontend-test build test infra-test secrets ## Fast pre-handoff check (ES-053); CI runs the same
 
 run: frontend ## Run the whole stack locally through Aspire (site and SQL Server)
 	dotnet run --project src/UmbracoSample.AppHost

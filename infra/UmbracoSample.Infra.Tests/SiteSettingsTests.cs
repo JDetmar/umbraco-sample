@@ -4,9 +4,9 @@ namespace UmbracoSample.Infra.Tests;
 
 public sealed class SiteSettingsTests
 {
-    private const string Digest = "ghcr.io/example/umbraco-sample@sha256:0000000000000000000000000000000000000000000000000000000000000000";
+    private const string Digest = "ghcr.io/example/umbraco-sample@sha256:1111111111111111111111111111111111111111111111111111111111111111";
 
-    private static SiteSettings Valid(string environment = "dev") => new(environment, 0, 3, 20m, "owner@example.invalid", Digest, EnableEdge: false, "admin@example.invalid");
+    private static SiteSettings Valid(string environment = "dev") => new(environment, 0, 1, 20m, "owner@example.invalid", Digest, EnableEdge: false, "admin@example.invalid", "owners-sql", "00000000-0000-0000-0000-0000000000aa");
 
     [Fact]
     public void Valid_dev_settings_pass() => Should.NotThrow(() => Valid().Validate());
@@ -52,4 +52,18 @@ public sealed class SiteSettingsTests
     [InlineData("admin")]
     public void The_admin_login_must_be_an_email_address(string email) =>
         Should.Throw<ArgumentException>(() => (Valid() with { AdminEmail = email }).Validate()).Message.ShouldContain("adminEmail");
+
+    [Fact]
+    public void Scaling_out_is_refused_until_umbraco_can_share_state() =>
+        Should.Throw<ArgumentException>(() => (Valid() with { MaxReplicas = 2 }).Validate()).Message.ShouldContain("DEV-015");
+
+    [Fact]
+    public void The_placeholder_digest_is_refused() =>
+        Should.Throw<ArgumentException>(() => (Valid() with { Image = "ghcr.io/example/umbraco-sample@sha256:0000000000000000000000000000000000000000000000000000000000000000" }).Validate()).Message.ShouldContain("placeholder");
+
+    [Theory]
+    [InlineData("", "00000000-0000-0000-0000-0000000000aa")]
+    [InlineData("owners-sql", "not-a-guid")]
+    public void An_owner_group_must_administer_sql(string groupName, string objectId) =>
+        Should.Throw<ArgumentException>(() => (Valid() with { SqlAdminGroupName = groupName, SqlAdminGroupObjectId = objectId }).Validate()).Message.ShouldContain("sqlAdminGroup");
 }

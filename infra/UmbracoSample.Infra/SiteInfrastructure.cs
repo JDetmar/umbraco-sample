@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using Pulumi;
 using Pulumi.AzureNative.App;
 using Pulumi.AzureNative.App.Inputs;
@@ -10,6 +12,8 @@ using Pulumi.AzureNative.Consumption.Inputs;
 using Pulumi.AzureNative.KeyVault;
 using Pulumi.AzureNative.KeyVault.Inputs;
 using Pulumi.AzureNative.ManagedIdentity;
+using Pulumi.AzureNative.Monitor;
+using Pulumi.AzureNative.Monitor.Inputs;
 using Pulumi.AzureNative.Network;
 using Pulumi.AzureNative.Network.Inputs;
 using Pulumi.AzureNative.OperationalInsights;
@@ -68,9 +72,14 @@ public sealed class SiteInfrastructure
         var client = GetClientConfig.Invoke();
         var group = new ResourceGroup(name, new ResourceGroupArgs { Tags = tags });
 
+        // Globally unique names are set explicitly: Pulumi's random auto-name suffix would push Key Vault and storage past
+        // Azure's 24-character limits. A short hash of subscription and environment keeps them unique and stable.
+        var suffix = client.Apply(c => Suffix(c.SubscriptionId, settings.Environment));
+
         var identity = new UserAssignedIdentity($"{name}-id", new UserAssignedIdentityArgs
         {
             ResourceGroupName = group.Name,
+            ResourceName = $"{name}-id",
             Tags = tags,
         });
 
@@ -80,7 +89,8 @@ public sealed class SiteInfrastructure
             ResourceGroupName = group.Name,
             Sku = new WorkspaceSkuArgs { Name = WorkspaceSkuNameEnum.PerGB2018 },
             RetentionInDays = 30,
-            WorkspaceCapping = new WorkspaceCappingArgs { DailyQuotaGb = 1 },
+            // About 6 GB a month outside prod keeps logs inside the dev budget; prod gets 1 GB a day (ES-047).
+            WorkspaceCapping = new WorkspaceCappingArgs { DailyQuotaGb = settings.Environment == "prod" ? 1 : 0.2 },
             Tags = tags,
         });
 
@@ -95,9 +105,10 @@ public sealed class SiteInfrastructure
         });
 
         // Media: Blob storage with no shared keys, no anonymous access and TLS 1.2 or later.
-        var storage = new StorageAccount(StorageName(settings.Environment), new StorageAccountArgs
+        var storage = new StorageAccount($"{name}-media", new StorageAccountArgs
         {
             ResourceGroupName = group.Name,
+            AccountName = suffix.Apply(s => StorageAccountName(settings.Environment, s)),
             Kind = StorageKind.StorageV2,
             Sku = new StorageSkuArgs { Name = StorageSkuName.Standard_LRS },
             AllowBlobPublicAccess = false,
@@ -110,6 +121,7 @@ public sealed class SiteInfrastructure
         var media = new BlobContainer("media", new BlobContainerArgs
         {
             ResourceGroupName = group.Name,
+            ContainerName = "media",
             AccountName = storage.Name,
             PublicAccess = PublicAccess.None,
         });
@@ -118,6 +130,7 @@ public sealed class SiteInfrastructure
         var vault = new Vault($"{name}-kv", new VaultArgs
         {
             ResourceGroupName = group.Name,
+            VaultName = suffix.Apply(s => VaultName(settings.Environment, s)),
             Properties = new VaultPropertiesArgs
             {
                 TenantId = client.Apply(c => c.TenantId),
@@ -129,19 +142,24 @@ public sealed class SiteInfrastructure
             Tags = tags,
         });
 
-        // Database: Entra-only authentication (no SQL logins), serverless with auto-pause outside prod.
+        // Database: Entra-only authentication (no SQL logins), serverless with auto-pause outside prod. An owner Entra group
+        // administers the server; the site identity is only a contained db_owner user in the Umbraco database, created
+        // once after the first deploy (docs/infra-setup.md), so a compromised site cannot administer the server (ES-023).
         var sqlServer = new Server($"{name}-sql", new ServerArgs
         {
             ResourceGroupName = group.Name,
+            ServerName = suffix.Apply(s => $"{name}-sql-{s}"),
             MinimalTlsVersion = "1.2",
+            // Virtual network rules work through the public endpoint; only the apps subnet is admitted (ADR 0010).
+            PublicNetworkAccess = ServerPublicNetworkAccessFlag.Enabled,
             Administrators = new ServerExternalAdministratorArgs
             {
                 AdministratorType = AdministratorType.ActiveDirectory,
                 AzureADOnlyAuthentication = true,
-                Login = identity.Name,
-                Sid = identity.PrincipalId,
+                Login = settings.SqlAdminGroupName,
+                Sid = settings.SqlAdminGroupObjectId,
                 TenantId = client.Apply(c => c.TenantId),
-                PrincipalType = SqlPrincipalType.Application,
+                PrincipalType = SqlPrincipalType.Group,
             },
             Tags = tags,
         });
@@ -165,7 +183,7 @@ public sealed class SiteInfrastructure
             ServiceEndpoints = { new ServiceEndpointPropertiesFormatArgs { Service = "Microsoft.Sql" } },
         });
 
-        _ = new SqlVirtualNetworkRule("apps-subnet", new SqlVirtualNetworkRuleArgs
+        var sqlNetworkRule = new SqlVirtualNetworkRule("apps-subnet", new SqlVirtualNetworkRuleArgs
         {
             ResourceGroupName = group.Name,
             ServerName = sqlServer.Name,
@@ -176,6 +194,7 @@ public sealed class SiteInfrastructure
         var databaseArgs = new DatabaseArgs
         {
             ResourceGroupName = group.Name,
+            DatabaseName = "umbraco",
             ServerName = sqlServer.Name,
             Sku = new AppSkuName { Name = "GP_S_Gen5", Tier = "GeneralPurpose", Family = "Gen5", Capacity = 1 },
             MinCapacity = 0.5,
@@ -214,23 +233,28 @@ public sealed class SiteInfrastructure
                 Encryption = new ManagedEnvironmentEncryptionArgs { Enabled = true },
             },
             WorkloadProfiles = { new WorkloadProfileArgs { Name = "Consumption", WorkloadProfileType = "Consumption" } },
-            AppLogsConfiguration = new AppLogsConfigurationArgs
-            {
-                Destination = "log-analytics",
-                LogAnalyticsConfiguration = new LogAnalyticsConfigurationArgs
-                {
-                    CustomerId = logs.CustomerId,
-                    SharedKey = GetSharedKeys.Invoke(new GetSharedKeysInvokeArgs { ResourceGroupName = group.Name, WorkspaceName = logs.Name })
-                        .Apply(keys => keys.PrimarySharedKey!),
-                },
-            },
+            // Logs go through Azure Monitor diagnostic settings, so no workspace shared key is read or stored (ES-024).
+            AppLogsConfiguration = new AppLogsConfigurationArgs { Destination = "azure-monitor" },
             Tags = tags,
+        });
+
+        _ = new DiagnosticSetting("environment-logs", new DiagnosticSettingArgs
+        {
+            ResourceUri = environment.Id,
+            WorkspaceId = logs.Id,
+            Logs =
+            {
+                new DiagnosticsLogSettingsArgs { Category = "ContainerAppConsoleLogs", Enabled = true },
+                new DiagnosticsLogSettingsArgs { Category = "ContainerAppSystemLogs", Enabled = true },
+            },
         });
 
         var site = new ContainerApp($"{name}-web", new ContainerAppArgs
         {
             ResourceGroupName = group.Name,
+            ContainerAppName = $"{name}-web",
             ManagedEnvironmentId = environment.Id,
+            WorkloadProfileName = "Consumption",
             Identity = new Pulumi.AzureNative.App.Inputs.ManagedServiceIdentityArgs
             {
                 Type = Pulumi.AzureNative.App.ManagedServiceIdentityType.UserAssigned,
@@ -270,7 +294,7 @@ public sealed class SiteInfrastructure
                             {
                                 Name = "ConnectionStrings__umbracoDbDSN",
                                 Value = Output.Tuple(sqlServer.FullyQualifiedDomainName, database.Name, identity.ClientId).Apply(t =>
-                                    $"Server=tcp:{t.Item1},1433;Database={t.Item2};Authentication=Active Directory Managed Identity;User Id={t.Item3};Encrypt=True"),
+                                    $"Server=tcp:{t.Item1},1433;Database={t.Item2};Authentication=Active Directory Managed Identity;User Id={t.Item3};Encrypt=True;Connect Timeout=60;Connect Retry Count=3;Connect Retry Interval=10"),
                             },
                             new EnvironmentVarArgs { Name = "ConnectionStrings__umbracoDbDSN_ProviderName", Value = "Microsoft.Data.SqlClient" },
                             new EnvironmentVarArgs { Name = "APPLICATIONINSIGHTS_CONNECTION_STRING", Value = insights.ConnectionString },
@@ -286,6 +310,8 @@ public sealed class SiteInfrastructure
                         },
                         Probes =
                         {
+                            // A cold start may wait for a paused serverless database to resume: allow five minutes to boot.
+                            new ContainerAppProbeArgs { Type = ProbeType.Startup, HttpGet = new ContainerAppProbeHttpGetArgs { Path = "/health/live", Port = 8080 }, PeriodSeconds = 10, FailureThreshold = 30 },
                             new ContainerAppProbeArgs { Type = ProbeType.Liveness, HttpGet = new ContainerAppProbeHttpGetArgs { Path = "/health/live", Port = 8080 } },
                             new ContainerAppProbeArgs { Type = ProbeType.Readiness, HttpGet = new ContainerAppProbeHttpGetArgs { Path = "/health/ready", Port = 8080 } },
                         },
@@ -294,7 +320,12 @@ public sealed class SiteInfrastructure
                 Scale = new ScaleArgs { MinReplicas = settings.MinReplicas, MaxReplicas = settings.MaxReplicas },
             },
             Tags = tags,
-        }, new CustomResourceOptions { DependsOn = { secretsReader } });
+        }, new CustomResourceOptions
+        {
+            // The first revision boots straight into the unattended install, so the network rule, the database and the
+            // Key Vault grant must exist first. RBAC can still take minutes to propagate; see docs/infra-setup.md.
+            DependsOn = { secretsReader, sqlNetworkRule, database },
+        });
 
         // ES-047: an alert before the money runs out, at 80% actual and 100% forecast spend.
         _ = new Budget($"{name}-budget", new BudgetArgs
@@ -303,7 +334,7 @@ public sealed class SiteInfrastructure
             Amount = (double)settings.MonthlyBudget,
             Category = CategoryType.Cost,
             TimeGrain = TimeGrainType.Monthly,
-            TimePeriod = new BudgetTimePeriodArgs { StartDate = "2026-12-01T00:00:00Z" },
+            TimePeriod = new BudgetTimePeriodArgs { StartDate = "2026-11-01T00:00:00Z" },
             Notifications =
             {
                 ["actual-80"] = new NotificationArgs { Enabled = true, Operator = OperatorType.GreaterThan, Threshold = 80, ContactEmails = { settings.BudgetContactEmail } },
@@ -314,7 +345,10 @@ public sealed class SiteInfrastructure
         Outputs = new Dictionary<string, object?>
         {
             ["resourceGroup"] = group.Name,
-            ["siteUrl"] = site.LatestRevisionFqdn.Apply(fqdn => $"https://{fqdn}"),
+            // The app's stable hostname, not one revision's: traffic splitting applies to it.
+            ["siteUrl"] = site.Configuration.Apply(c => $"https://{c?.Ingress?.Fqdn}"),
+            ["siteIdentity"] = identity.Name,
+            ["sqlServer"] = sqlServer.FullyQualifiedDomainName,
             ["mediaContainer"] = media.Name,
             ["keyVault"] = vault.Name,
             ["edgeEnabled"] = settings.EnableEdge.ToString(CultureInfo.InvariantCulture),
@@ -323,8 +357,15 @@ public sealed class SiteInfrastructure
 
     public IDictionary<string, object?> Outputs { get; }
 
-    /// <summary>Storage account names are global, 3-24 lower-case letters and digits.</summary>
-    public static string StorageName(string environment) => $"umbsample{environment}media";
+    /// <summary>Six hex characters from subscription and environment: unique enough for global names, stable across runs.</summary>
+    public static string Suffix(string subscriptionId, string environment) =>
+        Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes($"{subscriptionId}/{environment}")))[..6];
+
+    /// <summary>Storage account names are global: 3-24 lower-case letters and digits.</summary>
+    public static string StorageAccountName(string environment, string suffix) => $"umbsample{environment}{suffix}";
+
+    /// <summary>Key Vault names are global: 3-24 letters, digits and single hyphens, starting with a letter.</summary>
+    public static string VaultName(string environment, string suffix) => $"umbs-{environment}-{suffix}";
 
     private static KeyVaultSecret StoreSecret(string secretName, Vault vault, ResourceGroup group, Output<string> value) =>
         new(secretName, new KeyVaultSecretArgs

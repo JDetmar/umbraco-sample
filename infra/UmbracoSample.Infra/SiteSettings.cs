@@ -13,7 +13,9 @@ public sealed partial record SiteSettings(
     string BudgetContactEmail,
     string Image,
     bool EnableEdge,
-    string AdminEmail)
+    string AdminEmail,
+    string SqlAdminGroupName,
+    string SqlAdminGroupObjectId)
 {
     public static SiteSettings From(Config config)
     {
@@ -22,12 +24,14 @@ public sealed partial record SiteSettings(
         var settings = new SiteSettings(
             Environment: config.Require("environment"),
             MinReplicas: int.Parse(config.Get("minReplicas") ?? "0", CultureInfo.InvariantCulture),
-            MaxReplicas: int.Parse(config.Get("maxReplicas") ?? "3", CultureInfo.InvariantCulture),
+            MaxReplicas: int.Parse(config.Get("maxReplicas") ?? "1", CultureInfo.InvariantCulture),
             MonthlyBudget: decimal.Parse(config.Require("monthlyBudget"), CultureInfo.InvariantCulture),
             BudgetContactEmail: config.Require("budgetContactEmail"),
             Image: config.Require("image"),
             EnableEdge: bool.Parse(config.Get("enableEdge") ?? "false"),
-            AdminEmail: config.Require("adminEmail"));
+            AdminEmail: config.Require("adminEmail"),
+            SqlAdminGroupName: config.Require("sqlAdminGroupName"),
+            SqlAdminGroupObjectId: config.Require("sqlAdminGroupObjectId"));
 
         settings.Validate();
         return settings;
@@ -44,6 +48,12 @@ public sealed partial record SiteSettings(
         if (MinReplicas < 0 || MaxReplicas < 1 || MinReplicas > MaxReplicas)
         {
             throw new ArgumentException("replicas must satisfy 0 <= minReplicas <= maxReplicas and maxReplicas >= 1.");
+        }
+
+        // Umbraco needs a shared data-protection key ring and explicit server roles before it can scale out (DEV-015).
+        if (MaxReplicas > 1)
+        {
+            throw new ArgumentException("maxReplicas must be 1 until data protection keys are shared and server roles are set (DEV-015).");
         }
 
         if (Environment == "prod" && MinReplicas < 1)
@@ -64,6 +74,16 @@ public sealed partial record SiteSettings(
         if (!AdminEmail.Contains('@', StringComparison.Ordinal))
         {
             throw new ArgumentException("adminEmail must be an email address; it is the unattended-install admin login.");
+        }
+
+        if (string.IsNullOrWhiteSpace(SqlAdminGroupName) || !Guid.TryParse(SqlAdminGroupObjectId, out _))
+        {
+            throw new ArgumentException("sqlAdminGroupName and sqlAdminGroupObjectId must name the owner Entra group that administers SQL.");
+        }
+
+        if (Image.EndsWith("@sha256:" + new string('0', 64), StringComparison.Ordinal))
+        {
+            throw new ArgumentException("image is still the placeholder digest; set the digest CI published from main.");
         }
 
         // ES-049: releases are promoted by digest, never by a mutable tag.

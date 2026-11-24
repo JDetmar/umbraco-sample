@@ -3,7 +3,7 @@ using UmbracoSample.Infra;
 
 return await Deployment.RunAsync(() =>
 {
-    var settings = SiteSettings.From(new Config());
     var config = new Config();
+    var settings = SiteSettings.From(config);
     return new SiteInfrastructure(settings, SiteSecrets.From(config)).Outputs;
 });

@@ -1,7 +1,8 @@
 name: infra
 
-# Infrastructure checks (ADR 0010). Tests always run on infra changes and need no cloud access.
-# Preview runs only once the owner enables it (repository variable PULUMI_PREVIEW_ENABLED=true) and never runs `up`.
+# Infrastructure checks (ADR 0010). Mock tests run on infra changes here and in the required ci validate job.
+# Preview runs only once the owner enables it (repository variable PULUMI_PREVIEW_ENABLED=true), only for reviewed
+# code (main or a manual run), and never runs `up`: preview decrypts stack secrets, so pull-request code never gets the token.
 on:
   pull_request:
     paths: ["infra/**", ".github/workflows/infra.yml", "Directory.Packages.props", "global.json"]
@@ -38,8 +39,7 @@ jobs:
     name: infra (pulumi preview, dev)
     needs: test
     # Off until the owner has created the Azure federated credential and the Pulumi token (docs/infra-setup.md).
-    # Pull requests from forks never receive secrets, so they skip this job.
-    if: vars.PULUMI_PREVIEW_ENABLED == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    if: vars.PULUMI_PREVIEW_ENABLED == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: infra-preview

@@ -27,7 +27,15 @@ internal sealed class RecordingMocks : IMocks
         state.TryAdd("connectionString", "InstrumentationKey=mock");
         if (args.Type == "azure-native:storage:StorageAccount")
         {
-            state["primaryEndpoints"] = ImmutableDictionary<string, object>.Empty.Add("blob", $"https://{args.Name}.blob.core.windows.net/");
+            state["primaryEndpoints"] = ImmutableDictionary<string, object>.Empty.Add("blob", $"https://{(args.Inputs.TryGetValue("accountName", out var account) ? account : args.Name)}.blob.core.windows.net/");
+        }
+
+        if (args.Type == "azure-native:app:ContainerApp")
+        {
+            // Azure returns the app's stable ingress hostname, distinct from each revision's.
+            var configuration = (ImmutableDictionary<string, object>)args.Inputs["configuration"];
+            var ingress = ((ImmutableDictionary<string, object>)configuration["ingress"]).SetItem("fqdn", $"{args.Name}.app.example");
+            state["configuration"] = configuration.SetItem("ingress", ingress);
         }
 
         if (args.Type == "azure-native:keyvault:Secret")

@@ -7,4 +7,7 @@ config:
   umbraco-sample:budgetContactEmail: owner@example.invalid
   umbraco-sample:image: ghcr.io/example/umbraco-sample@sha256:0000000000000000000000000000000000000000000000000000000000000000
   umbraco-sample:adminEmail: owner@example.invalid
+  # Replace with the owner Entra group that administers SQL (docs/infra-setup.md).
+  umbraco-sample:sqlAdminGroupName: replace-with-owner-group
+  umbraco-sample:sqlAdminGroupObjectId: replace-with-group-object-id
   umbraco-sample:enableEdge: "false"

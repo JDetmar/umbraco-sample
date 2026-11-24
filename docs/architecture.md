@@ -1,6 +1,6 @@
 # Architecture
 
-How the deployed site fits together in Azure, per environment. This is the living overview: update it in the same pull request as any change to `infra/` that adds, removes or reconnects a resource. The decisions behind it are in [ADR 0004](adr/ADR-0004-azure-container-apps-hosting.md) and [ADR 0010](adr/ADR-0010-azure-environment-design.md). The trust boundaries for the lead form are in [threat model 0001](threat-models/0001-lead-form.md).
+How the deployed site fits together in Azure, per environment. This is the living overview: update it in the same pull request as any change to `infra/` that adds, removes or reconnects a resource. The decisions behind it are in [ADR 0004](adr/ADR-0004-azure-container-apps-hosting.md) and [ADR 0010](adr/ADR-0010-azure-environment-design.md). The trust boundaries for the lead form are in [threat model 0001](threat-models/0001-lead-form.md), and for the environment and delivery path in [threat model 0002](threat-models/0002-azure-environment.md).
 
 ## Runtime view (one environment)
 
