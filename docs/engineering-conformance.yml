@@ -88,6 +88,15 @@ clauses:
       - obligation: Secret scanning gates shared merge
         status: deviation
         deviation: DEV-001
+  ES-025:
+    status: deviation
+    obligations:
+      - obligation: Sensitive data is encrypted in transit
+        status: deviation
+        deviation: DEV-010
+      - obligation: Sensitive data is encrypted in transit
+        status: deviation
+        deviation: DEV-013
   ES-030:
     status: compliant
     evidence:

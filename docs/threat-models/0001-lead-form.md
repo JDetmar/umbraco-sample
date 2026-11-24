@@ -71,7 +71,7 @@ Each mitigation names the test that will prove it. "Edge" items are Phase 5 infr
 | Threat | Mitigation | Evidence (planned) |
 |---|---|---|
 | A visitor disputes giving consent | The MAP stores the consent flag, the consent text version and the submission time. The site keeps no copy. | Contract test: the MAP request carries the consent fields. |
-| An outcome cannot be traced across site and MAP | The site logs a separate random correlation ID (the trace ID) with the outcome; it is never sent to the MAP, so the logs cannot be joined to a lead. The idempotency key goes to the MAP and is never logged. Tracing one lead end to end therefore needs the MAP's own audit log, which is accepted. | Log test (see Information disclosure): the idempotency key never appears in logs. |
+| An outcome cannot be traced across site and MAP | The site logs a separate random correlation ID (the trace ID) with the outcome. It is never sent to the MAP: the MAP client turns off trace context propagation, so its requests carry no `traceparent` or `tracestate` header, and the logs cannot be joined to a lead. The idempotency key goes to the MAP only in the request body or a header, never in a URL path or query (including the lookup), so client spans cannot record it; it is never logged. Tracing one lead end to end therefore needs the MAP's own audit log. This is a design trade-off and departs from no clause. | Contract test: MAP requests carry no `traceparent` or `tracestate`, and no request URL contains the key. Log test (see Information disclosure): the idempotency key appears in no log and no span. |
 
 ### Information disclosure
 
@@ -100,7 +100,7 @@ Each mitigation names the test that will prove it. "Edge" items are Phase 5 infr
 ## 5. Never lost, never duplicated (ES-022)
 
 - **The site says "thank you" only after the MAP has acknowledged the lead.** Otherwise the visitor sees "we could not send this, please try again", and their input is kept in the page.
-- **An idempotency key** (signed, in the render token) identifies the submission. The form page is sent with `Cache-Control: private, no-store` and bypasses the edge cache, so every render gets its own key; a cached page would give every visitor the same key and the MAP would merge their leads. Tests: two renders carry different keys, and the form page has the no-store header. The MAP request carries it, so the MAP or the stub can de-duplicate on it.
+- **An idempotency key** (signed, in the render token) identifies the submission. The form page is sent with `Cache-Control: private, no-store`, bypasses the edge cache and is excluded from the site's output cache, so every render gets its own key; a cached page would give every visitor the same key and the MAP would merge their leads. Tests: two renders carry different keys, and the form page has the no-store header. The MAP request carries the idempotency key, so the MAP or the stub can de-duplicate on it.
 - **A timeout is not a failure.** ES-043 says a timeout does not prove the side effect did not happen. After a timeout, the site looks up the key in the MAP before it retries. If the lookup is not possible, the visitor is told the outcome is unknown and asked not to resubmit for a few minutes. The double-submit test covers what happens if they do.
 - **Tests:**
   - concurrent double submission of the same key creates one lead;
@@ -129,9 +129,9 @@ Each mitigation names the test that will prove it. "Edge" items are Phase 5 infr
 | D3 | Rate-limit numbers and field limits | **Decided:** 3 submissions per 10 minutes per client (per replica), a 16 KB body, and field limits of name ≤ 100, email ≤ 254, company ≤ 100 and message ≤ 2,000 characters. The numbers are configuration. |
 | D4 | Which real MAP | **Decided for now:** design against a generic, documented WireMock stub that supports idempotency keys and lookup by external ID. Choosing a real platform reopens this model and adds contract tests against its API. The chosen platform must support idempotency keys (or an external ID with de-duplication) and lookup by it, and its API quota must exceed the outbound cap. |
 | R1 | Determined human spammers will get through | Not a departure from the standard: no clause requires stopping human spam. Recorded as residual; CRM-side de-duplication and list hygiene handle it. |
-| R3 | Data Protection keys are per replica until a shared key ring exists | A render token signed on one replica fails on another. Phase 5 persists the key ring to shared storage before running more than one replica; until then the form runs on one replica. |
-| R4 | Edge-to-container plain HTTP inside the Container Apps environment | Recorded as gap DEV-013 for the owner to decide. |
 | R2 | The edge WAF and HSTS do not exist until Phase 5 | Tracked by DEV-010. Forms are not enabled on a public environment before Phase 5. |
+| R3 | Data Protection keys live in the container until a shared key ring exists | A render token signed on one replica fails on another, and every token on screen fails after a restart or new revision. Phase 5 persists the key ring to shared storage before the form is enabled on any deployed environment, even with one replica. |
+| R4 | Edge-to-container plain HTTP inside the Container Apps environment | Recorded as gap DEV-013 for the owner to decide. |
 
 ## 8. What approval unlocks
 
