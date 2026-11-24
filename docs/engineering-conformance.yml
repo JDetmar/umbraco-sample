@@ -175,19 +175,6 @@ deviations:
     opened: 2026-11-24
     disposition: Before the first deployment, add an ADR for schema changes (expand in one release, contract in a later one) and a repository test that fails when a uSync diff removes a property while views or view models still change in the same pull request, or decide with the owner to disable deletes during startup import.
 
-  - id: DEV-006
-    kind: gap
-    clauses: [ES-016, ES-051]
-    obligations:
-      - Known vulnerabilities in dependencies are assessed and dispositioned
-    summary: "npm audit reports moderate advisories in transitive build-time dependencies of Style Dictionary 5.8.0: glob (GHSA-3g3m-2fjr-6pw4) and minimatch (GHSA-g3hv-75wg-m249). The only fix npm offers is a downgrade to Style Dictionary 3."
-    consequence: Both are denial-of-service or traversal issues reachable only through glob patterns. Style Dictionary globs this repository's own token files at build time; no untrusted input reaches them, and nothing from these packages ships in the site.
-    compensating_controls: Build-time only. `make frontend-audit` fails CI on any advisory of moderate severity or above except these two, and their exceptions in frontend/scripts/audit.mjs expire on 2027-02-24. Dependabot proposes npm updates weekly. npm overrides were considered and do not help, because @bundled-es-modules/glob bundles glob and minimatch into its own code.
-    owner: repository-owner
-    opened: 2026-11-24
-    review_by: 2027-02-24
-    disposition: Take the Style Dictionary release that updates its bundled glob when Dependabot proposes it, then close this gap. If none exists by the review date, the owner decides whether to accept the risk or change tools.
-
   - id: DEV-007
     kind: gap
     clauses: [ES-026, ES-035]

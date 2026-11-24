@@ -27,6 +27,7 @@ Components need shared visual decisions (colour, spacing, type) that designers a
 
 - Contributors need Node 24.22.3 as well as the .NET SDK.
 - The image is built from a pre-built context, so its provenance includes the CI step that ran `make frontend`. That step runs in the same job, from the same commit.
-- Dependabot proposes npm updates weekly. `make frontend-audit` fails CI on any advisory of moderate severity or above unless the ledger assesses it; each exception in `frontend/scripts/audit.mjs` names its ledger entry and expires (DEV-006).
+- Dependabot proposes npm updates weekly. `make frontend-audit` fails CI on any advisory of moderate severity or above unless the ledger assesses it, and fails if the audit cannot run. Each exception in `frontend/scripts/audit.mjs` must name a ledger entry and expire; there are none today.
+- Style Dictionary 5.8.0 depends on glob and minimatch versions with moderate advisories (GHSA-3g3m-2fjr-6pw4, GHSA-g3hv-75wg-m249). `package.json` `overrides` pins the patched glob 14.0.6 and minimatch 11.0.9; the token build and its tests pass with them. Dependabot does not bump overrides, so remove them once a Style Dictionary release depends on patched versions itself.
 - ARC-05 is only partly met: tokens are code, but nothing syncs them from a design tool (Figma). That sync is a separate decision if a design team needs it.
 - Revisit if the site needs JavaScript bundles, or if a Node stage can use a mirrored base image.
