@@ -5,7 +5,7 @@ using Shouldly;
 namespace UmbracoSample.Repository.Tests;
 
 /// <summary>
-/// Aspire 17 builds through the pinned Aspire CLI local tool (ADR 0002, ES-013). The AppHost points at that tool's
+/// Aspire 17 builds through the pinned Aspire CLI local tool (ADR 0012, ES-013). The AppHost points at that tool's
 /// package by version, so the SDK, the hosting packages, the tool manifest and the AppHost's CLI version must agree.
 /// </summary>
 public sealed class AspireVersionPolicyTests

@@ -24,4 +24,5 @@ Aspire 17.0.0 for the AppHost SDK, the hosting packages and the CLI tool, all at
 
 - One more pinned tool to restore; `make bootstrap` handles it, and the dependency register lists it.
 - Aspire upgrades now touch five places; the policy test catches a partial bump, so a Dependabot pull request that moves only the packages fails CI and is redone by hand.
-- `AspireCliPath` covers osx-arm64, osx-x64, linux-arm64, linux-x64 and win-x64; another platform needs a line in the AppHost project.
+- `AspireCliPath` covers osx-arm64, osx-x64, linux-arm64, linux-x64, win-arm64 and win-x64. musl-based Linux (Alpine) is not supported for the AppHost; another platform needs a line in the AppHost project. The build stops with a clear message when the platform is not mapped or the tool was not restored.
+- Dependabot updates the tool manifest and `global.json` but not the AppHost's `Sdk` attribute or `AspireCliVersion`, so an Aspire update pull request is finished by hand; the policy test keeps it red until then.
