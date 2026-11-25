@@ -17,11 +17,20 @@ public static partial class DatabaseUserGrant
         DECLARE @sid varbinary(16) = CONVERT(varbinary(16), CONVERT(uniqueidentifier, @clientId));
         DECLARE @sidLiteral nvarchar(64) = CONVERT(nvarchar(64), @sid, 1);
         -- A replaced identity keeps its name but gets a new client ID: rebind the user rather than keep the stale one.
+        -- EXEC (...) accepts only literals and variables, not function calls, so each statement is built first.
+        DECLARE @statement nvarchar(max);
         IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = @name AND sid <> @sid)
-            EXEC (N'DROP USER ' + QUOTENAME(@name));
+        BEGIN
+            SET @statement = N'DROP USER ' + QUOTENAME(@name);
+            EXEC sys.sp_executesql @statement;
+        END;
         IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = @name)
-            EXEC (N'CREATE USER ' + QUOTENAME(@name) + N' WITH SID = ' + @sidLiteral + N', TYPE = E');
-        EXEC (N'ALTER ROLE db_owner ADD MEMBER ' + QUOTENAME(@name));
+        BEGIN
+            SET @statement = N'CREATE USER ' + QUOTENAME(@name) + N' WITH SID = ' + @sidLiteral + N', TYPE = E';
+            EXEC sys.sp_executesql @statement;
+        END;
+        SET @statement = N'ALTER ROLE db_owner ADD MEMBER ' + QUOTENAME(@name);
+        EXEC sys.sp_executesql @statement;
         """;
 
     public const int Attempts = 12;

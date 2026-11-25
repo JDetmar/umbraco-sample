@@ -63,6 +63,15 @@ public class DatabaseUserGrantTests
         DatabaseUserGrant.Sql.ShouldContain("DROP USER");
     }
 
+    [Fact]
+    public void Dynamic_statements_are_built_in_a_variable_before_they_run()
+    {
+        // EXEC (N'...' + QUOTENAME(@name)) is a syntax error in T-SQL (the first CD run failed on it):
+        // EXEC (...) takes only literals and variables, so every dynamic statement runs from @statement.
+        System.Text.RegularExpressions.Regex.IsMatch(DatabaseUserGrant.Sql, @"EXEC\s*\(").ShouldBeFalse();
+        System.Text.RegularExpressions.Regex.Matches(DatabaseUserGrant.Sql, @"EXEC sys\.sp_executesql @statement;").Count.ShouldBe(3);
+    }
+
     [Theory]
     [InlineData(40613, true)]
     [InlineData(40615, true)]
