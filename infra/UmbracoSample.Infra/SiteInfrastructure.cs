@@ -130,7 +130,8 @@ public sealed class SiteInfrastructure
 
         // Recovery (ES-031, OPS-05): soft delete keeps deleted or overwritten media, and deleted containers, for a
         // retention window. Soft delete covers overwrites too, so versioning (which keeps every version until a
-        // lifecycle rule removes it) is not needed.
+        // lifecycle rule removes it) is not needed. Soft-deleted data is billed as storage until it expires. It does not
+        // protect against deleting the storage account itself.
         var mediaRetentionDays = MediaRetentionDays(settings.Environment);
         _ = new BlobServiceProperties($"{name}-media-recovery", new BlobServicePropertiesArgs
         {

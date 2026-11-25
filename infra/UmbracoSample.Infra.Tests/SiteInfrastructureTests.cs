@@ -303,11 +303,12 @@ public sealed class SiteInfrastructureTests
     }
 
     [Fact]
-    public async Task Media_is_recoverable_after_delete_or_overwrite()
+    public async Task Media_soft_delete_is_declared()
     {
         var recovery = Single(await Declare(Dev), "azure-native:storage:BlobServiceProperties");
 
         recovery["blobServicesName"].ShouldBe("default");
+        recovery["accountName"].ShouldBe("umbraco-sample-dev-media");
         Map(recovery["deleteRetentionPolicy"])["enabled"].ShouldBe(true);
         Map(recovery["deleteRetentionPolicy"])["days"].ShouldBe(7);
         Map(recovery["deleteRetentionPolicy"])["allowPermanentDelete"].ShouldBe(false);
