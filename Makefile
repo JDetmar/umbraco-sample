@@ -45,10 +45,21 @@ format-check: ## Fail if formatting or code style would change
 
 FAST_TEST_PROJECTS := $(filter-out %Integration.Tests,$(wildcard tests/*.Tests))
 
-test: ## Fast tests: unit and policy tests, no containers
+COVERAGE_DIR := artifacts/coverage
+
+# Projects that reference coverlet.MTP also report the coverage of the code they run. Coverage is a diagnostic
+# (ES-002): the report lists every assembly, and only those in tests/coverage-floors.json can fail the build.
+test: ## Fast tests: unit and policy tests, no containers; reports coverage (floor on the domain only)
+	@find artifacts/coverage -name '*.cobertura.*xml' -delete 2>/dev/null || true
 	@for project in $(FAST_TEST_PROJECTS); do \
-		dotnet test --project "$$project" -c $(CONFIG) --no-build || exit 1; \
+		coverage=""; \
+		if grep -q '"coverlet.MTP"' "$$project"/*.csproj; then \
+			coverage="--coverlet --coverlet-output-format cobertura --coverlet-include [UmbracoSample.*]* --coverlet-file-prefix $$(basename $$project) --results-directory $(COVERAGE_DIR)"; \
+		fi; \
+		set -f; dotnet test --project "$$project" -c $(CONFIG) --no-build $$coverage || exit 1; set +f; \
 	done
+	node --test "scripts/test/*.test.mjs"
+	node scripts/coverage-report.mjs $(COVERAGE_DIR) tests/coverage-floors.json
 
 mutation: ## Mutation testing of the domain (Stryker.NET, ES-002); fails below the break threshold in stryker-config.json
 	dotnet tool restore

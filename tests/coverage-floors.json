@@ -1,0 +1,6 @@
+{
+  "$comment": "ES-002: coverage is diagnostic. Only critical modules get a floor; raise one only with a reason in the pull request. Measured on 2026-11-26: Domain 98.7% lines, 94.3% branches.",
+  "floors": {
+    "UmbracoSample.Domain": { "line": 95, "branch": 90 }
+  }
+}

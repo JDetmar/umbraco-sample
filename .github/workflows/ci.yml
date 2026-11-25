@@ -52,7 +52,16 @@ jobs:
       - run: make frontend-test
       - run: make frontend-audit
       - run: make build
+      # Also writes the coverage summary to the job summary; only the domain has a floor (ES-002).
       - run: make test
+      - name: Upload the coverage reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage
+          path: artifacts/coverage/*.xml
+          retention-days: 14
+          if-no-files-found: warn
       - run: make infra-test
       - run: make secrets
       - run: make vuln
