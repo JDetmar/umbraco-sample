@@ -49,11 +49,11 @@ These steps need the owner: they create cloud identities, store a secret and cha
 ## The first `pulumi up` (owner only)
 
 1. `pulumi up --stack dev`. If the Container App fails with a Key Vault 403, RBAC has not propagated yet: wait five minutes and run `pulumi up` again.
-2. Create the site's database user. Sign in to the `umbraco` database (Azure portal query editor, or `sqlcmd -G` against the `sqlServer` output) as a member of the SQL administrator group and run, with the `siteIdentity` output as the name:
+2. Create the site's database user. Azure has no API for contained database users, so this is SQL, run once per environment. Sign in to the `umbraco` database (Azure portal query editor, or `sqlcmd -G` against the `sqlServer` output) as a member of the SQL administrator group. The server admits only the apps subnet, so the query editor offers to add your client IP as a firewall rule: accept, and delete the rule when you are done. Run, with the `siteIdentity` output as the name:
    ```sql
    CREATE USER [umbraco-sample-dev-id] FROM EXTERNAL PROVIDER;
    ALTER ROLE db_owner ADD MEMBER [umbraco-sample-dev-id];
    ```
-   Until this runs, the site cannot connect and stays unready. Umbraco then installs unattended on the next start: restart the revision if it gave up.
+   Until this runs, the site cannot connect and keeps restarting. Umbraco then installs unattended on the next start; if the revision gave up, restart it: `az containerapp revision restart -n <app> -g <resource group> --revision <latest revision>`.
 3. Open the `siteUrl` output, sign in with `adminEmail` and the admin password, and change the password.
 
