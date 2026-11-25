@@ -4,7 +4,7 @@ These steps need the owner: they create cloud identities, store a secret and cha
 
 ## 1. Pulumi Cloud
 
-**OIDC subjects in this guide.** GitHub presents this repository's OIDC subject with numeric IDs: `repo:<owner>@<owner id>/umbraco-sample@<repository id>:environment:<name>`. Get the two IDs with `gh api repos/<owner>/umbraco-sample --jq '"\(.owner.id) \(.id)"'`. A federated credential or Pulumi policy written as `repo:<owner>/umbraco-sample:...` never matches, and Azure's sign-in fails with AADSTS700213, which quotes the subject GitHub actually sent.
+**OIDC subjects in this guide.** This repository uses GitHub's immutable OIDC subjects (`gh api repos/<owner>/umbraco-sample/actions/oidc/customization/sub` shows `use_immutable_subject: true`), so tokens carry numeric IDs: `repo:<owner>@<owner id>/umbraco-sample@<repository id>:environment:<name>`. Get the two IDs with `gh api repos/<owner>/umbraco-sample --jq '"\(.owner.id) \(.id)"'`. A federated credential or Pulumi policy written as `repo:<owner>/umbraco-sample:...` never matches, and Azure's sign-in fails with AADSTS700213, which quotes the subject GitHub actually sent.
 
 1. Create the stacks from `infra/UmbracoSample.Infra`: `pulumi stack init <org>/umbraco-sample/dev` (and `prod` later).
 2. Set the stack's values. **This repository is public**, and `pulumi config set` writes to the committed `Pulumi.<stack>.yaml`. So everything that is a credential or identifies you or your tenant is set with `--secret`: the file then holds only ciphertext that only your Pulumi Cloud stack can decrypt, and a policy test fails if a plain email or group lands there.
