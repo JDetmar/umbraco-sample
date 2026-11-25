@@ -33,6 +33,10 @@ public sealed class GovernanceReportTests
     }
 
     [Fact]
+    public void An_empty_site_is_not_reported_as_all_in_order() =>
+        GovernanceReport.Summarise([]).ShouldHaveSingleItem().ResultType.ShouldBe(StatusResultType.Info);
+
+    [Fact]
     public void Long_lists_are_cut_but_the_count_stays_exact()
     {
         var pages = Enumerable.Range(1, GovernanceReport.ListedPages + 5).Select(i => new ReviewedPage($"Page {i:000}", i, ReviewFinding.NoReviewDate)).ToList();

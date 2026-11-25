@@ -16,12 +16,17 @@ public sealed class PageReviewTests
     [InlineData(true, -1, ReviewFinding.Overdue)]
     [InlineData(false, 60, ReviewFinding.NoOwner)]
     [InlineData(false, -10, ReviewFinding.NoOwner | ReviewFinding.Overdue)]
+    [InlineData(false, 10, ReviewFinding.NoOwner | ReviewFinding.DueSoon)]
     public void A_page_is_assessed_against_today(bool hasOwner, int daysUntilReview, ReviewFinding expected) =>
         PageReview.Assess(hasOwner, Today.AddDays(daysUntilReview), Today).ShouldBe(expected);
 
     [Fact]
     public void A_page_without_a_review_date_is_flagged() =>
         PageReview.Assess(hasOwner: true, reviewDate: null, Today).ShouldBe(ReviewFinding.NoReviewDate);
+
+    [Fact]
+    public void A_page_with_neither_owner_nor_review_date_has_both_findings() =>
+        PageReview.Assess(hasOwner: false, reviewDate: null, Today).ShouldBe(ReviewFinding.NoOwner | ReviewFinding.NoReviewDate);
 
     [Fact]
     public void Only_a_coming_review_needs_no_action()
@@ -34,7 +39,7 @@ public sealed class PageReviewTests
     }
 
     [Fact]
-    public void Overdue_and_due_soon_never_appear_together_and_time_only_moves_a_page_towards_overdue() =>
+    public void Overdue_and_due_soon_never_appear_together_and_a_page_never_moves_back_from_due_soon_or_overdue() =>
         Gen.Select(Gen.Bool, Gen.Int[-400, 400], Gen.Int[0, 400]).Sample((hasOwner, offset, later) =>
         {
             var review = Today.AddDays(offset);
@@ -45,6 +50,11 @@ public sealed class PageReviewTests
             if (now.HasFlag(ReviewFinding.Overdue))
             {
                 afterwards.HasFlag(ReviewFinding.Overdue).ShouldBeTrue();
+            }
+
+            if (now.HasFlag(ReviewFinding.DueSoon))
+            {
+                (afterwards.HasFlag(ReviewFinding.DueSoon) || afterwards.HasFlag(ReviewFinding.Overdue)).ShouldBeTrue();
             }
 
             afterwards.HasFlag(ReviewFinding.NoOwner).ShouldBe(!hasOwner);

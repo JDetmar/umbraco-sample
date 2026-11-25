@@ -3,7 +3,7 @@
 - Status: Proposed
 - Date: 2026-11-25
 - Decider: owner
-- Clauses: ES-019, ES-020, ES-038; framework GOV-02, GOV-03
+- Clauses: ES-002, ES-019, ES-020, ES-038; framework GOV-02, GOV-03
 
 ## Context
 
@@ -19,12 +19,13 @@ Every page needs a named content owner and a review date (GOV-02), and pages tha
 ## Decision
 
 - A `contentGovernance` composition adds **Content owner** (a user picker) and **Review date** (the existing date picker) to every page type, in a Governance group. Both are optional in the editor, so a draft can be saved without them; the health check flags their absence.
-- The rule lives in the domain (`PageReview.Assess`): no owner, no review date, overdue (the date has passed), or due within 30 days. It is pure and property-tested (ES-020).
-- `ContentGovernanceHealthCheck` reads every published page through the content service and reports one result per kind of finding, naming up to 20 pages each: errors for no owner, no review date or overdue, a warning for due soon.
+- The rule lives in the domain (`PageReview.Assess`): no owner, no review date, overdue (the date has passed), or due within 30 days. It is pure (ES-020) and property-tested (ES-002); today is passed in, so tests control the clock.
+- `ContentGovernanceHealthCheck` reads the published values of every published page through the content service and reports one result per kind of finding, naming up to 20 pages each: errors for no owner, no review date or overdue, a warning for due soon. Policy tests keep every page type on the composition and keep the aliases and the date editor in step with the code.
 
 ## Consequences
 
-- Editors see the state of the site in the back office on demand. Nothing runs on page requests.
+- **GOV-02 is detected, not enforced, and GOV-03 is flagged on demand, not automatically.** The fields are optional because the seeded pages are imported without them and a mandatory field would block their publication. Umbraco's health-check notifications can run this check on a schedule and send email or Slack, which would make the flag automatic; that needs a mail or webhook setting per environment and is the follow-up that closes GOV-03.
+
+- Editors see the state of the site in the back office on demand. Nothing runs on page requests. The check loads every published page in full, which is fine on demand; if it is scheduled on a large site, read the published cache instead.
 - The seeded pages have no owner or review date, so dev shows them flagged until an editor sets them; that is the check working, not a fault.
-- Scheduled health-check notifications (email) are not configured; they need a mail setting per environment and are a follow-up.
 - A page whose owner's account is disabled still counts as owned. Checking the account state is a follow-up if it matters.

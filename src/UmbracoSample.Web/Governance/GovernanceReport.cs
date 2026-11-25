@@ -38,7 +38,11 @@ public static class GovernanceReport
             results.Add(new HealthCheckStatus($"{flagged.Count} published page(s) {message}: {names}{more}.") { ResultType = result });
         }
 
-        if (results.Count == 0)
+        if (pages.Count == 0)
+        {
+            results.Add(new HealthCheckStatus("No published pages to check.") { ResultType = StatusResultType.Info });
+        }
+        else if (results.Count == 0)
         {
             results.Add(new HealthCheckStatus($"All {pages.Count} published page(s) have an owner and a review date that has not passed.") { ResultType = StatusResultType.Success });
         }
