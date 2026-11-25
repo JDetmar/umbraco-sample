@@ -101,8 +101,12 @@ clauses:
         status: deviation
         deviation: DEV-013
       - obligation: Sensitive data is excluded from public CI logs
+        status: deviation
+        deviation: DEV-020
+      - obligation: Sensitive data is excluded from public CI logs
         status: compliant
         evidence:
+          - Workflows read the Azure tenant and subscription IDs only from secrets, which GitHub masks everywhere in a log, kept so by the policy test Azure_tenant_and_subscription_ids_reach_workflows_only_as_secrets.
           - Pulumi steps in CI run without a property diff and post nothing to comments or summaries (ADR 0014, proposed), kept so by the policy test Pulumi_runs_in_ci_never_print_a_property_diff.
           - The one leaked log (run 45677402486, a sign-in name from Azure systemData) was deleted by the owner on 2026-11-25; copies made before then cannot be recalled. On 2026-11-25 at 19:10 UTC the logs of every completed run (404 of 409; the rest were in progress) were searched for email addresses, JWTs, Pulumi and GitHub tokens, storage keys, passwords, connection strings, instrumentation keys and /32 addresses; none were found beyond public noreply addresses and the placeholder admin@example.com. Later runs are covered by the policy test, not the scan.
   ES-030:
@@ -385,3 +389,14 @@ deviations:
     owner: repository-owner
     opened: 2026-11-25
     disposition: Add an integration test that sends the batch to the Aspire SQL Server container with SET PARSEONLY ON (TYPE = E users themselves exist only in Azure SQL, so execution stays covered by the dev deploy). Not done in the fix PR to keep the production fix small.
+  - id: DEV-020
+    kind: gap
+    clauses: [ES-025]
+    obligations:
+      - Sensitive data is excluded from public CI logs
+    summary: Before the IDs moved to secrets, the deploy-dev job printed the Azure tenant and subscription IDs in plain text (azure/login input and pulumi/actions env headers). Those logs are public, and a tenant ID resolves to the tenant's display name and default domain, which identify more than this repository should.
+    consequence: Anyone reading the logs of the earlier deploy-dev runs on main (45553973503, 45671920271, 45675530873, 45677402486, 45681230448, 45682355271, 45683391197, and any later run before this change merged) can read both IDs. Neither ID can be changed.
+    compensating_controls: The IDs are not credentials; sign-in needs OIDC federation limited to this repository's environments. New runs mask both values. Run 45677402486's logs are already deleted (for a different leak).
+    owner: repository-owner
+    opened: 2026-11-25
+    disposition: The owner decides whether to delete the logs of the listed runs (permanent; the runs stay listed). Close this gap once they are deleted; otherwise the owner records the remaining exposure as an accepted risk.
