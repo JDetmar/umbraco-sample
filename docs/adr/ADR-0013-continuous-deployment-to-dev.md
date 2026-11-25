@@ -26,7 +26,7 @@ ADR 0010 kept every `pulumi up` on the owner's machine. The first dev deploy sho
 
 ## Consequences
 
-- Dev always runs what `main` last published, and every deploy is a CI run with its log, the operations Pulumi ran and the smoke result (ES-056). The log carries no property diff: Actions logs are public, and a diff prints resource metadata such as the deployer's sign-in name.
+- Dev always runs what `main` last published, and every deploy is a CI run with its log, diff and smoke result (ES-056).
 - A merged change that is malicious or broken reaches dev without a further human step. Review before merge (ES-028), the gates before `publish`, and the smoke test are the controls; dev holds only synthetic content (ES-027). Review before merge is not yet enforced for admins (DEV-001).
 - A failed smoke test leaves the new revision in place; there is no automatic rollback. To recover, fix forward, or re-run the `deploy-dev` job of the last good run (Actions, that run, Re-run jobs), which deploys its digest again once it is the newest run allowed to deploy (see `docs/infra-setup.md`).
 - The deploy identity is a standing, privileged identity. It is usable only from a `main` run in the `dev` environment, and only for this repository's subject.

@@ -47,7 +47,7 @@ Do not set `CD_DEV_ENABLED` until the owner-approved amendment to the `CLAUDE.md
 3. **SQL.** Add the deploy identity to the SQL administrator group, so the database user step can run. Use a group that administers dev only.
 4. **Pulumi Cloud.** In the OIDC issuer from section 1, step 6, add a second policy: personal tokens for your Pulumi user when `sub` equals `repo:<owner>@<owner id>/umbraco-sample@<repository id>:environment:dev`.
 5. **GitHub.** Create an environment named `dev`, restricted to the `main` branch, with no required reviewer (merging to `main` is the approval). Add the repository variable `AZURE_DEPLOY_CLIENT_ID` (the deploy identity's client ID), then `CD_DEV_ENABLED=true`.
-6. **Check.** The next push to `main` runs `deploy (dev, pulumi up)` after `publish`; its log shows the operations Pulumi ran (not a property diff, because Actions logs are public and a diff prints the deployer's sign-in name) and the smoke test. For a full diff, run `make infra-preview STACK=dev` locally.
+6. **Check.** The next push to `main` runs `deploy (dev, pulumi up)` after `publish`; its log shows the operations Pulumi ran (not a property diff, because Actions logs are public and a diff prints the sign-in name of whoever created or last changed a resource; ADR 0014) and the smoke test. For a full diff, open the update in Pulumi Cloud, or run `make infra-preview STACK=dev` locally.
 
 **If the smoke test fails**, the new revision stays; nothing rolls back by itself. Fix forward with a new pull request, or open the last good run in Actions and re-run its `deploy (dev, pulumi up)` job. A re-run deploys only while its commit is the head of `main`, so to roll back past a newer commit, revert that commit instead.
 

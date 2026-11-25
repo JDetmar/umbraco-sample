@@ -89,14 +89,40 @@ public sealed partial class SupplyChainPolicyTests
     [Fact]
     public void Pulumi_runs_in_ci_never_print_a_property_diff()
     {
-        // Actions logs are public; a Pulumi property diff prints systemData such as the deployer's sign-in name.
+        // Actions logs are public; a Pulumi property diff prints systemData, which holds the sign-in name of whoever
+        // created or last changed a resource (ADR 0014, DEV-019). PR comments and job summaries are public too.
         var offenders = WorkflowFiles()
-            .Where(file => File.ReadAllLines(file.FullName).Any(line => line.Trim() == "diff: true"))
-            .Select(file => file.Name)
+            .SelectMany(file => File.ReadAllLines(file.FullName).Select(line => (file.Name, Line: line.Trim())))
+            .Where(entry => !entry.Line.StartsWith('#') && PrintsPulumiProperties().IsMatch(entry.Line))
+            .Select(entry => $"{entry.Name}: {entry.Line}")
             .ToList();
 
-        offenders.ShouldBeEmpty("Pulumi steps in CI set diff: false; run `make infra-preview` locally for a full diff.");
+        offenders.ShouldBeEmpty("Pulumi steps in CI keep diff: false and post nothing to comments or summaries; use Pulumi Cloud or `make infra-preview` for a full diff.");
     }
+
+    [Theory]
+    [InlineData("diff: true")]
+    [InlineData("diff: 'true'")]
+    [InlineData("diff: \"True\"")]
+    [InlineData("diff: ${{ inputs.diff }}")]
+    [InlineData("comment-on-pr: true")]
+    [InlineData("comment-on-summary: true")]
+    [InlineData("always-include-summary: true")]
+    [InlineData("run: pulumi preview --diff")]
+    [InlineData("run: pulumi up --yes --show-secrets")]
+    public void The_property_diff_check_catches_each_way_of_turning_it_on(string line) =>
+        PrintsPulumiProperties().IsMatch(line).ShouldBeTrue();
+
+    [Theory]
+    [InlineData("diff: false")]
+    [InlineData("comment-on-pr: false")]
+    [InlineData("run: git diff --exit-code")]
+    public void The_property_diff_check_allows_the_safe_settings(string line) =>
+        PrintsPulumiProperties().IsMatch(line).ShouldBeFalse();
+
+    // Any value other than a literal false turns the input on, including quoted or expression values.
+    [GeneratedRegex(@"^(?:diff|comment-on-pr|comment-on-summary|always-include-summary)\s*:\s*(?!false\s*$)\S|pulumi\b.*\s--(?:diff|show-secrets)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex PrintsPulumiProperties();
 
     private static string JobBlock(string workflow, string job)
     {
