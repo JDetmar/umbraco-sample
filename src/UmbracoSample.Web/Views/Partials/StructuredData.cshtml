@@ -17,5 +17,7 @@
 }
 @if (json is not null)
 {
-    <script type="application/ld+json">@Html.Raw(json)</script>
+    @* "!" opts out of ASP.NET Core's ScriptTagHelper, which matches every <script> and would HTML-encode the "+" in
+       the type, so browsers and crawlers would no longer see a JSON-LD block. *@
+    <!script type="application/ld+json">@Html.Raw(json)</!script>
 }
