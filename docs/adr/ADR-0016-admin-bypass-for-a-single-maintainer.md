@@ -1,4 +1,4 @@
-# 0015. Admin bypass of required checks for a single maintainer
+# 0016. Admin bypass of required checks for a single maintainer
 
 - Status: Accepted by the owner on 2026-11-25 (project thread, recorded in pull request 37)
 - Date: 2026-11-25
