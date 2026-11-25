@@ -34,7 +34,12 @@ These steps need the owner: they create cloud identities, store a secret and cha
 ## 3. GitHub repository
 
 1. Create an environment named `infra-preview`, restricted to the `main` branch, with yourself as a required reviewer. The workflow previews only `main` or a manual run, because preview decrypts stack secrets; the environment rules enforce that even if the workflow changes.
-2. Add repository variables: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `PULUMI_ORG`, and finally `PULUMI_PREVIEW_ENABLED=true`.
+2. Add repository secrets `AZURE_TENANT_ID` and `AZURE_SUBSCRIPTION_ID`, then repository variables `AZURE_CLIENT_ID`, `PULUMI_ORG`, and finally `PULUMI_PREVIEW_ENABLED=true`.
+   The two IDs are not credentials, but they are secrets here because Actions logs are public.
+   GitHub masks a secret everywhere in a log, while a variable's value is printed in step headers, and a tenant ID resolves to the tenant's name and default domain.
+   Store both in lowercase, as Azure prints them, because masking matches exact text.
+   A policy test keeps them out of `vars`.
+   The client IDs stay variables: `azure/login` masks its client ID, and an app's client ID does not name its tenant.
 
 ## 4. CD for dev (once; ADR 0013)
 
@@ -46,8 +51,12 @@ Do not set `CD_DEV_ENABLED` until the owner-approved amendment to the `CLAUDE.md
 2. **Its Azure roles**, on the subscription: **Contributor**, and **Role Based Access Control Administrator** with the condition "allow assigning only" Key Vault Secrets User, Storage Blob Data Contributor and Monitoring Metrics Publisher (the three roles the stack grants the site).
 3. **SQL.** Add the deploy identity to the SQL administrator group, so the database user step can run. Use a group that administers dev only.
 4. **Pulumi Cloud.** In the OIDC issuer from section 1, step 6, add a second policy: personal tokens for your Pulumi user when `sub` equals `repo:<owner>@<owner id>/umbraco-sample@<repository id>:environment:dev`.
-5. **GitHub.** Create an environment named `dev`, restricted to the `main` branch, with no required reviewer (merging to `main` is the approval). Add the repository variable `AZURE_DEPLOY_CLIENT_ID` (the deploy identity's client ID), then `CD_DEV_ENABLED=true`.
+5. **GitHub.** Create an environment named `dev`, restricted to the `main` branch, with no required reviewer (merging to `main` is the approval).
+   Add the repository secrets `AZURE_TENANT_ID` and `AZURE_SUBSCRIPTION_ID` if section 3 has not, in lowercase (see section 3, step 2 for why they are secrets).
+   Add the repository variable `AZURE_DEPLOY_CLIENT_ID` (the deploy identity's client ID), then `CD_DEV_ENABLED=true`.
 6. **Check.** The next push to `main` runs `deploy (dev, pulumi up)` after `publish`; its log shows the operations Pulumi ran (not a property diff, because Actions logs are public and a diff prints the sign-in name of whoever created or last changed a resource; ADR 0014) and the smoke test. For a full diff, open the update in Pulumi Cloud, or run `make infra-preview STACK=dev` locally.
+
+**Dev content.** Dev imports every uSync group at each start, including the seed home page shipped in the image, so content edited in the dev backoffice is replaced at the next restart. Change dev content by committing it under `src/UmbracoSample.Web/uSync/v17`. Other environments import settings only.
 
 **If the smoke test fails**, the new revision stays; nothing rolls back by itself. Fix forward with a new pull request, or open the last good run in Actions and re-run its `deploy (dev, pulumi up)` job. A re-run deploys only while its commit is the head of `main`, so to roll back past a newer commit, revert that commit instead.
 

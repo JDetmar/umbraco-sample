@@ -1,6 +1,6 @@
 # 0015. Admin bypass of required checks for a single maintainer
 
-- Status: Proposed
+- Status: Accepted by the owner on 2026-11-25 (project thread, recorded in pull request 37)
 - Date: 2026-11-25
 - Decider: owner
 - Clauses: ES-011, ES-012, ES-019, ES-024, ES-028, ES-038, ES-054
