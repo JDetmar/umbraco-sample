@@ -1,0 +1,12 @@
+@* Schema.org JSON-LD for the page (ARC-08). A data block, never executed, so the content security policy is unchanged. *@
+@inherits UmbracoViewPage
+@using UmbracoSample.Web.StructuredData
+@{
+    static string TitleOf(IPublishedContent page) => page.Value<string>("title") is { Length: > 0 } title ? title : page.Name;
+
+    var trail = Model.AncestorsOrSelf().Reverse()
+        .Select(page => (TitleOf(page), new Uri(page.Url(mode: UrlMode.Absolute))))
+        .ToList();
+    var facts = new PageFacts(TitleOf(Model), Model.Value<string>("metaDescription"), new Uri(Model.Url(mode: UrlMode.Absolute)), new DateTimeOffset(Model.UpdateDate), trail);
+}
+<script type="application/ld+json">@Html.Raw(PageStructuredData.Build(facts))</script>
