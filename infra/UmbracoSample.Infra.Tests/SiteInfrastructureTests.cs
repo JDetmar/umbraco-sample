@@ -300,7 +300,7 @@ public sealed class SiteInfrastructureTests
 
         container["image"].ShouldBe(Digest);
         ingress["allowInsecure"].ShouldBe(false);
-        configuration["activeRevisionsMode"].ShouldBe("Multiple");
+        configuration["activeRevisionsMode"].ShouldBe("Single");
         ((ImmutableArray<object>)container["probes"]).Select(p => (string)Map(p)["type"]).ShouldBe(["Startup", "Liveness", "Readiness"]);
     }
 

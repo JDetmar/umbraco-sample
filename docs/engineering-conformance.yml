@@ -329,9 +329,9 @@ deviations:
     clauses: [ES-030, ES-047]
     obligations:
       - Services scale and recover without losing user sessions
-    summary: Accepted by the owner for dev only (2026-11-24). The site runs as a single replica. Umbraco has no shared data-protection key ring, so a second replica would break back-office sign-in and antiforgery tokens. Every instance declares itself the single Umbraco server (ServerRoleComposer), so a second replica would also run scheduled publishing. While a new revision starts, the previous one can briefly run alongside it with the same role.
+    summary: Accepted by the owner for dev only (2026-11-24). The site runs as a single replica. Umbraco has no shared data-protection key ring, so a second replica would break back-office sign-in and antiforgery tokens. Every instance declares itself the single Umbraco server (ServerRoleComposer), so a second replica would also run the uSync startup import, rebuild Examine indexes and write document URLs as if it were alone; scheduled publishing is coordinated through the database whatever the role. The container app keeps one active revision (ADR 0015), so an older revision does not run beside the new one.
     consequence: No horizontal scaling; a replica restart signs editors out and drops in-flight requests. A replica stuck in Umbraco's BootFailed state stays alive but unready until restarted.
-    compensating_controls: SiteSettings refuses maxReplicas above 1; multiple revisions allow rollback; a startup probe gives a resuming database five minutes.
+    compensating_controls: SiteSettings refuses maxReplicas above 1; one active revision at a time (ADR 0015); rollback is a redeploy of the last good digest or a revert (ADR 0013); a startup probe gives a resuming database five minutes.
     owner: repository-owner
     opened: 2026-11-24
     approver: repository-owner

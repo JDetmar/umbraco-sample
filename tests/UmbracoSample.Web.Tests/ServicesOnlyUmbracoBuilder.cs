@@ -5,7 +5,7 @@ using Umbraco.Cms.Core.Cache;
 using Umbraco.Cms.Core.Composing;
 using Umbraco.Cms.Core.Logging;
 
-namespace UmbracoSample.Web.Tests.Hosting;
+namespace UmbracoSample.Web.Tests;
 
 /// <summary>An Umbraco builder with only a service collection, for composers that only register services.</summary>
 internal sealed class ServicesOnlyUmbracoBuilder : IUmbracoBuilder
