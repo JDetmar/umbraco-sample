@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- Creates the site's contained database user (ADR 0010). Azure has no API for database users, so a Container Apps
-       job inside the virtual network runs this with the deployer's SQL token (ADR 0016), using the site's SQL driver. -->
+       job inside the virtual network runs this with the deployer's SQL token (ADR 0017), using the site's SQL driver. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
   </PropertyGroup>
