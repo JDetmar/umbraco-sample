@@ -1,6 +1,6 @@
 # Threat model 0002: the Azure environment and its delivery path
 
-- Status: **Open risks decided by the owner on 2026-11-24 (section 5).** R1 and R3 are accepted for dev only; R2 is fixed by OIDC.
+- Status: **Open risks decided by the owner on 2026-11-24 (section 5).** R1 and R3 are accepted for dev only; R2 is fixed by OIDC; R4 is accepted for dev with conditions (DEV-017).
 - Date: 2026-11-24
 - Scope: one environment as declared in `infra/UmbracoSample.Infra` (ADR 0010), the CI image publish and the infrastructure preview
 - Clauses: ES-022, ES-023, ES-024, ES-025, ES-047, ES-049, ES-054; framework ENV-01, OPS-01, OPS-03
@@ -18,8 +18,8 @@ One resource group per environment: a Container Apps environment in a delegated 
 | 3 | Site to SQL, Blob, Key Vault, Application Insights | Azure services, reached with the site's managed identity | Trusted; each grant scoped to one resource |
 | 4 | Apps subnet to SQL public endpoint | Only the apps subnet, by virtual network rule | Network-restricted, then Entra-only authentication |
 | 5 | CI to GHCR | The `publish` job's short-lived token, `main` only | Reviewed code only |
-| 6 | CI to Pulumi Cloud and Azure | Short-lived Pulumi token from OIDC exchange (decrypts stack secrets) and OIDC Reader identity | Reviewed code only (`main` or manual run, `infra-preview` environment) |
-| 7 | Owner workstation to Pulumi Cloud, Azure and SQL | The owner, the only one who runs `up`; during `up`, a firewall rule admits the owner's IP to SQL while the database user script runs | Trusted; rule removed on exit, Entra-only authentication |
+| 6 | CI to Pulumi Cloud and Azure | Short-lived Pulumi tokens from OIDC exchange (decrypt stack secrets); the Reader identity for preview; the deploy identity for dev CD (ADR 0013) | Reviewed code only: `main` or manual run in `infra-preview`; `main` only in `dev` |
+| 7 | Deployer to Pulumi Cloud, Azure and SQL | The owner (prod, and dev before CD), or the `deploy-dev` job on a shared GitHub-hosted runner (dev under CD); during `up`, a firewall rule admits the deployer's public IP to SQL while the database user script runs | Trusted deployer; rule removed on exit, Entra-only authentication; a CI runner's IP is shared, so the open window is the exposure (R4) |
 
 ## 3. Assets
 
@@ -49,8 +49,9 @@ One resource group per environment: a Container Apps environment in a delegated 
 
 ## 5. Open risks for the owner
 
-Each needed an owner decision (accept, or fix first). Agents do not accept risks (CLAUDE.md). The owner decided all three on 2026-11-24, in the project thread.
+Each needed an owner decision (accept, or fix first). Agents do not accept risks (CLAUDE.md). The owner decided R1 to R4 on 2026-11-24, in the project thread.
 
 - **R1. Public back office without WAF or HSTS in dev (T6, DEV-010).** Recommendation: accept for dev with synthetic content and forms off; prod is already blocked without the edge. **Owner decision (2026-11-24): accepted for dev only.** Prod still requires the edge.
 - **R2. Long-lived Pulumi token that can decrypt stack secrets (T3, T4, DEV-016).** Recommendation: accept with a 90-day expiry and environment review until `pulumi/auth-actions` is approved. **Owner decision (2026-11-24): fix first. `pulumi/auth-actions` is approved;** the preview job exchanges its GitHub OIDC token for a short-lived Pulumi token, and no Pulumi token is stored. DEV-016 closes when the first preview runs this way.
 - **R3. Single replica (T7, DEV-015).** Recommendation: accept for dev; revisit before prod traffic. **Owner decision (2026-11-24): accepted for dev only.** Prod traffic still waits for the DEV-015 work.
+- **R4. A standing deploy identity for dev CD (T2, T8, T10; ADR 0013).** The `deploy-dev` job's identity has Contributor on the subscription, Role Based Access Control Administrator limited to the stack's three data-plane roles, and SQL administrator group membership; it gets an organization Pulumi token. It is federated only to this repository's `dev` environment, which runs only on `main`. These rights reach beyond dev: the Pulumi token can update and decrypt any stack in the organization, the roles cover every resource group in the subscription, the role condition limits which roles can be assigned but not to whom or where, and the SQL group administers every server it is set on. During `up` the database user script also opens a SQL firewall rule for the shared GitHub-hosted runner's IP, found through api.ipify.org. A merged malicious change could use all of this, so review before merge (ES-028) is the main control, and it is not yet enforced for admins (DEV-001); dev holds only synthetic content. Recommendation: accept for dev only on the condition that prod lives in a separate subscription and Pulumi project, or is never created with these credentials in reach; use a dev-only SQL admin group; narrow Contributor to the resource group once a bootstrap stack creates it; switch to a team token limited to the dev stack if the plan allows; and move the database user step into the VNet (no firewall rule). **Owner decision (2026-11-24): accepted for dev, with the recommended conditions as follow-ups (DEV-017).**

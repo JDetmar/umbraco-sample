@@ -75,6 +75,21 @@ public sealed class SiteSettingsTests
     }
 
     [Fact]
+    public void The_image_comes_from_stack_config_first_then_from_cd()
+    {
+        SiteSettings.ResolveImage("ghcr.io/o/a@sha256:1", "ghcr.io/o/a@sha256:2").ShouldBe("ghcr.io/o/a@sha256:1");
+        SiteSettings.ResolveImage(null, "ghcr.io/o/a@sha256:2").ShouldBe("ghcr.io/o/a@sha256:2");
+        Should.Throw<ArgumentException>(() => SiteSettings.ResolveImage(" ", "")).Message.ShouldContain("SITE_IMAGE");
+    }
+
+    [Fact]
+    public void Dev_takes_its_image_from_cd_so_a_stale_stack_file_cannot_roll_it_back()
+    {
+        var folder = Path.GetFullPath(Path.Join(AppContext.BaseDirectory, "../../../../UmbracoSample.Infra"));
+        File.ReadAllText(Path.Join(folder, "Pulumi.dev.yaml")).ShouldNotContain("umbraco-sample:image:");
+    }
+
+    [Fact]
     public void Committed_stack_files_hold_no_owner_identifying_plain_values()
     {
         var folder = Path.GetFullPath(Path.Join(AppContext.BaseDirectory, "../../../../UmbracoSample.Infra"));

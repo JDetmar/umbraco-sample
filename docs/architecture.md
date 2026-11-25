@@ -56,9 +56,9 @@ flowchart LR
     dev([Contributor or agent]) -- pull request --> gh["GitHub: main<br/>rulesets require CI"]
     gh -- "CI: validate, integration,<br/>image, e2e, CodeQL" --> img["Container image<br/>by digest, with SBOM"]
     gh -- "infra workflow:<br/>mock tests, preview" --> pulumi["Pulumi Cloud<br/>stack state"]
-    owner([Owner]) -- "pulumi up<br/>(owner only)" --> pulumi
-    pulumi -- declares --> azure["Azure resource group"]
-    img -. "digest set in stack config" .-> azure
+    img -- "deploy-dev: pulumi up<br/>by digest, then smoke test" --> pulumi
+    owner([Owner]) -- "pulumi up<br/>(prod, owner only)" --> pulumi
+    pulumi -- declares --> azure["Azure resource groups"]
 ```
 
-No agent runs `pulumi up` or deploys (CLAUDE.md). Locally, `make run` starts the same site with SQL Server in containers through Aspire (ADR 0002, ADR 0012), with no Azure resources.
+CD deploys dev from `main` after every gate and the publish (ADR 0013); no agent runs `pulumi up` directly, and prod is deployed only by the owner. Locally, `make run` starts the same site with SQL Server in containers through Aspire (ADR 0002, ADR 0012), with no Azure resources.

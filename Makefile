@@ -78,7 +78,9 @@ infra-test: ## Infrastructure: locked restore, format check, build and Pulumi mo
 	dotnet test --project infra/UmbracoSample.Infra.Tests -c $(CONFIG) --no-build
 
 infra-preview: ## Pulumi preview of a stack: make infra-preview STACK=dev (needs Pulumi Cloud and Azure sign-in; never runs `up`)
-	cd infra/UmbracoSample.Infra && pulumi preview --stack "$(STACK)" --diff --non-interactive
+	@set -euo pipefail; cd infra/UmbracoSample.Infra; \
+	if [ "$(STACK)" = dev ] && [ -z "$${SITE_IMAGE:-}" ]; then SITE_IMAGE="$$(../../scripts/published-image.sh)"; export SITE_IMAGE; fi; \
+	pulumi preview --stack "$(STACK)" --diff --non-interactive
 
 smoke: ## Smoke-test a running site: make smoke URL=https://host
 	scripts/smoke.sh "$(URL)"
