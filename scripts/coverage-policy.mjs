@@ -7,8 +7,9 @@ const attribute = (tag, name) => {
 };
 
 // Returns Map<package, Map<"file:line", { hit, branches, branchesHit }>>. Lines are taken from each class's own
-// <lines>, not from its <methods>, which repeat them; a line seen twice keeps the better result. File names are
-// resolved against the report's <source>, because each report states them relative to a different root.
+// <lines>, not from its <methods>, which repeat them. A line seen twice keeps the better result; for branches that
+// is the higher count, not the union of the conditions hit, so a merge can only under-report, never pass a floor
+// falsely. File names are resolved against the report's <source>, because each report uses a different root.
 export function parseCobertura(xml) {
   if (typeof xml !== 'string' || !/<coverage\b/.test(xml)) {
     throw new Error('Not a Cobertura report.');
@@ -111,6 +112,12 @@ export function checkFloors(summary, floors) {
     const row = summary.find((entry) => entry.name === name);
     if (!row) {
       failures.push(`${name}: no coverage report, but it has a floor.`);
+      continue;
+    }
+
+    const unknown = Object.keys(floor ?? {}).filter((kind) => kind !== 'line' && kind !== 'branch');
+    if (unknown.length > 0 || typeof floor !== 'object' || floor === null) {
+      failures.push(`${name}: a floor takes only "line" and "branch", not ${unknown.join(', ') || 'this value'}.`);
       continue;
     }
 

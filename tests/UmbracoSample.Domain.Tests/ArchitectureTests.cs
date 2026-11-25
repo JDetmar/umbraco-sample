@@ -23,7 +23,7 @@ public sealed class ArchitectureTests
     [Fact]
     public void The_domain_depends_on_no_framework_infrastructure_or_io()
     {
-        // Coverage collection (make coverage) adds one tracker type to the instrumented assembly; it is not domain code.
+        // Coverage collection in `make test` adds one tracker type to the instrumented assembly; it is not domain code.
         var result = Rule(Types.InAssembly(typeof(RedirectMap).Assembly).That().DoNotResideInNamespace(CoverageTrackerNamespace)).GetResult();
 
         result.IsSuccessful.ShouldBeTrue($"Offending types: {string.Join(", ", result.FailingTypeNames ?? [])}");

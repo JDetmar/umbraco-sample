@@ -45,6 +45,11 @@ test('a module without a floor never fails, however low', () => {
   assert.deepEqual(checkFloors(summary, {}), []);
 });
 
+test('a misspelled floor fails closed instead of applying nothing', () => {
+  const summary = summarise(parseCobertura(report('P', [[1, 1]])));
+  assert.match(checkFloors(summary, { P: { lines: 95 } })[0], /only "line" and "branch"/);
+});
+
 test('a floor on a module with no report fails closed', () => {
   assert.equal(checkFloors([], { Missing: { line: 50 } }).length, 1);
 });

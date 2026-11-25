@@ -47,14 +47,16 @@ FAST_TEST_PROJECTS := $(filter-out %Integration.Tests,$(wildcard tests/*.Tests))
 
 COVERAGE_DIR := artifacts/coverage
 
-# Projects that reference coverlet.MTP also report the coverage of the code they run. Coverage is a diagnostic
-# (ES-002): the report lists every assembly, and only those in tests/coverage-floors.json can fail the build.
+# A test project that references coverlet.MTP reports the coverage of the assembly it is named after, and only that
+# one, so a floor measures that assembly's own tests. Coverage is a diagnostic (ES-002): only assemblies in
+# tests/coverage-floors.json can fail the build. The stale-report cleanup names its directory literally on purpose.
 test: ## Fast tests: unit and policy tests, no containers; reports coverage (floor on the domain only)
 	@find artifacts/coverage -name '*.cobertura.*xml' -delete 2>/dev/null || true
 	@for project in $(FAST_TEST_PROJECTS); do \
+		name=$$(basename "$$project"); \
 		coverage=""; \
 		if grep -q '"coverlet.MTP"' "$$project"/*.csproj; then \
-			coverage="--coverlet --coverlet-output-format cobertura --coverlet-include [UmbracoSample.*]* --coverlet-file-prefix $$(basename $$project) --results-directory $(COVERAGE_DIR)"; \
+			coverage="--coverlet --coverlet-output-format cobertura --coverlet-include [$${name%.Tests}]* --coverlet-file-prefix $$name --results-directory $(COVERAGE_DIR)"; \
 		fi; \
 		set -f; dotnet test --project "$$project" -c $(CONFIG) --no-build $$coverage || exit 1; set +f; \
 	done
