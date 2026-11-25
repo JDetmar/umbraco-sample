@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\UmbracoSample.Infra\UmbracoSample.Infra.csproj" />
+    <ProjectReference Include="..\UmbracoSample.Infra.DatabaseUser\UmbracoSample.Infra.DatabaseUser.csproj" />
   </ItemGroup>
 
   <ItemGroup>

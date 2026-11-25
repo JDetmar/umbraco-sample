@@ -85,7 +85,7 @@ public sealed class SiteInfrastructureTests
     [Fact]
     public async Task Up_creates_the_site_database_user_as_the_deployer()
     {
-        var command = Single(await Declare(Dev), "command:local:Command");
+        var command = (await Declare(Dev)).Resources.Single(r => r.Type == "command:local:Command" && r.Name == "site-database-user").Inputs;
         var environment = Map(command["environment"]);
 
         command["create"].ShouldBe("bash scripts/grant-site-database-user.sh");
@@ -96,17 +96,22 @@ public sealed class SiteInfrastructureTests
     }
 
     [Fact]
-    public void The_database_user_script_is_idempotent_and_always_closes_its_firewall_rule()
+    public async Task The_app_waits_for_its_key_vault_access_to_propagate()
+    {
+        var wait = (await Declare(Dev)).Resources.Single(r => r.Type == "command:local:Command" && r.Name == "wait-for-secret-access").Inputs;
+
+        wait["create"].ShouldBe("sleep 120");
+    }
+
+    [Fact]
+    public void The_database_user_script_always_closes_its_firewall_rule_and_needs_no_extra_tools()
     {
         var script = File.ReadAllText(Path.GetFullPath(Path.Join(AppContext.BaseDirectory, "../../../../UmbracoSample.Infra/scripts/grant-site-database-user.sh")));
 
         script.ShouldContain("set -euo pipefail");
-        script.ShouldContain("IF NOT EXISTS (SELECT 1 FROM sys.database_principals");
         script.ShouldContain("trap remove_rule EXIT");
-        script.ShouldContain("TYPE = E");
-        // Values spliced into SQL are checked against the shapes Azure produces first.
-        script.ShouldContain("SITE_IDENTITY_NAME\" =~ ^[A-Za-z0-9_-]");
-        script.ShouldContain("SITE_IDENTITY_CLIENT_ID\" =~ ^[0-9a-fA-F]{8}-");
+        script.ShouldContain("dotnet run --project");
+        script.ShouldNotContain("sqlcmd -");
     }
 
     [Fact]

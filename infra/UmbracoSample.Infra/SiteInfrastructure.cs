@@ -240,6 +240,14 @@ public sealed class SiteInfrastructure
         // The site identity gets exactly the data-plane roles it needs, scoped to the one resource each.
         _ = Grant("media-writer", storage.Id, StorageBlobDataContributor, identity, client);
         var secretsReader = Grant("secrets-reader", vault.Id, KeyVaultSecretsUser, identity, client);
+
+        // A new role assignment can take a few minutes to reach Key Vault; without this wait the app's first revision
+        // can fail to read its secrets. Runs only when the assignment is created or replaced.
+        var secretAccessPropagated = new LocalCommand("wait-for-secret-access", new LocalCommandArgs
+        {
+            Create = "sleep 120",
+            Triggers = secretsReader.Id.Apply(id => ImmutableArray.Create<object>(id)),
+        }, new CustomResourceOptions { DependsOn = { secretsReader } });
         _ = Grant("telemetry-writer", insights.Id, MonitoringMetricsPublisher, identity, client);
 
         // Secrets the site needs at first boot. Set by the owner per stack; stored in Key Vault; referenced, never copied,
@@ -352,7 +360,7 @@ public sealed class SiteInfrastructure
         {
             // The first revision boots straight into the unattended install, so the network rule, the database and the
             // Key Vault grant must exist first. RBAC can still take minutes to propagate; see docs/infra-setup.md.
-            DependsOn = { secretsReader, sqlNetworkRule, database, databaseUser },
+            DependsOn = { secretsReader, secretAccessPropagated, sqlNetworkRule, database, databaseUser },
         });
 
         // ES-047: an alert before the money runs out, at 80% actual and 100% forecast spend.
