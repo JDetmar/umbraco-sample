@@ -3,43 +3,43 @@
 # Azure has no API for database users. SQL admits only the apps subnet, so the SQL runs from a Container Apps job there,
 # and no firewall rule is opened. The job has no identity: this script passes it a SQL access token of the deployer (a
 # member of the SQL administrator group), valid for about an hour, and waits for the execution to finish.
-# It prints nothing secret: the token goes only into the request body, in a private temporary file.
-# Needs az (signed in) and jq.
+# It prints nothing secret: the token goes only into the request body, in a private temporary file. Needs only az.
 set -euo pipefail
 
-: "${JOB_ID:?}" "${IMAGE:?}" "${SQL_SERVER_FQDN:?}" "${DATABASE:?}" "${SITE_IDENTITY_NAME:?}" "${SITE_IDENTITY_CLIENT_ID:?}"
+: "${JOB_ID:?}" "${SQL_SERVER_FQDN:?}" "${DATABASE:?}" "${SITE_IDENTITY_NAME:?}" "${SITE_IDENTITY_CLIENT_ID:?}"
 api="api-version=2024-03-01"
+
+# The job definition's container, kept in step with SiteInfrastructure.cs (a test checks both).
+container_name="database-user"
+container_command='["dotnet", "/app/tools/database-user/UmbracoSample.Infra.DatabaseUser.dll"]'
+
+# Every value spliced into the JSON body is checked against the shape Azure produces, so none needs escaping.
+check() { [[ "$2" =~ $3 ]] || { echo "$1 has an unexpected format" >&2; exit 1; }; }
+image="$(az rest --method get --url "${JOB_ID}?${api}" --query "properties.template.containers[0].image" -o tsv)"
+check IMAGE "$image" '^[a-z0-9./:_-]+@sha256:[0-9a-f]{64}$'
+check SQL_SERVER_FQDN "$SQL_SERVER_FQDN" '^[a-z0-9-]{1,63}\.database\.windows\.net$'
+check DATABASE "$DATABASE" '^[A-Za-z0-9_-]{1,128}$'
+check SITE_IDENTITY_NAME "$SITE_IDENTITY_NAME" '^[A-Za-z0-9_-]{1,128}$'
+check SITE_IDENTITY_CLIENT_ID "$SITE_IDENTITY_CLIENT_ID" '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+
+token="$(az account get-access-token --resource https://database.windows.net/ --query accessToken -o tsv)"
+[[ "$token" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "could not get a SQL access token for the deployer" >&2; exit 1; }
 
 body="$(mktemp)"
 chmod 600 "$body"
 trap 'rm -f "$body"' EXIT
-
-TOKEN="$(az account get-access-token --resource https://database.windows.net/ --query accessToken -o tsv)" \
-jq -n \
-  --arg image "$IMAGE" --arg fqdn "$SQL_SERVER_FQDN" --arg db "$DATABASE" \
-  --arg name "$SITE_IDENTITY_NAME" --arg client "$SITE_IDENTITY_CLIENT_ID" \
-  '{containers: [{
-      name: "database-user",
-      image: $image,
-      command: ["dotnet", "/app/tools/database-user/UmbracoSample.Infra.DatabaseUser.dll"],
-      env: [
-        {name: "SQL_SERVER_FQDN", value: $fqdn},
-        {name: "DATABASE", value: $db},
-        {name: "SITE_IDENTITY_NAME", value: $name},
-        {name: "SITE_IDENTITY_CLIENT_ID", value: $client},
-        {name: "SQL_ACCESS_TOKEN", value: env.TOKEN}
-      ],
-      resources: {cpu: 0.25, memory: "0.5Gi"}
-    }]}' > "$body"
+printf '{"containers":[{"name":"%s","image":"%s","command":%s,"resources":{"cpu":0.25,"memory":"0.5Gi"},"env":[{"name":"SQL_SERVER_FQDN","value":"%s"},{"name":"DATABASE","value":"%s"},{"name":"SITE_IDENTITY_NAME","value":"%s"},{"name":"SITE_IDENTITY_CLIENT_ID","value":"%s"},{"name":"SQL_ACCESS_TOKEN","value":"%s"}]}]}' \
+  "$container_name" "$image" "$container_command" "$SQL_SERVER_FQDN" "$DATABASE" "$SITE_IDENTITY_NAME" "$SITE_IDENTITY_CLIENT_ID" "$token" > "$body"
+unset token
 
 execution="$(az rest --method post --url "${JOB_ID}/start?${api}" --body "@${body}" --query id -o tsv)"
 rm -f "$body"
-[[ "$execution" == "${JOB_ID}/executions/"* ]] || { echo "the job did not start" >&2; exit 1; }
+[[ "$execution" == */executions/* ]] || { echo "the job did not start" >&2; exit 1; }
 echo "started ${execution##*/}"
 
-# The serverless database may be resuming, and the tool retries for up to three minutes; allow ten.
+# The tool retries a resuming database for up to three minutes; the replica times out at 600 s. Poll past that.
 status=""
-for _ in $(seq 1 60); do
+for _ in $(seq 1 72); do
   status="$(az rest --method get --url "${execution}?${api}" --query properties.status -o tsv)"
   case "$status" in
     Succeeded) echo "the site's database user is in place"; exit 0 ;;
@@ -47,5 +47,5 @@ for _ in $(seq 1 60); do
   esac
   sleep 10
 done
-echo "database user job still ${status:-unknown} after ten minutes" >&2
+echo "database user job still ${status:-unknown} after twelve minutes" >&2
 exit 1

@@ -287,9 +287,9 @@ public sealed class SiteInfrastructure
                 {
                     new ContainerArgs
                     {
-                        Name = "database-user",
+                        Name = DatabaseUserContainer,
                         Image = settings.Image,
-                        Command = { "dotnet", "/app/tools/database-user/UmbracoSample.Infra.DatabaseUser.dll" },
+                        Command = { "dotnet", DatabaseUserEntryPoint },
                         Resources = new ContainerResourcesArgs { Cpu = 0.25, Memory = "0.5Gi" },
                     },
                 },
@@ -303,13 +303,13 @@ public sealed class SiteInfrastructure
             Environment =
             {
                 ["JOB_ID"] = databaseUserJob.Id,
-                ["IMAGE"] = settings.Image,
                 ["SQL_SERVER_FQDN"] = sqlServer.FullyQualifiedDomainName,
                 ["DATABASE"] = database.Name,
                 ["SITE_IDENTITY_NAME"] = identity.Name,
                 ["SITE_IDENTITY_CLIENT_ID"] = identity.ClientId,
             },
-            // Runs again only if the database, the identity or the job is replaced.
+            // Runs again only if the database, the identity or the job is replaced. The script reads the job's current
+            // image itself, so a new image digest on every deploy does not re-run it.
             Triggers = Output.Tuple(database.Id, identity.ClientId, databaseUserJob.Id).Apply(t => ImmutableArray.Create<object>(t.Item1, t.Item2, t.Item3)),
         }, new CustomResourceOptions { DependsOn = { database, sqlNetworkRule, databaseUserJob } });
 
@@ -437,6 +437,12 @@ public sealed class SiteInfrastructure
 
     /// <summary>Storage account names are global: 3-24 lower-case letters and digits.</summary>
     public static string StorageAccountName(string environment, string suffix) => $"umbsample{environment}{suffix}";
+
+    /// <summary>The database user job's container; the script that starts it sends the same name and command.</summary>
+    public const string DatabaseUserContainer = "database-user";
+
+    /// <summary>Where the Dockerfile publishes the database user tool inside the site image.</summary>
+    public const string DatabaseUserEntryPoint = "/app/tools/database-user/UmbracoSample.Infra.DatabaseUser.dll";
 
     /// <summary>What uSync imports at startup: everything (schema and synthetic seed content) in dev only, settings elsewhere.</summary>
     public static string UsyncImportGroup(string environment) => environment == "dev" ? "All" : "Settings";

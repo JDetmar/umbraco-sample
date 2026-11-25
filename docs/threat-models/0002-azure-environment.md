@@ -19,7 +19,7 @@ One resource group per environment: a Container Apps environment in a delegated 
 | 4 | Apps subnet to SQL public endpoint | Only the apps subnet, by virtual network rule | Network-restricted, then Entra-only authentication |
 | 5 | CI to GHCR | The `publish` job's short-lived token, `main` only | Reviewed code only |
 | 6 | CI to Pulumi Cloud and Azure | Short-lived Pulumi tokens from OIDC exchange (decrypt stack secrets); the Reader identity for preview; the deploy identity for dev CD (ADR 0013) | Reviewed code only: `main` or manual run in `infra-preview`; `main` only in `dev` |
-| 7 | Deployer to Pulumi Cloud, Azure and SQL | The owner (prod, and dev before CD), or the `deploy-dev` job on a shared GitHub-hosted runner (dev under CD); during `up`, the deployer passes a short-lived SQL token to the database user job inside the network (ADR 0016) | Trusted deployer; no firewall rule; Entra-only authentication; the token is readable in the job execution by those who can read the job until it expires (R4) |
+| 7 | Deployer to Pulumi Cloud, Azure and SQL | The owner (prod, and dev before CD), or the `deploy-dev` job on a shared GitHub-hosted runner (dev under CD); during `up`, the deployer passes a short-lived SQL token to the database user job inside the network (ADR 0016) | Trusted deployer; no firewall rule; Entra-only authentication; the token is readable in the job execution by anyone with read access to the job until it expires, today only the owner and the deploy identity (R4) |
 
 ## 3. Assets
 
@@ -45,7 +45,7 @@ One resource group per environment: a Container Apps environment in a delegated 
 | T7 | Denial of wallet: traffic or a loop runs up cost | Scale bounded at one replica; serverless SQL with free limit and auto-pause outside prod; log cap; budget alerts | Alerts notify, they do not stop spend |
 | T8 | Repudiation: an infrastructure change without a record | Every change is a reviewed pull request; Pulumi Cloud keeps update history; only the owner runs `up` | Portal changes outside Pulumi; a preview shows them as drift |
 | T9 | Information disclosure: media served publicly | Container is private; no anonymous access; no shared keys | Media is served through the site, which applies Umbraco's permissions |
-| T10 | Information disclosure or tampering: the database user step opens SQL, leaks its token, or is fed a crafted name | The SQL runs from a job inside the apps subnet, so no firewall rule exists (ADR 0016); the token goes only into the start request, through a private temporary file, never a log; identity name, client ID and database are checked against Azure's formats before they reach SQL | The token is visible in the job execution to readers of the job for about an hour; authentication is still Entra-only |
+| T10 | Information disclosure or tampering: the database user step opens SQL, leaks its token, or is fed a crafted name | The SQL runs from a job inside the apps subnet, so no firewall rule exists (ADR 0016); the token goes only into the start request, through a private temporary file, never a log; identity name, client ID and database are checked against Azure's formats before they reach SQL | The token is visible in the job execution to anyone with read access to the job (Reader on its resource group or subscription) for about an hour, today only the owner and the deploy identity; authentication is still Entra-only |
 
 ## 5. Open risks for the owner
 
