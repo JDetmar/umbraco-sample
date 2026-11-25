@@ -1,0 +1,7 @@
+name: umbraco-sample
+description: Azure infrastructure for the Umbraco sample site (ADR 0003, ADR 0004, ADR 0010).
+runtime: dotnet
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: ""

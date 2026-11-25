@@ -8,7 +8,7 @@ SLN := UmbracoSample.slnx
 CONFIG ?= Release
 GITLEAKS ?= gitleaks
 
-.PHONY: help bootstrap restore lockfiles-check build format format-check frontend frontend-test frontend-audit test mutation test-integration e2e e2e-update-snapshots lighthouse image smoke validate secrets vuln run clean
+.PHONY: help bootstrap restore lockfiles-check build format format-check frontend frontend-test frontend-audit test mutation test-integration e2e e2e-update-snapshots lighthouse image smoke validate secrets vuln run clean infra-test infra-preview
 
 help: ## List targets
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -69,6 +69,17 @@ e2e-update-snapshots: ## Re-approve visual baselines after an intended visual ch
 lighthouse: ## Lighthouse CI budgets (TST-14) against a running site, in the same pinned image (make run first)
 	scripts/e2e.sh --lighthouse
 
+INFRA_SLN := infra/UmbracoSample.Infra.slnx
+
+infra-test: ## Infrastructure: locked restore, format check, build and Pulumi mock tests (no Azure account needed)
+	dotnet restore $(INFRA_SLN) --locked-mode
+	dotnet format $(INFRA_SLN) --verify-no-changes --no-restore
+	dotnet build $(INFRA_SLN) -c $(CONFIG) --no-restore
+	dotnet test --project infra/UmbracoSample.Infra.Tests -c $(CONFIG) --no-build
+
+infra-preview: ## Pulumi preview of a stack: make infra-preview STACK=dev (needs Pulumi Cloud and Azure sign-in; never runs `up`)
+	cd infra/UmbracoSample.Infra && pulumi preview --stack "$(STACK)" --diff --non-interactive
+
 smoke: ## Smoke-test a running site: make smoke URL=https://host
 	scripts/smoke.sh "$(URL)"
 
@@ -81,7 +92,7 @@ vuln: ## Fail on known-vulnerable NuGet packages, including transitive ones
 	@if grep -q "has the following vulnerable packages" artifacts/vulnerable-packages.txt; then \
 		echo "Vulnerable packages found (ES-016)."; exit 1; fi
 
-validate: lockfiles-check format-check frontend frontend-test build test secrets ## Fast pre-handoff check (ES-053); CI runs the same
+validate: lockfiles-check format-check frontend frontend-test build test infra-test secrets ## Fast pre-handoff check (ES-053); CI runs the same
 
 run: frontend ## Run the whole stack locally through Aspire (site and SQL Server)
 	dotnet run --project src/UmbracoSample.AppHost

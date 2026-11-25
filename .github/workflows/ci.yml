@@ -53,6 +53,7 @@ jobs:
       - run: make frontend-audit
       - run: make build
       - run: make test
+      - run: make infra-test
       - run: make secrets
       - run: make vuln
 
