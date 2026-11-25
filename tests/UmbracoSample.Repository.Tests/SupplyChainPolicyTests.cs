@@ -90,7 +90,7 @@ public sealed partial class SupplyChainPolicyTests
     public void Pulumi_runs_in_ci_never_print_a_property_diff()
     {
         // Actions logs are public; a Pulumi property diff prints systemData, which holds the sign-in name of whoever
-        // created or last changed a resource (ADR 0014, DEV-019). PR comments and job summaries are public too.
+        // created or last changed a resource (ADR 0014). PR comments and job summaries are public too.
         var offenders = WorkflowFiles()
             .SelectMany(file => File.ReadAllLines(file.FullName).Select(line => (file.Name, Line: line.Trim())))
             .Where(entry => !entry.Line.StartsWith('#') && PrintsPulumiProperties().IsMatch(entry.Line))
