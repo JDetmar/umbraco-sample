@@ -38,7 +38,7 @@ public class DatabaseUserGrantTests
     [Fact]
     public async Task A_refused_input_exits_without_retrying()
     {
-        var error = new StringWriter();
+        using var error = new StringWriter();
 
         var code = await DatabaseUserGrant.RunAsync(With("SITE_IDENTITY_CLIENT_ID", null), TextWriter.Null, error, TimeSpan.Zero);
 
