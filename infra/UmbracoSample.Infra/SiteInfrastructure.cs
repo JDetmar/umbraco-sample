@@ -443,6 +443,8 @@ public sealed class SiteInfrastructure
     /// </summary>
     private static void DeclareUptimeAlert(string name, SiteSettings settings, ResourceGroup group, Component insights, ContainerApp site, Output<string> contact, InputMap<string> tags)
     {
+        // The app's own hostname until the edge exists; when Front Door lands (DEV-010) the probe moves to its endpoint,
+        // or it would bypass the WAF, or be refused once ingress admits only Front Door.
         var url = site.Configuration.Apply(c => $"https://{c?.Ingress?.Fqdn}/health/ready");
 
         // Azure links a test to its Application Insights resource only through this hidden-link tag.

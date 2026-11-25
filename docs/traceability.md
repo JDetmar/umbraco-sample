@@ -117,7 +117,7 @@ How to read the status column:
 | CMP-07 | Yearly manual accessibility audit | gap | DEV-008. |
 | OPS-01 | Web application firewall in front of the site | planned | Front Door with WAF rules (Phase 5, ADR 0010). |
 | OPS-02 | Third-party penetration test | outside the code | |
-| OPS-03 | Real user monitoring, uptime checks and alerting | partly | Server-side OpenTelemetry to Application Insights. An availability test of `/health/ready` from three regions with an email alert is declared for always-on stacks (`uptimeTest`, on in prod, mock-tested in `SiteInfrastructureTests`); it is off in dev, which scales to zero, and prod is not deployed, so no alert has fired yet. No real user (browser) monitoring. |
+| OPS-03 | Real user monitoring, uptime checks and alerting | partly | Server-side OpenTelemetry to Application Insights. An availability test of `/health/ready` from three regions with an email alert is declared for always-on stacks (`uptimeTest`, on in prod, mock-tested in `SiteInfrastructureTests`); it is off in dev, which scales to zero, and prod is not deployed, so no alert has fired yet; prod waits on the edge (DEV-010) and the owner's environment plan. No real user (browser) monitoring. |
 | OPS-04 | SLOs for availability and page speed | gap | Not started. |
 | OPS-05 | Backups with tested restores | planned | Phase 5: a scripted restore test. |
 | OPS-06 | Incident runbooks and on-call | outside the code | |

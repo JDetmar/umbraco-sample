@@ -91,7 +91,7 @@ Rough list prices, to confirm with the Azure pricing calculator before Phase 5. 
 | Media, Key Vault, App Insights | Blob storage, Key Vault, App Insights free ingestion tier | a few dollars |
 | Edge and WAF | Front Door Standard with custom WAF rules (rate limiting, geo); managed OWASP rule sets need Premium | ~$35-40 (Premium ~$330, off by default) |
 
-Expected total: about $60-90/month with Front Door Standard in prod, or about $30-40 without it. Front Door Premium would be a toggle for demos only. Running Standard instead of Premium means OPS-01 is only partly met, recorded in the ledger as a gap with the toggle as its fix.
+Expected total: about $60-90/month with Front Door Standard in prod, or about $30-40 without it, plus about $10 for the prod availability test (OPS-03). Front Door Premium would be a toggle for demos only. Running Standard instead of Premium means OPS-01 is only partly met, recorded in the ledger as a gap with the toggle as its fix.
 
 ## Phase 6: Governance features
 

@@ -323,13 +323,17 @@ public sealed class SiteInfrastructureTests
         test["retryEnabled"].ShouldBe(true);
         Map(test["request"])["requestUrl"].ShouldBe("https://umbraco-sample-dev-web.app.example/health/ready");
         Map(test["validationRules"])["expectedHttpStatusCode"].ShouldBe(200);
-        ((ImmutableArray<object>)test["locations"]).Length.ShouldBe(3);
+        test["webTestKind"].ShouldBe("standard");
+        ((ImmutableArray<object>)test["locations"]).Select(l => (string)Map(l)["location"]).ShouldBe(["emea-gb-db3-azr", "emea-nl-ams-azr", "us-va-ash-azr"]);
         Map(test["tags"])["hidden-link:/mock/azure-native:applicationinsights:Component/umbraco-sample-dev-ai"].ShouldBe("Resource");
 
         var criteria = Map(alert["criteria"]);
         criteria["odataType"].ShouldBe("Microsoft.Azure.Monitor.WebtestLocationAvailabilityCriteria");
         criteria["failedLocationCount"].ShouldBe(2);
         criteria["webTestId"].ShouldBe("/mock/azure-native:applicationinsights:WebTest/umbraco-sample-dev-uptime");
+        criteria["componentId"].ShouldBe("/mock/azure-native:applicationinsights:Component/umbraco-sample-dev-ai");
+        // Azure requires exactly the test and its component as scopes, in this order.
+        ((ImmutableArray<object>)alert["scopes"]).ShouldBe(["/mock/azure-native:applicationinsights:WebTest/umbraco-sample-dev-uptime", "/mock/azure-native:applicationinsights:Component/umbraco-sample-dev-ai"]);
         alert["enabled"].ShouldBe(true);
 
         var receiver = Map(((ImmutableArray<object>)contacts["emailReceivers"]).ShouldHaveSingleItem());

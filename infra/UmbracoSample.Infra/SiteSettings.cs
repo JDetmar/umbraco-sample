@@ -70,8 +70,8 @@ public sealed partial record SiteSettings(
             throw new ArgumentException("prod must sit behind the edge (Front Door with WAF, HSTS); see ADR 0010 and DEV-010.");
         }
 
-        // A test every 15 minutes keeps a scale-to-zero app awake about a third of the time, which costs more than the
-        // dev budget; scale-to-zero environments rely on the daily smoke test instead (OPS-03).
+        // Three regions every 15 minutes probe about every 5 minutes, inside the 300-second scale-in cooldown, so a
+        // scale-to-zero app would never sleep: more than the dev budget. Such stacks rely on the daily smoke test (OPS-03).
         if (UptimeTest && MinReplicas < 1)
         {
             throw new ArgumentException("uptimeTest needs minReplicas >= 1: probing a scale-to-zero app keeps it awake and wakes it cold.");
