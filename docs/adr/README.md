@@ -17,5 +17,6 @@ Lightweight records of significant decisions (ES-019). Each records context, alt
 | [0011](ADR-0011-stay-on-lts-releases.md) | Stay on long-term support releases of .NET and Umbraco | Accepted |
 | [0012](ADR-0012-aspire-17-and-cli.md) | Move to Aspire 17 with the CLI as a pinned local tool | Accepted |
 | [0013](ADR-0013-continuous-deployment-to-dev.md) | Continuous deployment to dev | Accepted |
+| [0014](ADR-0014-no-property-diff-in-ci-logs.md) | No Pulumi property diff in CI logs (amends 0013) | Proposed |
 
 New records copy [template.md](template.md) and are named `ADR-NNNN-short-title.md`, with the next free number; a policy test checks the name and that this index lists the file.
