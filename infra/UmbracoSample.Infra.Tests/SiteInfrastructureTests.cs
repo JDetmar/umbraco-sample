@@ -303,6 +303,27 @@ public sealed class SiteInfrastructureTests
     }
 
     [Fact]
+    public async Task Media_soft_delete_is_declared()
+    {
+        var recovery = Single(await Declare(Dev), "azure-native:storage:BlobServiceProperties");
+
+        recovery["blobServicesName"].ShouldBe("default");
+        recovery["accountName"].ShouldBe("umbraco-sample-dev-media");
+        Map(recovery["deleteRetentionPolicy"])["enabled"].ShouldBe(true);
+        Map(recovery["deleteRetentionPolicy"])["days"].ShouldBe(7);
+        Map(recovery["deleteRetentionPolicy"])["allowPermanentDelete"].ShouldBe(false);
+        Map(recovery["containerDeleteRetentionPolicy"])["enabled"].ShouldBe(true);
+        Map(recovery["containerDeleteRetentionPolicy"])["days"].ShouldBe(7);
+    }
+
+    [Theory]
+    [InlineData("dev", 7)]
+    [InlineData("staging", 7)]
+    [InlineData("prod", 30)]
+    public void Prod_keeps_deleted_media_longer(string environment, int days) =>
+        SiteInfrastructure.MediaRetentionDays(environment).ShouldBe(days);
+
+    [Fact]
     public async Task Dev_declares_no_uptime_test_by_default()
     {
         var mocks = await Declare(Dev);
