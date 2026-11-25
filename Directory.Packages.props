@@ -4,7 +4,7 @@
   </PropertyGroup>
   <ItemGroup Label="Umbraco">
     <PackageVersion Include="Umbraco.Cms" Version="17.8.2" />
-    <PackageVersion Include="uSync" Version="17.6.2" />
+    <PackageVersion Include="uSync" Version="17.6.3" />
   </ItemGroup>
   <ItemGroup Label="Azure">
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
