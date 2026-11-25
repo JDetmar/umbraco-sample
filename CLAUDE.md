@@ -98,12 +98,12 @@ Agents MAY, without asking:
   3. The PR body lists the ES clauses and framework IDs the change touches, with the evidence for each.
 
 Bounds on delegated work (ES-048, ES-054):
-- Blast radius: this repository only. No other repository, cloud subscription, package registry or external service is changed.
+- Blast radius: this repository only, apart from the dev environment that CD deploys from `main` (ADR 0013). No other repository, cloud subscription, package registry or external service is changed.
 - Every change is a pull request that can be reverted with one revert commit; force-pushes only on the agent's own unmerged branches.
 - An unattended run stops after its stated time budget (8 hours for the first build-out run), and at any point where a step needs owner approval, failing CI cannot be fixed within three attempts, or a finding cannot be resolved without changing scope.
 
 Agents MUST NOT, without the owner's explicit approval:
-- Deploy to any Azure environment or run `pulumi up`.
+- Deploy to any Azure environment or run `pulumi up`. The one exception is CD: once the owner enables it, the `deploy-dev` job deploys a `main` revision to dev after CI passes, if it is still the head of `main` (ADR 0013), so merging your own pull request can deploy dev. Prod is never deployed by an agent or by CD.
 - Change repository settings, branch protection, secrets or GitHub App permissions.
 - Approve an exception, accepted risk or emergency in the ledger.
 - Add a dependency that is not already approved in `docs/dependencies.md`.
