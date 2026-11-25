@@ -298,7 +298,7 @@ public sealed class SiteInfrastructure
                             {
                                 Name = "ConnectionStrings__umbracoDbDSN",
                                 Value = Output.Tuple(sqlServer.FullyQualifiedDomainName, database.Name, identity.ClientId).Apply(t =>
-                                    $"Server=tcp:{t.Item1},1433;Database={t.Item2};Authentication=Active Directory Managed Identity;User Id={t.Item3};Encrypt=True;Connect Timeout=60;Connect Retry Count=3;Connect Retry Interval=10"),
+                                    $"Server=tcp:{t.Item1},1433;Database={t.Item2};Authentication=Active Directory Managed Identity;User Id={t.Item3};Encrypt=True;Connect Timeout=60;Command Timeout=60;Connect Retry Count=3;Connect Retry Interval=10"),
                             },
                             new EnvironmentVarArgs { Name = "ConnectionStrings__umbracoDbDSN_ProviderName", Value = "Microsoft.Data.SqlClient" },
                             new EnvironmentVarArgs { Name = "APPLICATIONINSIGHTS_CONNECTION_STRING", Value = insights.ConnectionString },

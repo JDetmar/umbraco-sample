@@ -264,6 +264,8 @@ public sealed class SiteInfrastructureTests
 
         ((string)connection["value"]).ShouldContain("Authentication=Active Directory Managed Identity");
         ((string)connection["value"]).ShouldNotContain("Password", Case.Insensitive);
+        // Umbraco deprecates deriving its command timeout from the connect timeout, so set it explicitly.
+        ((string)connection["value"]).ShouldContain("Command Timeout=60");
     }
 
     [Fact]
