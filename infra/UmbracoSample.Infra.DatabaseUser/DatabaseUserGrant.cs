@@ -17,7 +17,7 @@ public static partial class DatabaseUserGrant
         DECLARE @sid varbinary(16) = CONVERT(varbinary(16), CONVERT(uniqueidentifier, @clientId));
         DECLARE @sidLiteral nvarchar(64) = CONVERT(nvarchar(64), @sid, 1);
         -- A replaced identity keeps its name but gets a new client ID: rebind the user rather than keep the stale one.
-        -- EXEC (...) accepts only literals and variables, not function calls, so each statement is built first.
+        -- EXEC with parentheses accepts only literals and variables, not function calls, so each statement is built first.
         DECLARE @statement nvarchar(max);
         IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = @name AND sid <> @sid)
         BEGIN
