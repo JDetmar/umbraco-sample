@@ -19,6 +19,6 @@ Lightweight records of significant decisions (ES-019). Each records context, alt
 | [0013](ADR-0013-continuous-deployment-to-dev.md) | Continuous deployment to dev | Accepted |
 | [0014](ADR-0014-no-property-diff-in-ci-logs.md) | No Pulumi property diff in CI logs (amends 0013) | Proposed |
 | [0015](ADR-0015-single-server-role-and-one-active-revision.md) | Single Umbraco server role and one active revision (amends 0004) | Accepted |
-| [0016](ADR-0016-database-user-job-in-the-network.md) | Create the site's database user from a job inside the network (amends 0010) | Accepted |
+| [0017](ADR-0017-database-user-job-in-the-network.md) | Create the site's database user from a job inside the network (amends 0010) | Accepted |
 
 New records copy [template.md](template.md) and are named `ADR-NNNN-short-title.md`, with the next free number; a policy test checks the name and that this index lists the file.

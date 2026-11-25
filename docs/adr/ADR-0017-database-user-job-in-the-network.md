@@ -1,4 +1,4 @@
-# 0016. Create the site's database user from a job inside the network
+# 0017. Create the site's database user from a job inside the network
 
 - Status: Accepted by the owner on 2026-11-25 (project thread decision, "Short-lived token from deploy")
 - Date: 2026-11-25

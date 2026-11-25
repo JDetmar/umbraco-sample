@@ -23,7 +23,7 @@ COPY src/UmbracoSample.Web/ src/UmbracoSample.Web/
 RUN test -f src/UmbracoSample.Web/wwwroot/dist/site.css || { echo 'Run make frontend before building the image.' >&2; exit 1; }
 RUN dotnet publish src/UmbracoSample.Web/UmbracoSample.Web.csproj -c Release --no-restore -o /app /p:UseAppHost=false
 # The database user tool ships in the same image as a second entry point, run by a Container Apps job inside the
-# virtual network (ADR 0016), so no second image or registry is needed.
+# virtual network (ADR 0017), so no second image or registry is needed.
 COPY infra/UmbracoSample.Infra.DatabaseUser/ infra/UmbracoSample.Infra.DatabaseUser/
 RUN dotnet publish infra/UmbracoSample.Infra.DatabaseUser/UmbracoSample.Infra.DatabaseUser.csproj -c Release --no-restore -o /app/tools/database-user /p:UseAppHost=false
 

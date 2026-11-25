@@ -265,7 +265,7 @@ public sealed class SiteInfrastructure
 
         // The site's contained database user. Azure has no API for database users, and SQL admits only the apps subnet,
         // so the SQL runs from a manual Container Apps job in this environment, using the tool shipped in the site image
-        // (ADR 0016). The job has no identity: `up` starts it with a short-lived SQL token of the deployer, a member of
+        // (ADR 0017). The job has no identity: `up` starts it with a short-lived SQL token of the deployer, a member of
         // the SQL administrator group, and waits for it. No firewall rule is opened. Preview never runs it.
         var databaseUserJob = new Pulumi.AzureNative.App.Job($"{name}-db-user", new Pulumi.AzureNative.App.JobArgs
         {

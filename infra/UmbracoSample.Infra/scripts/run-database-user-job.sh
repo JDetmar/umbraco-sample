@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Creates the site's contained database user by starting the database user job inside the virtual network (ADR 0016).
+# Creates the site's contained database user by starting the database user job inside the virtual network (ADR 0017).
 # Azure has no API for database users. SQL admits only the apps subnet, so the SQL runs from a Container Apps job there,
 # and no firewall rule is opened. The job has no identity: this script passes it a SQL access token of the deployer (a
 # member of the SQL administrator group), valid for about an hour, and waits for the execution to finish.

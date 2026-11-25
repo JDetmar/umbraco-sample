@@ -93,7 +93,7 @@ public static partial class DatabaseUserGrant
 
     /// <summary>
     /// Signs in only with the SQL access token the deploy passes in <c>SQL_ACCESS_TOKEN</c>: a token of the deployer, a
-    /// member of the SQL administrator group, valid for about an hour (ADR 0016). The job has no identity of its own and
+    /// member of the SQL administrator group, valid for about an hour (ADR 0017). The job has no identity of its own and
     /// no other credential is tried.
     /// </summary>
     public static async Task<int> RunAsync(Func<string, string?> env, TextWriter output, TextWriter error, TimeSpan retryDelay)

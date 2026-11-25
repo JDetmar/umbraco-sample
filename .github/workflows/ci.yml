@@ -158,7 +158,7 @@ jobs:
           SMOKE_HOME_MARKER: "<h1>Umbraco sample</h1>"
         run: scripts/smoke.sh http://localhost:8080
 
-      - name: The database user tool starts from the image (ADR 0016)
+      - name: The database user tool starts from the image (ADR 0017)
         run: |
           # The job runs this entry point in Azure. Without a token it must refuse before connecting (exit 2).
           set +e
