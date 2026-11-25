@@ -26,6 +26,8 @@ using Pulumi.AzureNative.Storage.Inputs;
 using AppSkuName = Pulumi.AzureNative.Sql.Inputs.SkuArgs;
 using KeyVaultSecret = Pulumi.AzureNative.KeyVault.Secret;
 using KeyVaultSecretArgs = Pulumi.AzureNative.KeyVault.SecretArgs;
+using LocalCommand = Pulumi.Command.Local.Command;
+using LocalCommandArgs = Pulumi.Command.Local.CommandArgs;
 using ProbeType = Pulumi.AzureNative.App.Type;
 using SqlPrincipalType = Pulumi.AzureNative.Sql.PrincipalType;
 using SqlVirtualNetworkRule = Pulumi.AzureNative.Sql.VirtualNetworkRule;
@@ -216,6 +218,25 @@ public sealed class SiteInfrastructure
 
         var database = new Database("umbraco", databaseArgs);
 
+        // The site's contained database user. Azure has no API for database users, so `pulumi up` runs an idempotent
+        // script as the deployer (a member of the SQL administrator group) once per database (ADR 0010). It opens a
+        // firewall rule for the deployer's IP only while it runs. Preview never runs it.
+        var databaseUser = new LocalCommand("site-database-user", new LocalCommandArgs
+        {
+            Create = "bash scripts/grant-site-database-user.sh",
+            Environment =
+            {
+                ["SQL_SERVER_FQDN"] = sqlServer.FullyQualifiedDomainName,
+                ["SQL_SERVER_NAME"] = sqlServer.Name,
+                ["RESOURCE_GROUP"] = group.Name,
+                ["DATABASE"] = database.Name,
+                ["SITE_IDENTITY_NAME"] = identity.Name,
+                ["SITE_IDENTITY_CLIENT_ID"] = identity.ClientId,
+            },
+            // Runs again only if the database or the identity is replaced.
+            Triggers = Output.Tuple(database.Id, identity.ClientId).Apply(t => ImmutableArray.Create<object>(t.Item1, t.Item2)),
+        }, new CustomResourceOptions { DependsOn = { database, sqlNetworkRule } });
+
         // The site identity gets exactly the data-plane roles it needs, scoped to the one resource each.
         _ = Grant("media-writer", storage.Id, StorageBlobDataContributor, identity, client);
         var secretsReader = Grant("secrets-reader", vault.Id, KeyVaultSecretsUser, identity, client);
@@ -331,7 +352,7 @@ public sealed class SiteInfrastructure
         {
             // The first revision boots straight into the unattended install, so the network rule, the database and the
             // Key Vault grant must exist first. RBAC can still take minutes to propagate; see docs/infra-setup.md.
-            DependsOn = { secretsReader, sqlNetworkRule, database },
+            DependsOn = { secretsReader, sqlNetworkRule, database, databaseUser },
         });
 
         // ES-047: an alert before the money runs out, at 80% actual and 100% forecast spend.

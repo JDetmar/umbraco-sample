@@ -402,7 +402,8 @@
         "type": "Project",
         "dependencies": {
           "Pulumi": "[3.118.0, )",
-          "Pulumi.AzureNative": "[3.30.0, )"
+          "Pulumi.AzureNative": "[3.30.0, )",
+          "Pulumi.Command": "[4.5.0, )"
         }
       },
       "OpenTelemetry.Api": {
@@ -451,6 +452,15 @@
         "contentHash": "mXSFpqHpwxk8Dynad6j/j0FA8gYer/OAQOKN1pcIh8ZZWGOPV8M6hXc8aZRgdPqcsPRfFTtsTshFaGqSJQQR2w==",
         "dependencies": {
           "Pulumi": "3.116.2"
+        }
+      },
+      "Pulumi.Command": {
+        "type": "CentralTransitive",
+        "requested": "[4.5.0, )",
+        "resolved": "4.5.0",
+        "contentHash": "aDeR68RwEzlYIixz2g72GQfcv8u3/OUx3VZfS8nMoXQIXzj/Y9oHlC2BloRQ1sjv/0oepn/6JW7tioVOqtAJ+A==",
+        "dependencies": {
+          "Pulumi": "3.39.1"
         }
       }
     }

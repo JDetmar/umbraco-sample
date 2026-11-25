@@ -49,11 +49,11 @@ These steps need the owner: they create cloud identities, store a secret and cha
 ## The first `pulumi up` (owner only)
 
 1. `pulumi up --stack dev`. If the Container App fails with a Key Vault 403, RBAC has not propagated yet: wait five minutes and run `pulumi up` again.
-2. Create the site's database user. Azure has no API for contained database users, so this is SQL, run once per environment. Sign in to the `umbraco` database (Azure portal query editor, or `sqlcmd -G` against the `sqlServer` output) as a member of the SQL administrator group. The server admits only the apps subnet, so the query editor offers to add your client IP as a firewall rule: accept, and delete the rule when you are done. Run, with the `siteIdentity` output as the name:
+2. `up` creates the site's database user itself (resource `site-database-user`, script `infra/UmbracoSample.Infra/scripts/grant-site-database-user.sh`). Azure has no API for contained database users, so the script runs SQL as you: run `up` signed in to `az` as a member of the SQL administrator group, with `sqlcmd` (go-sqlcmd: `brew install sqlcmd`) and `curl` installed. The server admits only the apps subnet, so the script opens a firewall rule for your public IP (found with api.ipify.org, or set `DEPLOYER_IP`) and always removes it on exit. It is idempotent and runs again only if the database or the site identity is replaced. If it fails, fix the cause and run `up` again; the site keeps restarting until the user exists. If the revision gave up meanwhile, restart it: `az containerapp revision restart -n <app> -g <resource group> --revision <latest revision>`.
+   Manual fallback, as a member of the SQL administrator group in the portal query editor (accept its offer to add your IP, and delete that rule afterwards), with the `siteIdentity` output as the name:
    ```sql
    CREATE USER [umbraco-sample-dev-id] FROM EXTERNAL PROVIDER;
    ALTER ROLE db_owner ADD MEMBER [umbraco-sample-dev-id];
    ```
-   Until this runs, the site cannot connect and keeps restarting. Umbraco then installs unattended on the next start; if the revision gave up, restart it: `az containerapp revision restart -n <app> -g <resource group> --revision <latest revision>`.
 3. Open the `siteUrl` output, sign in with `adminEmail` and the admin password, and change the password.
 

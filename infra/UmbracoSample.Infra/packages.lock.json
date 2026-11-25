@@ -32,6 +32,15 @@
           "Pulumi": "3.116.2"
         }
       },
+      "Pulumi.Command": {
+        "type": "Direct",
+        "requested": "[4.5.0, )",
+        "resolved": "4.5.0",
+        "contentHash": "aDeR68RwEzlYIixz2g72GQfcv8u3/OUx3VZfS8nMoXQIXzj/Y9oHlC2BloRQ1sjv/0oepn/6JW7tioVOqtAJ+A==",
+        "dependencies": {
+          "Pulumi": "3.39.1"
+        }
+      },
       "Ben.Demystifier": {
         "type": "Transitive",
         "resolved": "0.4.1",

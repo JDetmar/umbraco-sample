@@ -19,7 +19,7 @@ One resource group per environment: a Container Apps environment in a delegated 
 | 4 | Apps subnet to SQL public endpoint | Only the apps subnet, by virtual network rule | Network-restricted, then Entra-only authentication |
 | 5 | CI to GHCR | The `publish` job's short-lived token, `main` only | Reviewed code only |
 | 6 | CI to Pulumi Cloud and Azure | Short-lived Pulumi token from OIDC exchange (decrypts stack secrets) and OIDC Reader identity | Reviewed code only (`main` or manual run, `infra-preview` environment) |
-| 7 | Owner workstation to Pulumi Cloud and Azure | The owner, the only one who runs `up` | Trusted |
+| 7 | Owner workstation to Pulumi Cloud, Azure and SQL | The owner, the only one who runs `up`; during `up`, a firewall rule admits the owner's IP to SQL while the database user script runs | Trusted; rule removed on exit, Entra-only authentication |
 
 ## 3. Assets
 
@@ -45,6 +45,7 @@ One resource group per environment: a Container Apps environment in a delegated 
 | T7 | Denial of wallet: traffic or a loop runs up cost | Scale bounded at one replica; serverless SQL with free limit and auto-pause outside prod; log cap; budget alerts | Alerts notify, they do not stop spend |
 | T8 | Repudiation: an infrastructure change without a record | Every change is a reviewed pull request; Pulumi Cloud keeps update history; only the owner runs `up` | Portal changes outside Pulumi; a preview shows them as drift |
 | T9 | Information disclosure: media served publicly | Container is private; no anonymous access; no shared keys | Media is served through the site, which applies Umbraco's permissions |
+| T10 | Information disclosure or tampering: the database user script leaves SQL open, or is fed a crafted name | The firewall rule admits one IP, is removed on exit (trap), and is named `pulumi-deployer-*` so a leftover is easy to find; identity name, client ID and database are checked against Azure's formats before they reach SQL | A killed `up` can leave the rule behind until removed by hand; authentication is still Entra-only |
 
 ## 5. Open risks for the owner
 

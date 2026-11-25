@@ -83,6 +83,33 @@ public sealed class SiteInfrastructureTests
     }
 
     [Fact]
+    public async Task Up_creates_the_site_database_user_as_the_deployer()
+    {
+        var command = Single(await Declare(Dev), "command:local:Command");
+        var environment = Map(command["environment"]);
+
+        command["create"].ShouldBe("bash scripts/grant-site-database-user.sh");
+        command.ShouldNotContainKey("delete");
+        environment["DATABASE"].ShouldBe("umbraco");
+        environment["SITE_IDENTITY_NAME"].ShouldBe("umbraco-sample-dev-id");
+        environment.Keys.ShouldBe(["SQL_SERVER_FQDN", "SQL_SERVER_NAME", "RESOURCE_GROUP", "DATABASE", "SITE_IDENTITY_NAME", "SITE_IDENTITY_CLIENT_ID"], ignoreOrder: true);
+    }
+
+    [Fact]
+    public void The_database_user_script_is_idempotent_and_always_closes_its_firewall_rule()
+    {
+        var script = File.ReadAllText(Path.GetFullPath(Path.Join(AppContext.BaseDirectory, "../../../../UmbracoSample.Infra/scripts/grant-site-database-user.sh")));
+
+        script.ShouldContain("set -euo pipefail");
+        script.ShouldContain("IF NOT EXISTS (SELECT 1 FROM sys.database_principals");
+        script.ShouldContain("trap remove_rule EXIT");
+        script.ShouldContain("TYPE = E");
+        // Values spliced into SQL are checked against the shapes Azure produces first.
+        script.ShouldContain("SITE_IDENTITY_NAME\" =~ ^[A-Za-z0-9_-]");
+        script.ShouldContain("SITE_IDENTITY_CLIENT_ID\" =~ ^[0-9a-fA-F]{8}-");
+    }
+
+    [Fact]
     public async Task Umbraco_knows_its_public_url_so_production_mode_can_boot()
     {
         // The app's ingress host is <app name>.<environment default domain>; the mock environment's domain is env.region.example.
