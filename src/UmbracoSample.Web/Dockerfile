@@ -11,6 +11,7 @@ COPY global.json Directory.Build.props Directory.Packages.props .editorconfig ./
 COPY src/UmbracoSample.ServiceDefaults/*.csproj src/UmbracoSample.ServiceDefaults/packages.lock.json src/UmbracoSample.ServiceDefaults/
 COPY src/UmbracoSample.Domain/*.csproj src/UmbracoSample.Domain/packages.lock.json src/UmbracoSample.Domain/
 COPY src/UmbracoSample.Web/*.csproj src/UmbracoSample.Web/packages.lock.json src/UmbracoSample.Web/
+COPY infra/Directory.Packages.props infra/
 COPY infra/UmbracoSample.Infra.DatabaseUser/*.csproj infra/UmbracoSample.Infra.DatabaseUser/packages.lock.json infra/UmbracoSample.Infra.DatabaseUser/
 RUN dotnet restore src/UmbracoSample.Web/UmbracoSample.Web.csproj \
     && dotnet restore infra/UmbracoSample.Infra.DatabaseUser/UmbracoSample.Infra.DatabaseUser.csproj
