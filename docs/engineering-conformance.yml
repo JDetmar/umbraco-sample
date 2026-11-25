@@ -15,7 +15,7 @@ clauses:
   ES-001:
     status: deviation
     obligations:
-      - obligation: Tests contain a meaningful failure oracle
+      - obligation: Tests have a meaningful failure oracle for the behaviour they guard
         status: deviation
         deviation: DEV-018
   ES-002:
@@ -32,7 +32,7 @@ clauses:
   ES-006:
     status: deviation
     obligations:
-      - obligation: Integration tests exercise the infrastructure behaviour they claim to verify
+      - obligation: Tests have a meaningful failure oracle for the behaviour they guard
         status: deviation
         deviation: DEV-018
   ES-007:
@@ -72,7 +72,7 @@ clauses:
       - obligation: Production schema changes use backward-compatible expand/contract and forward-only corrective migrations
         status: deviation
         deviation: DEV-003
-      - obligation: Destructive contraction occurs in a later deployment than the change that stops using the old shape
+      - obligation: Destructive contraction occurs in a later deployment, after consumers have stopped relying on the old shape
         status: deviation
         deviation: DEV-005
   ES-015:
@@ -85,6 +85,7 @@ clauses:
       - .github/dependabot.yml discovers updates weekly for NuGet, npm (frontend/ and e2e/), GitHub Actions and Docker base images.
       - "`make vuln` fails CI on any known-vulnerable NuGet package, including transitive ones; `make frontend-audit` fails on npm advisories of moderate or above unless the advisory is assessed with a ledger reference and an expiry (frontend/scripts/audit-policy.mjs, tested in frontend/test/audit-policy.test.mjs)."
       - CodeQL runs on every pull request and weekly (.github/workflows/codeql.yml).
+      - Triage: a NuGet finding fails the build and is resolved by an upgrade before merge, since `make vuln` has no suppression path; an npm finding is either fixed or assessed with a ledger reference and an expiry. Dependabot pull requests are reviewed like any other change.
   ES-017:
     status: compliant
     evidence:
@@ -115,7 +116,7 @@ clauses:
         status: compliant
         evidence:
           - docs/threat-models/0001-lead-form.md was written and its decisions taken by the owner before any form code; docs/threat-models/0002-azure-environment.md before the first deployment, with owner decisions R1 to R4 recorded in pull requests 15 and 30.
-      - obligation: Principals use least privilege and default-deny access
+      - obligation: Identities have the least privilege their job needs
         status: deviation
         deviation: DEV-017
   ES-024:
@@ -146,7 +147,7 @@ clauses:
       - obligation: Rate, payload and execution limits for public or expensive operations
         status: deviation
         deviation: DEV-004
-      - obligation: Outputs are encoded appropriately at trust boundaries
+      - obligation: Untrusted or semi-trusted input is validated or encoded at the boundary where it is rendered
         status: deviation
         deviation: DEV-007
       - obligation: Outputs are encoded appropriately at trust boundaries
@@ -176,7 +177,7 @@ clauses:
   ES-035:
     status: deviation
     obligations:
-      - obligation: User-facing web UI meets WCAG 2.2 AA
+      - obligation: Content meets the accessibility baseline
         status: deviation
         deviation: DEV-007
   ES-036:
@@ -194,7 +195,7 @@ clauses:
   ES-037:
     status: compliant
     evidence:
-      - .github/PULL_REQUEST_TEMPLATE.md carries the definition of done; main requires the six CI checks (ruleset main-2, with the admin bypass accepted as DEV-001); every agent pull request records an independent review.
+      - .github/PULL_REQUEST_TEMPLATE.md carries the definition of done; main requires the six CI checks for non-admins (ruleset main-2; the admin bypass is DEV-001, proposed as an accepted risk and pending the owner's approval); agent pull requests record an independent review in the pull request, by practice rather than by a check.
   ES-049:
     status: unknown
     obligations:
@@ -249,6 +250,7 @@ deviations:
     compensating_controls: main-1 applies to everyone, so history on main cannot be rewritten or deleted. main-2 gates every non-admin change. Procedurally, every agent merge so far has had a green CI run and an independent reviewer recorded in the pull request.
     owner: repository-owner
     opened: 2026-11-24
+    disposition: "Until the owner approves the accepted risk, this stays a gap with the earlier disposition: owner decides on (1) removing the admin bypass from main-2 or giving the agent a non-admin identity, which closes the ES-011, ES-012 and ES-024 obligations, and (2) requiring pull requests, which bears on ES-054. Agents cannot change repository settings."
     approver: null
     approval_ref: null
     threat_model_ref: docs/adr/ADR-0015-admin-bypass-for-a-single-maintainer.md
@@ -312,7 +314,7 @@ deviations:
     kind: gap
     clauses: [ES-014]
     obligations:
-      - Production schema changes use backward-compatible expand/contract and forward-only corrective migrations
+      - Destructive contraction occurs in a later deployment, after consumers have stopped relying on the old shape
     summary: Production imports uSync settings at every startup, and nothing yet stops a single change from removing a document-type property (and its content) in the same release that stops using it.
     consequence: A rollout that removes a property cannot be contained by shifting traffic back to the previous revision, because the data is already gone.
     compensating_controls: Only dev is deployed, with synthetic content that the seed recreates; /health/schema reports drift; every change is reviewed.
