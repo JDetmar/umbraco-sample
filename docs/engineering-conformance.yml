@@ -107,7 +107,7 @@ clauses:
       - When APPLICATIONINSIGHTS_CONNECTION_STRING is set (Azure), ServiceDefaults also exports traces and metrics to Application Insights with the Azure Monitor exporter, authenticated by the workload's managed identity (WorkloadIdentity); OTLP is unchanged for local runs.
       - Umbraco's Serilog pipeline replaces the OpenTelemetry log provider, so structured logs go to stdout as compact JSON (appsettings.json) for the container platform to collect, rather than over OTLP.
       - /health/live, /health/ready (includes Umbraco runtime level) and /health/schema (uSync schema drift) are mapped in every environment; the integration tests assert all three, and unit tests cover every drift outcome, including the vacuous no-handlers case.
-      - scripts/smoke.sh is the post-deployment check; CI runs it against the built image with SQL Server on every pull request.
+      - scripts/smoke.sh is the post-deployment check; CI runs it against the built image with SQL Server on every pull request, and the deploy-dev job (ADR 0013) runs it against dev after every deploy. A failed smoke test fails the run but does not roll back; recovery is a fix forward or a revert (docs/infra-setup.md, section 4).
   ES-036:
     status: deviation
     obligations:

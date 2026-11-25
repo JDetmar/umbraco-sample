@@ -21,7 +21,7 @@ These steps need the owner: they create cloud identities, store a secret and cha
    ```
 4. Check before committing: `git diff infra/UmbracoSample.Infra/Pulumi.dev.yaml` should show only `secure:` values for these keys. Commit the file through a pull request so CI previews use the same config.
 5. Make the GHCR package public once CI first publishes it from main (GitHub, your profile, Packages, umbraco-sample, Package settings, Change visibility). New packages start private, and a public package lets Container Apps pull without a stored registry credential. Dev takes its image from CD (section 4); for prod, set the digest from the main CI run's summary: `pulumi config set image ghcr.io/<owner>/umbraco-sample@sha256:<digest> --stack prod`.
-6. Let CI sign in with OIDC instead of a stored token. In Pulumi Cloud, Settings, OIDC Issuers, register `https://token.actions.githubusercontent.com`; `pulumi/auth-actions` requests the audience `urn:pulumi:org:<your Pulumi organization>`, so the issuer must accept that audience and add one policy: allow organization tokens when `sub` equals `repo:<owner>/umbraco-sample:environment:infra-preview`. Nothing else can get a token, and each token lasts about two hours. If your plan has teams, a team token for a team with read access to this project's stacks is narrower; switch `requested-token-type` in `infra.yml` to match.
+6. Let CI sign in with OIDC instead of a stored token. In Pulumi Cloud, Settings, OIDC Issuers, register `https://token.actions.githubusercontent.com`; `pulumi/auth-actions` requests the audience `urn:pulumi:org:<your Pulumi organization>`, so the issuer must accept that audience and add one policy: allow organization tokens when `sub` equals `repo:<owner>/umbraco-sample:environment:infra-preview`. Until section 4 adds a second policy, nothing else can get a token; each token lasts about two hours. If your plan has teams, a team token for a team with read access to this project's stacks is narrower; switch `requested-token-type` in `infra.yml` to match.
 
 ## 2. Azure
 
@@ -36,14 +36,18 @@ These steps need the owner: they create cloud identities, store a secret and cha
 
 ## 4. CD for dev (once; ADR 0013)
 
-After this, every merge to `main` that passes all gates deploys dev by digest and smoke-tests it. You no longer run `up` for dev. Read threat model 0002, R4, first: these steps create the standing deploy identity it describes.
+After this, every merge to `main` that passes all gates deploys dev by digest and smoke-tests it. You no longer run `up` for dev. Read threat model 0002, R4, first: these steps create the standing deploy identity it describes, and its rights reach any prod stack in the same subscription and Pulumi organization.
+
+Do not set `CD_DEV_ENABLED` until the CLAUDE.md delegation envelope allows a merge to `main` to deploy dev: today it forbids agents to deploy to Azure, and an agent's merge would.
 
 1. **Deploy identity.** Create a second app registration (separate from the preview's Reader identity), with a federated credential: issuer `https://token.actions.githubusercontent.com`, subject `repo:<owner>/umbraco-sample:environment:dev`.
 2. **Its Azure roles**, on the subscription: **Contributor**, and **Role Based Access Control Administrator** with the condition "allow assigning only" Key Vault Secrets User, Storage Blob Data Contributor and Monitoring Metrics Publisher (the three roles the stack grants the site).
-3. **SQL.** Add the deploy identity to the SQL administrator group, so the database user step can run.
+3. **SQL.** Add the deploy identity to the SQL administrator group, so the database user step can run. Use a group that administers dev only.
 4. **Pulumi Cloud.** In the OIDC issuer from section 1, step 6, add a second policy: organization tokens when `sub` equals `repo:<owner>/umbraco-sample:environment:dev`.
 5. **GitHub.** Create an environment named `dev`, restricted to the `main` branch, with no required reviewer (merging to `main` is the approval). Add the repository variable `AZURE_DEPLOY_CLIENT_ID` (the deploy identity's client ID), then `CD_DEV_ENABLED=true`.
 6. **Check.** The next push to `main` runs `deploy (dev, pulumi up)` after `publish`; its log shows the diff and the smoke test.
+
+**If the smoke test fails**, the new revision stays; nothing rolls back by itself. Fix forward with a new pull request, or open the last good run in Actions and re-run its `deploy (dev, pulumi up)` job. A re-run deploys only while its commit is the head of `main`, so to roll back past a newer commit, revert that commit instead.
 
 Dev's stack file pins no image: CD passes the digest it just published as `SITE_IMAGE`. To run `up` locally anyway, set `SITE_IMAGE="$(scripts/published-image.sh)"` first.
 
