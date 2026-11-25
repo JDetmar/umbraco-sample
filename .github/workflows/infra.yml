@@ -65,7 +65,10 @@ jobs:
       - uses: pulumi/auth-actions@273044cc19e63ea565285da8edd4e059126a0bdb # v2.1.2
         with:
           organization: ${{ vars.PULUMI_ORG }}
-          requested-token-type: urn:pulumi:token-type:access_token:organization
+          # Organization and team tokens need a paid Pulumi organization plan; on an individual account the
+          # organization is the user, so the exchange asks for that user's personal token (docs/infra-setup.md).
+          requested-token-type: urn:pulumi:token-type:access_token:personal
+          scope: user:${{ vars.PULUMI_ORG }}
       # Dev's stack file pins no image; preview the one main last published (ADR 0013).
       - name: Look up the published image
         id: image

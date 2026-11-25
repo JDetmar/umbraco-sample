@@ -356,7 +356,7 @@ deviations:
     clauses: [ES-024, ES-040, ES-054]
     obligations:
       - Identities have the least privilege their job needs
-    summary: Accepted by the owner for dev, with conditions (2026-11-24). The deploy-dev identity (ADR 0013) is standing and privileged; Contributor on the subscription, Role Based Access Control Administrator limited to three roles, SQL administrator group membership, and an organization Pulumi token. These rights reach any stack in the same subscription and Pulumi organization, not only dev, and during up it opens a SQL firewall rule for a shared GitHub-hosted runner's IP.
+    summary: Accepted by the owner for dev, with conditions (2026-11-24). The deploy-dev identity (ADR 0013) is standing and privileged; Contributor on the subscription, Role Based Access Control Administrator limited to three roles, SQL administrator group membership, and a short-lived Pulumi token (personal, acting as the owner, on an individual Pulumi account). These rights reach any stack in the same subscription and Pulumi organization, not only dev, and during up it opens a SQL firewall rule for a shared GitHub-hosted runner's IP.
     consequence: A merged malicious or broken change could change or read resources and stack secrets beyond dev, or reach SQL from the runner's IP while the rule is open.
     compensating_controls: Federated only to this repository's dev environment, which runs only on main; review before merge (ES-028, not yet enforced for admins, DEV-001); CI gates before publish; post-deploy smoke test; dev holds only synthetic content; the firewall rule has one fixed name and is removed on exit; CD stays off until the owner amends the delegation envelope and sets CD_DEV_ENABLED.
     owner: repository-owner
