@@ -1,12 +1,21 @@
-@* Schema.org JSON-LD for the page (ARC-08). A data block, never executed, so the content security policy is unchanged. *@
+@* Schema.org JSON-LD for the page (ARC-08). A data block, never executed, so the content security policy is unchanged.
+   Content Umbraco cannot route gets no block rather than an error (PageStructuredData.TryBuild). *@
 @inherits UmbracoViewPage
 @using UmbracoSample.Web.StructuredData
 @{
-    static string TitleOf(IPublishedContent page) => page.Value<string>("title") is { Length: > 0 } title ? title : page.Name;
+    // The same title rule as the layout's <title> and the page's <h1>.
+    static string TitleOf(IPublishedContent page) => page.Value<string>("title") ?? page.Name;
 
-    var trail = Model.AncestorsOrSelf().Reverse()
-        .Select(page => (TitleOf(page), new Uri(page.Url(mode: UrlMode.Absolute))))
-        .ToList();
-    var facts = new PageFacts(TitleOf(Model), Model.Value<string>("metaDescription"), new Uri(Model.Url(mode: UrlMode.Absolute)), new DateTimeOffset(Model.UpdateDate), trail);
+    // Umbraco 17 stores system dates in UTC; the published cache may hand them back unmarked.
+    var updated = Model.UpdateDate.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(Model.UpdateDate, DateTimeKind.Utc) : Model.UpdateDate;
+    var json = PageStructuredData.TryBuild(
+        TitleOf(Model),
+        Model.Value<string>("metaDescription"),
+        Model.Url(mode: UrlMode.Absolute),
+        new DateTimeOffset(updated),
+        Model.AncestorsOrSelf().Reverse().Select(page => (TitleOf(page), page.Url(mode: UrlMode.Absolute))));
 }
-<script type="application/ld+json">@Html.Raw(PageStructuredData.Build(facts))</script>
+@if (json is not null)
+{
+    <script type="application/ld+json">@Html.Raw(json)</script>
+}
