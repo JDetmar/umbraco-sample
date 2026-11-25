@@ -4,6 +4,8 @@ These steps need the owner: they create cloud identities, store a secret and cha
 
 ## 1. Pulumi Cloud
 
+**OIDC subjects in this guide.** This repository uses GitHub's immutable OIDC subjects (`gh api repos/<owner>/umbraco-sample/actions/oidc/customization/sub` shows `use_immutable_subject: true`), so tokens carry numeric IDs: `repo:<owner>@<owner id>/umbraco-sample@<repository id>:environment:<name>`. Get the two IDs with `gh api repos/<owner>/umbraco-sample --jq '"\(.owner.id) \(.id)"'`. A federated credential or Pulumi policy written as `repo:<owner>/umbraco-sample:...` never matches, and Azure's sign-in fails with AADSTS700213, which quotes the subject GitHub actually sent.
+
 1. Create the stacks from `infra/UmbracoSample.Infra`: `pulumi stack init <org>/umbraco-sample/dev` (and `prod` later).
 2. Set the stack's values. **This repository is public**, and `pulumi config set` writes to the committed `Pulumi.<stack>.yaml`. So everything that is a credential or identifies you or your tenant is set with `--secret`: the file then holds only ciphertext that only your Pulumi Cloud stack can decrypt, and a policy test fails if a plain email or group lands there.
    ```sh
@@ -21,12 +23,12 @@ These steps need the owner: they create cloud identities, store a secret and cha
    ```
 4. Check before committing: `git diff infra/UmbracoSample.Infra/Pulumi.dev.yaml` should show only `secure:` values for these keys. Commit the file through a pull request so CI previews use the same config.
 5. Make the GHCR package public once CI first publishes it from main (GitHub, your profile, Packages, umbraco-sample, Package settings, Change visibility). New packages start private, and a public package lets Container Apps pull without a stored registry credential. Dev takes its image from CD (section 4); for prod, set the digest from the main CI run's summary: `pulumi config set image ghcr.io/<owner>/umbraco-sample@sha256:<digest> --stack prod`.
-6. Let CI sign in with OIDC instead of a stored token. In Pulumi Cloud, Settings, OIDC Issuers, register `https://token.actions.githubusercontent.com`; `pulumi/auth-actions` requests the audience `urn:pulumi:org:<your Pulumi organization>`, so the issuer must accept that audience and add one policy: allow organization tokens when `sub` equals `repo:<owner>/umbraco-sample:environment:infra-preview`. Until section 4 adds a second policy, nothing else can get a token; each token lasts about two hours. If your plan has teams, a team token for a team with read access to this project's stacks is narrower; switch `requested-token-type` in `infra.yml` to match.
+6. Let CI sign in with OIDC instead of a stored token. In Pulumi Cloud, Settings, OIDC Issuers, register `https://token.actions.githubusercontent.com`; `pulumi/auth-actions` requests the audience `urn:pulumi:org:<your Pulumi organization>`, so the issuer must accept that audience and add one policy: allow **personal** tokens for your Pulumi user when `sub` equals `repo:<owner>@<owner id>/umbraco-sample@<repository id>:environment:infra-preview`. Until section 4 adds a second policy, nothing else can get a token; each token lasts about two hours. The workflows ask for a personal token because organization and team tokens need a paid organization plan (an individual account fails with "Org tokens are not supported for non enterprise organizations"); on an individual account `PULUMI_ORG` is your Pulumi user name. With a paid plan, a team token for a team with access to only this project's stacks is narrower: switch `requested-token-type` and `scope` in `infra.yml` and `ci.yml` to match.
 
 ## 2. Azure
 
 1. Create an app registration (or user-assigned identity) for CI previews.
-2. Add a federated credential for GitHub Actions: issuer `https://token.actions.githubusercontent.com`, subject `repo:<owner>/umbraco-sample:environment:infra-preview`.
+2. Add a federated credential for GitHub Actions: issuer `https://token.actions.githubusercontent.com`, subject `repo:<owner>@<owner id>/umbraco-sample@<repository id>:environment:infra-preview`.
 3. Grant it **Reader** on the subscription (or on the resource group once it exists). Preview needs only read access: the stack reads no keys. Do not grant Contributor until deploys are designed.
 
 ## 3. GitHub repository
@@ -40,10 +42,10 @@ After this, every merge to `main` that passes all gates deploys dev by digest an
 
 Do not set `CD_DEV_ENABLED` until the CLAUDE.md delegation envelope allows a merge to `main` to deploy dev: today it forbids agents to deploy to Azure, and an agent's merge would.
 
-1. **Deploy identity.** Create a second app registration (separate from the preview's Reader identity), with a federated credential: issuer `https://token.actions.githubusercontent.com`, subject `repo:<owner>/umbraco-sample:environment:dev`.
+1. **Deploy identity.** Create a second app registration (separate from the preview's Reader identity), with a federated credential: issuer `https://token.actions.githubusercontent.com`, subject `repo:<owner>@<owner id>/umbraco-sample@<repository id>:environment:dev`.
 2. **Its Azure roles**, on the subscription: **Contributor**, and **Role Based Access Control Administrator** with the condition "allow assigning only" Key Vault Secrets User, Storage Blob Data Contributor and Monitoring Metrics Publisher (the three roles the stack grants the site).
 3. **SQL.** Add the deploy identity to the SQL administrator group, so the database user step can run. Use a group that administers dev only.
-4. **Pulumi Cloud.** In the OIDC issuer from section 1, step 6, add a second policy: organization tokens when `sub` equals `repo:<owner>/umbraco-sample:environment:dev`.
+4. **Pulumi Cloud.** In the OIDC issuer from section 1, step 6, add a second policy: personal tokens for your Pulumi user when `sub` equals `repo:<owner>@<owner id>/umbraco-sample@<repository id>:environment:dev`.
 5. **GitHub.** Create an environment named `dev`, restricted to the `main` branch, with no required reviewer (merging to `main` is the approval). Add the repository variable `AZURE_DEPLOY_CLIENT_ID` (the deploy identity's client ID), then `CD_DEV_ENABLED=true`.
 6. **Check.** The next push to `main` runs `deploy (dev, pulumi up)` after `publish`; its log shows the diff and the smoke test.
 

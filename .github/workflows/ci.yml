@@ -334,7 +334,10 @@ jobs:
         if: steps.current.outputs.deploy == 'true'
         with:
           organization: ${{ vars.PULUMI_ORG }}
-          requested-token-type: urn:pulumi:token-type:access_token:organization
+          # Organization and team tokens need a paid Pulumi organization plan; on an individual account the
+          # organization is the user, so the exchange asks for that user's personal token (docs/infra-setup.md).
+          requested-token-type: urn:pulumi:token-type:access_token:personal
+          scope: user:${{ vars.PULUMI_ORG }}
       - uses: pulumi/actions@96c7761824268174e0d2a4e8c7d75671eebd24a7 # v7.1.0
         if: steps.current.outputs.deploy == 'true'
         id: up
