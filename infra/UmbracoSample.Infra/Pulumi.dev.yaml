@@ -6,7 +6,6 @@ config:
   umbraco-sample:monthlyBudget: "20"
   umbraco-sample:budgetContactEmail:
     secure: AAABADRPcbIs2k4b0VhcQBdI3Tbd7HAjkuR06MD0S/tlJtqB5JDQ8Uk6kPDG6t+arQ==
-  umbraco-sample:image: ghcr.io/jdetmar/umbraco-sample@sha256:7037fa12d33fafdac3663fb99ec80b0155ac3cd64b9b9477a9ef8b0810b68738
   umbraco-sample:adminEmail:
     secure: AAABAMefhF6nC4V6kuOV+ETnJ1jEEYjQkgBfzy/9R7ynNsDFJJMCBGfEoB/kpBnQlg==
   umbraco-sample:sqlAdminGroupName:

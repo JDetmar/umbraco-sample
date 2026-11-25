@@ -22,12 +22,22 @@ public sealed partial record SiteSettings(
             MinReplicas: int.Parse(config.Get("minReplicas") ?? "0", CultureInfo.InvariantCulture),
             MaxReplicas: int.Parse(config.Get("maxReplicas") ?? "1", CultureInfo.InvariantCulture),
             MonthlyBudget: decimal.Parse(config.Require("monthlyBudget"), CultureInfo.InvariantCulture),
-            Image: config.Require("image"),
+            Image: ResolveImage(config.Get("image"), System.Environment.GetEnvironmentVariable("SITE_IMAGE")),
             EnableEdge: bool.Parse(config.Get("enableEdge") ?? "false"));
 
         settings.Validate();
         return settings;
     }
+
+    /// <summary>
+    /// The image comes from stack config when pinned there (prod), otherwise from SITE_IMAGE, which CD sets to the
+    /// digest main just published (ADR 0013). Dev's committed stack file holds no image, so a stale local file can
+    /// never roll the site back.
+    /// </summary>
+    public static string ResolveImage(string? configured, string? fromEnvironment) =>
+        !string.IsNullOrWhiteSpace(configured) ? configured
+        : !string.IsNullOrWhiteSpace(fromEnvironment) ? fromEnvironment
+        : throw new ArgumentException("image is not set: CD passes SITE_IMAGE (ADR 0013); for a local preview run `make infra-preview STACK=dev`, which looks up the image main last published.");
 
     /// <summary>Rejects settings that would break the hosting decisions in ADR 0004 and ADR 0010.</summary>
     public void Validate()

@@ -62,6 +62,10 @@ jobs:
         with:
           organization: ${{ vars.PULUMI_ORG }}
           requested-token-type: urn:pulumi:token-type:access_token:organization
+      # Dev's stack file pins no image; preview the one main last published (ADR 0013).
+      - name: Look up the published image
+        id: image
+        run: echo "image=$(scripts/published-image.sh "ghcr.io/${GITHUB_REPOSITORY,,}")" >> "${GITHUB_OUTPUT}"
       - uses: pulumi/actions@96c7761824268174e0d2a4e8c7d75671eebd24a7 # v7.1.0
         with:
           command: preview
@@ -69,6 +73,7 @@ jobs:
           work-dir: infra/UmbracoSample.Infra
           diff: true
         env:
+          SITE_IMAGE: ${{ steps.image.outputs.image }}
           ARM_USE_OIDC: "true"
           ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
           ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}

@@ -18,7 +18,7 @@ One resource group per environment: a Container Apps environment in a delegated 
 | 3 | Site to SQL, Blob, Key Vault, Application Insights | Azure services, reached with the site's managed identity | Trusted; each grant scoped to one resource |
 | 4 | Apps subnet to SQL public endpoint | Only the apps subnet, by virtual network rule | Network-restricted, then Entra-only authentication |
 | 5 | CI to GHCR | The `publish` job's short-lived token, `main` only | Reviewed code only |
-| 6 | CI to Pulumi Cloud and Azure | Short-lived Pulumi token from OIDC exchange (decrypts stack secrets) and OIDC Reader identity | Reviewed code only (`main` or manual run, `infra-preview` environment) |
+| 6 | CI to Pulumi Cloud and Azure | Short-lived Pulumi tokens from OIDC exchange (decrypt stack secrets); the Reader identity for preview; the deploy identity for dev CD (ADR 0013) | Reviewed code only: `main` or manual run in `infra-preview`; `main` only in `dev` |
 | 7 | Owner workstation to Pulumi Cloud, Azure and SQL | The owner, the only one who runs `up`; during `up`, a firewall rule admits the owner's IP to SQL while the database user script runs | Trusted; rule removed on exit, Entra-only authentication |
 
 ## 3. Assets
@@ -49,8 +49,9 @@ One resource group per environment: a Container Apps environment in a delegated 
 
 ## 5. Open risks for the owner
 
-Each needed an owner decision (accept, or fix first). Agents do not accept risks (CLAUDE.md). The owner decided all three on 2026-11-24, in the project thread.
+Each needed an owner decision (accept, or fix first). Agents do not accept risks (CLAUDE.md). The owner decided R1 to R3 on 2026-11-24, in the project thread; R4 (from ADR 0013) is open.
 
 - **R1. Public back office without WAF or HSTS in dev (T6, DEV-010).** Recommendation: accept for dev with synthetic content and forms off; prod is already blocked without the edge. **Owner decision (2026-11-24): accepted for dev only.** Prod still requires the edge.
 - **R2. Long-lived Pulumi token that can decrypt stack secrets (T3, T4, DEV-016).** Recommendation: accept with a 90-day expiry and environment review until `pulumi/auth-actions` is approved. **Owner decision (2026-11-24): fix first. `pulumi/auth-actions` is approved;** the preview job exchanges its GitHub OIDC token for a short-lived Pulumi token, and no Pulumi token is stored. DEV-016 closes when the first preview runs this way.
+- **R4. A standing deploy identity for dev CD (T2, T8; ADR 0013).** Open, for the owner. The `deploy-dev` job's identity has Contributor on the subscription, Role Based Access Control Administrator limited to the stack's three data-plane roles, and SQL administrator group membership. It is federated only to this repository's `dev` environment, which runs only on `main`; a merged malicious change could use it, so review before merge (ES-028) is the main control, and dev holds only synthetic content. Recommendation: accept for dev; narrow Contributor to the resource group once a bootstrap stack creates it.
 - **R3. Single replica (T7, DEV-015).** Recommendation: accept for dev; revisit before prod traffic. **Owner decision (2026-11-24): accepted for dev only.** Prod traffic still waits for the DEV-015 work.

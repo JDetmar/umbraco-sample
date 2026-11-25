@@ -43,7 +43,7 @@ public sealed partial class SupplyChainPolicyTests
     public void Write_permissions_are_granted_only_to_allowlisted_jobs()
     {
         // (workflow, job, permission): each write grant is reviewed here before it can exist (ES-017).
-        (string, string, string)[] allowed = [("ci.yml", "publish", "packages"), ("codeql.yml", "analyze", "security-events"), ("infra.yml", "preview", "id-token")];
+        (string, string, string)[] allowed = [("ci.yml", "publish", "packages"), ("codeql.yml", "analyze", "security-events"), ("infra.yml", "preview", "id-token"), ("ci.yml", "deploy-dev", "id-token")];
 
         var grants = new List<(string, string, string)>();
         foreach (var file in WorkflowFiles())

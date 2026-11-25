@@ -16,5 +16,6 @@ Lightweight records of significant decisions (ES-019). Each records context, alt
 | [0010](ADR-0010-azure-environment-design.md) | Azure environment design: Container Apps, Azure SQL, Key Vault and managed identity per environment | Proposed |
 | [0011](ADR-0011-stay-on-lts-releases.md) | Stay on long-term support releases of .NET and Umbraco | Accepted |
 | [0012](ADR-0012-aspire-17-and-cli.md) | Move to Aspire 17 with the CLI as a pinned local tool | Accepted |
+| [0013](ADR-0013-continuous-deployment-to-dev.md) | Continuous deployment to dev | Proposed |
 
 New records copy [template.md](template.md) and are named `ADR-NNNN-short-title.md`, with the next free number; a policy test checks the name and that this index lists the file.

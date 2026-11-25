@@ -247,6 +247,8 @@ jobs:
     timeout-minutes: 10
     permissions:
       packages: write
+    outputs:
+      image: ${{ steps.push.outputs.image }}
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -254,6 +256,7 @@ jobs:
           path: ${{ runner.temp }}
 
       - name: Push to GHCR and record the digest
+        id: push
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -279,5 +282,56 @@ jobs:
             echo "- Source revision: \`${GITHUB_SHA}\`"
             echo "- SBOM: artifact \`sbom-umbraco-sample.spdx.json\` of ${RUN_URL} (run artifacts expire; see ledger ES-049)"
             echo
-            echo "Pin it in a stack with \`pulumi config set image ${repository}@${digest} --stack <stack>\`."
+            echo "CD deploys it to dev; pin it for prod with \`pulumi config set image ${repository}@${digest} --stack prod\`."
           } >> "${GITHUB_STEP_SUMMARY}"
+          echo "image=${repository}@${digest}" >> "${GITHUB_OUTPUT}"
+
+  deploy-dev:
+    name: deploy (dev, pulumi up)
+    # CD for dev (ADR 0013): every main revision that passed all gates and published goes to dev, by digest.
+    # Off until the owner has done the CD setup in docs/infra-setup.md and set CD_DEV_ENABLED=true.
+    # Prod is never deployed from here.
+    needs: publish
+    if: vars.CD_DEV_ENABLED == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: dev
+    concurrency:
+      group: deploy-dev
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write # OIDC to Azure and Pulumi Cloud; no stored deploy secret (ES-024)
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_DEPLOY_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - uses: pulumi/auth-actions@273044cc19e63ea565285da8edd4e059126a0bdb # v2.1.2
+        with:
+          organization: ${{ vars.PULUMI_ORG }}
+          requested-token-type: urn:pulumi:token-type:access_token:organization
+      - uses: pulumi/actions@96c7761824268174e0d2a4e8c7d75671eebd24a7 # v7.1.0
+        id: up
+        with:
+          command: up
+          stack-name: ${{ vars.PULUMI_ORG }}/umbraco-sample/dev
+          work-dir: infra/UmbracoSample.Infra
+          diff: true
+        env:
+          SITE_IMAGE: ${{ needs.publish.outputs.image }}
+          ARM_USE_OIDC: "true"
+          ARM_CLIENT_ID: ${{ vars.AZURE_DEPLOY_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      # The post-deployment check (ES-030): a cold start may wait for the serverless database to resume.
+      - name: Smoke test dev
+        env:
+          SITE_URL: ${{ steps.up.outputs.siteUrl }}
+          SMOKE_RETRIES: "30"
+        run: scripts/smoke.sh "${SITE_URL}"

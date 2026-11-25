@@ -20,7 +20,7 @@ These steps need the owner: they create cloud identities, store a secret and cha
    pulumi config set --secret sqlAdminGroupObjectId <group object id> --stack dev
    ```
 4. Check before committing: `git diff infra/UmbracoSample.Infra/Pulumi.dev.yaml` should show only `secure:` values for these keys. Commit the file through a pull request so CI previews use the same config.
-5. Make the GHCR package public once CI first publishes it from main (GitHub, your profile, Packages, umbraco-sample, Package settings, Change visibility). New packages start private, and a public package lets Container Apps pull without a stored registry credential. Then set the image, using the digest from the main CI run's summary: `pulumi config set image ghcr.io/<owner>/umbraco-sample@sha256:<digest> --stack dev`.
+5. Make the GHCR package public once CI first publishes it from main (GitHub, your profile, Packages, umbraco-sample, Package settings, Change visibility). New packages start private, and a public package lets Container Apps pull without a stored registry credential. Dev takes its image from CD (section 4); for prod, set the digest from the main CI run's summary: `pulumi config set image ghcr.io/<owner>/umbraco-sample@sha256:<digest> --stack prod`.
 6. Let CI sign in with OIDC instead of a stored token. In Pulumi Cloud, Settings, OIDC Issuers, register `https://token.actions.githubusercontent.com` (audience: your Pulumi organization name) and add one policy: allow organization tokens when `sub` equals `repo:<owner>/umbraco-sample:environment:infra-preview`. Nothing else can get a token, and each token lasts about two hours. If your plan has teams, a team token for a team with read access to this project's stacks is narrower; switch `requested-token-type` in `infra.yml` to match.
 
 ## 2. Azure
@@ -34,7 +34,20 @@ These steps need the owner: they create cloud identities, store a secret and cha
 1. Create an environment named `infra-preview`, restricted to the `main` branch, with yourself as a required reviewer. The workflow previews only `main` or a manual run, because preview decrypts stack secrets; the environment rules enforce that even if the workflow changes.
 2. Add repository variables: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `PULUMI_ORG`, and finally `PULUMI_PREVIEW_ENABLED=true`.
 
-## 4. Check
+## 4. CD for dev (once; ADR 0013)
+
+After this, every merge to `main` that passes all gates deploys dev by digest and smoke-tests it. You no longer run `up` for dev. Read threat model 0002, R4, first: these steps create the standing deploy identity it describes.
+
+1. **Deploy identity.** Create a second app registration (separate from the preview's Reader identity), with a federated credential: issuer `https://token.actions.githubusercontent.com`, subject `repo:<owner>/umbraco-sample:environment:dev`.
+2. **Its Azure roles**, on the subscription: **Contributor**, and **Role Based Access Control Administrator** with the condition "allow assigning only" Key Vault Secrets User, Storage Blob Data Contributor and Monitoring Metrics Publisher (the three roles the stack grants the site).
+3. **SQL.** Add the deploy identity to the SQL administrator group, so the database user step can run.
+4. **Pulumi Cloud.** In the OIDC issuer from section 1, step 6, add a second policy: organization tokens when `sub` equals `repo:<owner>/umbraco-sample:environment:dev`.
+5. **GitHub.** Create an environment named `dev`, restricted to the `main` branch, with no required reviewer (merging to `main` is the approval). Add the repository variable `AZURE_DEPLOY_CLIENT_ID` (the deploy identity's client ID), then `CD_DEV_ENABLED=true`.
+6. **Check.** The next push to `main` runs `deploy (dev, pulumi up)` after `publish`; its log shows the diff and the smoke test.
+
+Dev's stack file pins no image: CD passes the digest it just published as `SITE_IMAGE`. To run `up` locally anyway, set `SITE_IMAGE="$(scripts/published-image.sh)"` first.
+
+## 5. Check
 
 - Run the `infra` workflow manually (Actions, infra, Run workflow). The preview job should sign in with OIDC and show the planned resources for `dev`.
 - Locally: `make infra-preview STACK=dev` after `az login` and `pulumi login`.
@@ -46,7 +59,7 @@ These steps need the owner: they create cloud identities, store a secret and cha
 - Accept ADR 0010, or record the changes you want.
 - Merge the site's Blob storage and Application Insights wiring (pull request 29) and let main publish an image that includes it.
 
-## The first `pulumi up` (owner only)
+## The first `pulumi up` (owner only; dev's later deploys come from CD)
 
 1. `pulumi up --stack dev`. The first run waits two minutes after granting the site's Key Vault access, so the app's first revision can read its secrets.
 2. `up` creates the site's database user itself (resource `site-database-user`, script `infra/UmbracoSample.Infra/scripts/grant-site-database-user.sh`). Azure has no API for contained database users, so the script runs SQL as you, through the small `UmbracoSample.Infra.DatabaseUser` tool (the site's own SQL driver): run `up` signed in to `az` as a member of the SQL administrator group. It needs nothing beyond `dotnet` and `az`, which `up` already uses. The server admits only the apps subnet, so the script opens a firewall rule for your public IP (found with api.ipify.org, or set `DEPLOYER_IP`) and always removes it on exit. It is idempotent and runs again only if the database or the site identity is replaced. If it fails, fix the cause and run `up` again; the site keeps restarting until the user exists. If the revision gave up meanwhile, restart it: `az containerapp revision restart -n <app> -g <resource group> --revision <latest revision>`.

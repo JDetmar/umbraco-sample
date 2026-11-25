@@ -63,7 +63,7 @@ clauses:
     evidence:
       - Every third-party action in .github/workflows is pinned to a full commit SHA.
       - Every workflow declares top-level `permissions` with read-only defaults; the policy tests reject unpinned actions, missing permissions and write-all or read-all.
-      - Job-level write grants are allowlisted by a policy test (Write_permissions_are_granted_only_to_allowlisted_jobs): packages write only to the ci publish job, which runs only on main, checks out nothing and runs no third-party build code; security-events write only to the CodeQL job; id-token write only to the infra preview job, for OIDC sign-in to Azure and Pulumi Cloud (no stored Azure or Pulumi secret), which runs only on main or a manual run.
+      - Job-level write grants are allowlisted by a policy test (Write_permissions_are_granted_only_to_allowlisted_jobs): packages write only to the ci publish job, which runs only on main, checks out nothing and runs no third-party build code; security-events write only to the CodeQL job; id-token write only to the infra preview job and the ci deploy-dev job, for OIDC sign-in to Azure and Pulumi Cloud (no stored Azure or Pulumi secret); preview runs only on main or a manual run, deploy-dev only on main after publish (ADR 0013).
   ES-018:
     status: compliant
     evidence:
