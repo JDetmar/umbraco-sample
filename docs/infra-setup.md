@@ -34,7 +34,8 @@ These steps need the owner: they create cloud identities, store a secret and cha
 ## 3. GitHub repository
 
 1. Create an environment named `infra-preview`, restricted to the `main` branch, with yourself as a required reviewer. The workflow previews only `main` or a manual run, because preview decrypts stack secrets; the environment rules enforce that even if the workflow changes.
-2. Add repository variables: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `PULUMI_ORG`, and finally `PULUMI_PREVIEW_ENABLED=true`.
+2. Add repository secrets `AZURE_TENANT_ID` and `AZURE_SUBSCRIPTION_ID`, then repository variables `AZURE_CLIENT_ID`, `PULUMI_ORG`, and finally `PULUMI_PREVIEW_ENABLED=true`.
+   The two IDs are not credentials, but they are secrets here because Actions logs are public: GitHub masks a secret everywhere in a log, while a variable's value is printed in step headers, and a tenant ID resolves to the tenant's name and default domain. A policy test keeps them out of `vars`.
 
 ## 4. CD for dev (once; ADR 0013)
 

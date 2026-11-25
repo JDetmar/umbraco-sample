@@ -328,8 +328,8 @@ jobs:
         if: steps.current.outputs.deploy == 'true'
         with:
           client-id: ${{ vars.AZURE_DEPLOY_CLIENT_ID }}
-          tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - uses: pulumi/auth-actions@273044cc19e63ea565285da8edd4e059126a0bdb # v2.1.2
         if: steps.current.outputs.deploy == 'true'
         with:
@@ -354,8 +354,8 @@ jobs:
           SITE_IMAGE: ${{ needs.publish.outputs.image }}
           ARM_USE_OIDC: "true"
           ARM_CLIENT_ID: ${{ vars.AZURE_DEPLOY_CLIENT_ID }}
-          ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
-          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       # The post-deployment check (ES-030): a cold start may wait for the serverless database to resume.
       - name: Smoke test dev
         if: steps.current.outputs.deploy == 'true'

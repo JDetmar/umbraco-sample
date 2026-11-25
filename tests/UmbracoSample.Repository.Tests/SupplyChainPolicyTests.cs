@@ -253,6 +253,31 @@ public sealed partial class SupplyChainPolicyTests
         PinnedUses().IsMatch("uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1").ShouldBeTrue();
     }
 
+    [Fact]
+    public void Azure_tenant_and_subscription_ids_reach_workflows_only_as_secrets()
+    {
+        // Actions logs are public. A variable's value is printed wherever a step echoes its inputs or env, and the tenant
+        // ID resolves to the tenant's default domain. Secrets are masked everywhere in the log (ES-025).
+        var offenders = WorkflowFiles()
+            .SelectMany(file => File.ReadAllLines(file.FullName).Select((line, i) => (file.Name, Line: i + 1, Text: line)))
+            .Where(l => AzureIdAsVariable().IsMatch(l.Text))
+            .Select(l => $"{l.Name}:{l.Line}")
+            .ToList();
+
+        offenders.ShouldBeEmpty("Read AZURE_TENANT_ID and AZURE_SUBSCRIPTION_ID from secrets, not vars, so the public log shows ***.");
+    }
+
+    [Theory]
+    [InlineData("tenant-id: ${{ vars.AZURE_TENANT_ID }}", true)]
+    [InlineData("ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}", true)]
+    [InlineData("tenant-id: ${{ secrets.AZURE_TENANT_ID }}", false)]
+    [InlineData("client-id: ${{ vars.AZURE_DEPLOY_CLIENT_ID }}", false)]
+    public void The_azure_id_check_flags_only_variables(string line, bool flagged) =>
+        AzureIdAsVariable().IsMatch(line).ShouldBe(flagged);
+
+    [GeneratedRegex(@"\bvars\.AZURE_(?:TENANT|SUBSCRIPTION)_ID\b")]
+    private static partial Regex AzureIdAsVariable();
+
     private static IEnumerable<FileInfo> WorkflowFiles() =>
         new DirectoryInfo(Path.Join(RepositoryRoot.Find().FullName, ".github", "workflows"))
             .EnumerateFiles("*.y*ml");
