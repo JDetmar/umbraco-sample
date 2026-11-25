@@ -126,8 +126,8 @@ How to read the status column:
 | OWN-03 | Named product owner and marketing counterpart | outside the code | |
 | OWN-04 | Legal and privacy own regulated content approval | outside the code | |
 | OWN-05 | A durable product team with a roadmap | outside the code | |
-| GOV-02 | Every page has an owner and a review date | planned | Phase 6. |
-| GOV-03 | Expired or ownerless pages flagged | planned | Phase 6. |
+| GOV-02 | Every page has an owner and a review date | partly | Content owner and review date on every page type (`contentGovernance` composition, ADR 0018), kept there by `GovernanceSchemaTests`. Optional in the editor, so detected rather than enforced. |
+| GOV-03 | Expired or ownerless pages flagged | partly | The Content governance health check flags ownerless, undated, overdue and due-soon pages on demand (`PageReviewTests`, `GovernanceReportTests`). Not yet on a schedule. |
 | GOV-04 | ADRs for major choices | met | [ADRs](adr/README.md); a policy test keeps the index complete. |
 | GOV-05 | Coding standards and definition of done, enforced in review | partly | `CLAUDE.md`, the engineering standard and the review rule in the delegation envelope. Review is not enforced for admins (DEV-001). |
 | GOV-06 | What belongs on the site versus a no-code tool | outside the code | |
