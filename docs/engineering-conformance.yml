@@ -369,3 +369,14 @@ deviations:
       - Any change to the deploy identity's roles or federated credentials.
     disposition: "Conditions of the acceptance, each a follow-up: (a) prod lives in a separate subscription and Pulumi project, or is never created with these credentials in reach; (b) a SQL administrator group for dev only; (c) Contributor narrowed to the resource group once a bootstrap stack creates it; (d) a team Pulumi token limited to the dev stack if the plan allows; (e) the database user step moves into the VNet, so no firewall rule is opened for a runner's IP."
 
+  - id: DEV-018
+    kind: gap
+    clauses: [ES-001, ES-006]
+    obligations:
+      - Tests have a meaningful failure oracle for the behaviour they guard
+    summary: The database user tool's T-SQL batch is checked only by text assertions in unit tests, not parsed by SQL Server in CI. A syntax error in it (EXEC with a function call) passed every test and first failed in the dev deploy on 2026-11-25.
+    consequence: A later edit to the batch that breaks its syntax is caught only by the next dev deploy, which then fails at the database user step and leaves the app on its previous revision.
+    compensating_controls: Unit tests forbid the known-bad EXEC form and assert the statement shape; the batch runs in one transaction, so a failure changes nothing; CD deploys dev on every merge, so the failure is seen within one run; dev holds only synthetic content.
+    owner: repository-owner
+    opened: 2026-11-25
+    disposition: Add an integration test that sends the batch to the Aspire SQL Server container with SET PARSEONLY ON (TYPE = E users themselves exist only in Azure SQL, so execution stays covered by the dev deploy). Not done in the fix PR to keep the production fix small.
