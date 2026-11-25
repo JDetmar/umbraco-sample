@@ -267,6 +267,8 @@ public sealed class SiteInfrastructureTests
         database["useFreeLimit"].ShouldBe(true);
         database["freeLimitExhaustionBehavior"].ShouldBe("AutoPause");
         database["autoPauseDelay"].ShouldBe(60);
+        // Azure accepts only the default max size on a free-limit, auto-pausing database.
+        database.ContainsKey("maxSizeBytes").ShouldBeFalse();
     }
 
     [Fact]

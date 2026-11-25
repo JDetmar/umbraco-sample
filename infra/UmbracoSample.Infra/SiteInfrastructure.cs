@@ -199,7 +199,6 @@ public sealed class SiteInfrastructure
             Sku = new AppSkuName { Name = "GP_S_Gen5", Tier = "GeneralPurpose", Family = "Gen5", Capacity = 1 },
             MinCapacity = 0.5,
             AutoPauseDelay = settings.Environment == "prod" ? -1 : 60,
-            MaxSizeBytes = 5L * 1024 * 1024 * 1024,
             Tags = tags,
         };
 
@@ -208,6 +207,11 @@ public sealed class SiteInfrastructure
         {
             databaseArgs.UseFreeLimit = true;
             databaseArgs.FreeLimitExhaustionBehavior = "AutoPause";
+        }
+        else
+        {
+            // Azure refuses a custom max size on a free-limit database that auto-pauses, so only prod caps it.
+            databaseArgs.MaxSizeBytes = 5L * 1024 * 1024 * 1024;
         }
 
         var database = new Database("umbraco", databaseArgs);

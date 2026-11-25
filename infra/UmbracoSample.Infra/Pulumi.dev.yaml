@@ -9,7 +9,6 @@ config:
   umbraco-sample:image: ghcr.io/jdetmar/umbraco-sample@sha256:7037fa12d33fafdac3663fb99ec80b0155ac3cd64b9b9477a9ef8b0810b68738
   umbraco-sample:adminEmail:
     secure: AAABAMefhF6nC4V6kuOV+ETnJ1jEEYjQkgBfzy/9R7ynNsDFJJMCBGfEoB/kpBnQlg==
-  # Replace with the owner Entra group that administers SQL (docs/infra-setup.md).
   umbraco-sample:sqlAdminGroupName:
     secure: AAABAIHMBDCbpHediBJWQyMqwxGD39b8P8elxNVO4qjlrTuzJeR13ZdbqejnaAcstwiHXrCqQ+A/
   umbraco-sample:sqlAdminGroupObjectId:
