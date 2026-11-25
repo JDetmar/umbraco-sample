@@ -295,8 +295,9 @@ public sealed class SiteInfrastructure
             },
             Configuration = new ConfigurationArgs
             {
-                // Multiple revisions: a failed compatible release is contained by shifting traffic back (ADR 0004, ES-014).
-                ActiveRevisionsMode = ActiveRevisionsMode.Multiple,
+                // One active revision: each instance is the single Umbraco server and imports its uSync files at
+                // startup, so an older revision left running could wake and roll the shared database back (ADR 0015).
+                ActiveRevisionsMode = ActiveRevisionsMode.Single,
                 Ingress = new IngressArgs
                 {
                     External = true,
