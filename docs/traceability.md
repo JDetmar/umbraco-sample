@@ -41,7 +41,7 @@ How to read the status column:
 | ES-028 | Final review and authorization | not assessed | Delegation envelope in `CLAUDE.md`: an independent reviewer context for every agent pull request. |
 | ES-029 | Review focus | not assessed | |
 | ES-030 | Diagnostic signals | deviation | DEV-011 (no CSP reporting), DEV-015 (single replica). OpenTelemetry to Application Insights. |
-| ES-031 | Recovery | not assessed | Planned: backups with a scripted restore test (Phase 5, OPS-05). |
+| ES-031 | Recovery | not assessed | Media soft delete declared; database restore test proposed (ADR 0019, OPS-05). |
 | ES-032 | Learning | not assessed | |
 | ES-033 | Reader and contract | not assessed | One page per component in [docs/components](components/README.md). |
 | ES-034 | Failure semantics | not assessed | The site refuses to start on an invalid redirect map (ADR 0009). |
@@ -119,7 +119,7 @@ How to read the status column:
 | OPS-02 | Third-party penetration test | outside the code | |
 | OPS-03 | Real user monitoring, uptime checks and alerting | partly | Server-side OpenTelemetry to Application Insights. No real user (browser) monitoring, uptime check or alert rules yet. |
 | OPS-04 | SLOs for availability and page speed | gap | Not started. |
-| OPS-05 | Backups with tested restores | planned | Phase 5: a scripted restore test. |
+| OPS-05 | Backups with tested restores | planned | Media: blob and container soft delete, 7 days in dev and 30 in prod (`Media_is_recoverable_after_delete_or_overwrite`). Database: Azure SQL automatic backups. No restore has been tested yet; a scheduled restore test is proposed in ADR 0019. |
 | OPS-06 | Incident runbooks and on-call | outside the code | |
 | OWN-01 | One team owns the repository, environments and pipeline; no direct production access | partly | Infrastructure only through Pulumi and the pipeline; dev deploys only through CD (ADR 0013). Production is deferred. |
 | OWN-02 | All work arrives as pull requests and merges after review | partly | Every change is a pull request with an independent review (delegation envelope); not enforced for admins (DEV-001). |

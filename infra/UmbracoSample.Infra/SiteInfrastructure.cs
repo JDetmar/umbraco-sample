@@ -128,6 +128,19 @@ public sealed class SiteInfrastructure
             PublicAccess = PublicAccess.None,
         });
 
+        // Recovery (ES-031, OPS-05): soft delete keeps deleted or overwritten media, and deleted containers, for a
+        // retention window. Soft delete covers overwrites too, so versioning (which keeps every version until a
+        // lifecycle rule removes it) is not needed.
+        var mediaRetentionDays = MediaRetentionDays(settings.Environment);
+        _ = new BlobServiceProperties($"{name}-media-recovery", new BlobServicePropertiesArgs
+        {
+            ResourceGroupName = group.Name,
+            AccountName = storage.Name,
+            BlobServicesName = "default",
+            DeleteRetentionPolicy = new DeleteRetentionPolicyArgs { Enabled = true, Days = mediaRetentionDays, AllowPermanentDelete = false },
+            ContainerDeleteRetentionPolicy = new DeleteRetentionPolicyArgs { Enabled = true, Days = mediaRetentionDays },
+        });
+
         // Secrets: RBAC-authorised Key Vault with purge protection.
         var vault = new Vault($"{name}-kv", new VaultArgs
         {
@@ -430,6 +443,9 @@ public sealed class SiteInfrastructure
     }
 
     public IDictionary<string, object?> Outputs { get; }
+
+    /// <summary>Days that deleted or overwritten media can be recovered: 30 in prod, 7 elsewhere.</summary>
+    public static int MediaRetentionDays(string environment) => environment == "prod" ? 30 : 7;
 
     /// <summary>Six hex characters from subscription and environment: unique enough for global names, stable across runs.</summary>
     public static string Suffix(string subscriptionId, string environment) =>

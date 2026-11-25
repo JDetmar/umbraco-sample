@@ -303,6 +303,26 @@ public sealed class SiteInfrastructureTests
     }
 
     [Fact]
+    public async Task Media_is_recoverable_after_delete_or_overwrite()
+    {
+        var recovery = Single(await Declare(Dev), "azure-native:storage:BlobServiceProperties");
+
+        recovery["blobServicesName"].ShouldBe("default");
+        Map(recovery["deleteRetentionPolicy"])["enabled"].ShouldBe(true);
+        Map(recovery["deleteRetentionPolicy"])["days"].ShouldBe(7);
+        Map(recovery["deleteRetentionPolicy"])["allowPermanentDelete"].ShouldBe(false);
+        Map(recovery["containerDeleteRetentionPolicy"])["enabled"].ShouldBe(true);
+        Map(recovery["containerDeleteRetentionPolicy"])["days"].ShouldBe(7);
+    }
+
+    [Theory]
+    [InlineData("dev", 7)]
+    [InlineData("staging", 7)]
+    [InlineData("prod", 30)]
+    public void Prod_keeps_deleted_media_longer(string environment, int days) =>
+        SiteInfrastructure.MediaRetentionDays(environment).ShouldBe(days);
+
+    [Fact]
     public async Task No_resource_input_carries_a_password_or_key()
     {
         var mocks = await Declare(Dev);
