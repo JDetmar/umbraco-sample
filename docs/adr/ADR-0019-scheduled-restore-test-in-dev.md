@@ -10,7 +10,7 @@
 OPS-05 and ES-031 ask for backups with tested restores. The data that matters is in two places:
 
 - **The Azure SQL database.** It has automatic backups with point-in-time restore. Dev uses the free offer.
-- **The media blob container.** It has no soft delete or versioning today, so a deleted or overwritten file cannot be brought back.
+- **The media blob container.** Before pull request 50 it had no soft delete, so a deleted or overwritten file could not be brought back.
 
 A backup counts only when a restore has been shown to work. The time a restore takes is the recovery time to plan around.
 
@@ -33,7 +33,7 @@ The SQL server accepts connections only from the apps subnet (ADR 0017). A GitHu
    - Pros: no work.
    - Cons: does not meet OPS-05 or ES-031.
 
-For media, under any option: enable blob soft delete and versioning, with 7 days in dev and 30 in prod. Pulumi declares it, and it costs very little. The restore test also restores one deleted test blob.
+For media, under any option: blob and container soft delete, 7 days outside prod and 30 in prod (pull request 50). Soft delete also keeps overwritten blobs, so versioning is not needed. The restore test also restores one deleted test blob.
 
 ## Decision
 
