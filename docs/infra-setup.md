@@ -1,6 +1,6 @@
 # Infrastructure setup (owner checklist)
 
-These steps need the owner: they create cloud identities, store a secret and change repository settings, which agents may not do (CLAUDE.md). Nothing here deploys anything. Deploying (`pulumi up`) stays a separate, explicit owner action.
+These steps need the owner: they create cloud identities, store a secret and change repository settings, which agents may not do (CLAUDE.md). Nothing here directly deploys anything. After the owner enables CD, eligible `main` revisions deploy to dev; prod deployment remains an explicit owner action.
 
 ## 1. Pulumi Cloud
 
@@ -38,9 +38,9 @@ These steps need the owner: they create cloud identities, store a secret and cha
 
 ## 4. CD for dev (once; ADR 0013)
 
-After this, every merge to `main` that passes all gates deploys dev by digest and smoke-tests it. You no longer run `up` for dev. Read threat model 0002, R4, first: these steps create the standing deploy identity it describes, and its rights reach any prod stack in the same subscription and Pulumi organization.
+After this, a `main` revision that passes all gates deploys dev by digest and is smoke-tested, provided it is still the head of `main` when the deploy job runs. You no longer run `up` for dev. Read threat model 0002, R4, first: these steps create the standing deploy identity it describes, and its rights reach any prod stack in the same subscription and Pulumi organization.
 
-Do not set `CD_DEV_ENABLED` until the CLAUDE.md delegation envelope allows a merge to `main` to deploy dev: today it forbids agents to deploy to Azure, and an agent's merge would.
+Do not set `CD_DEV_ENABLED` until the owner-approved amendment to the `CLAUDE.md` delegation envelope, allowing merges to `main` to deploy dev, has been merged to `main`.
 
 1. **Deploy identity.** Create a second app registration (separate from the preview's Reader identity), with a federated credential: issuer `https://token.actions.githubusercontent.com`, subject `repo:<owner>@<owner id>/umbraco-sample@<repository id>:environment:dev`.
 2. **Its Azure roles**, on the subscription: **Contributor**, and **Role Based Access Control Administrator** with the condition "allow assigning only" Key Vault Secrets User, Storage Blob Data Contributor and Monitoring Metrics Publisher (the three roles the stack grants the site).
