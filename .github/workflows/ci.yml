@@ -302,7 +302,7 @@ jobs:
       cancel-in-progress: false
     permissions:
       contents: read
-      id-token: write # OIDC to Azure and Pulumi Cloud; no stored deploy secret (ES-024)
+      id-token: write # OIDC to Azure and Pulumi Cloud; no stored credential (ES-024)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

@@ -260,23 +260,50 @@ public sealed partial class SupplyChainPolicyTests
         // ID resolves to the tenant's default domain. Secrets are masked everywhere in the log (ES-025).
         var offenders = WorkflowFiles()
             .SelectMany(file => File.ReadAllLines(file.FullName).Select((line, i) => (file.Name, Line: i + 1, Text: line)))
-            .Where(l => AzureIdAsVariable().IsMatch(l.Text))
+            .Where(l => ExposesAzureId(l.Text))
             .Select(l => $"{l.Name}:{l.Line}")
             .ToList();
 
-        offenders.ShouldBeEmpty("Read AZURE_TENANT_ID and AZURE_SUBSCRIPTION_ID from secrets, not vars, so the public log shows ***.");
+        offenders.ShouldBeEmpty("Every tenant or subscription ID input must come from secrets (not vars, env or a literal), so the public log shows ***.");
     }
 
     [Theory]
     [InlineData("tenant-id: ${{ vars.AZURE_TENANT_ID }}", true)]
     [InlineData("ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}", true)]
+    [InlineData("tenant-id: ${{ vars['AZURE_TENANT_ID'] }}", true)]
+    [InlineData("subscription-id: ${{ VARS.azure_subscription_id }}", true)]
+    [InlineData("ARM_TENANT_ID: ${{ vars.TENANT }}", true)]
+    [InlineData("tenant-id: ${{ env.TENANT }}", true)]
+    [InlineData("ARM_TENANT_ID: 00000000-0000-0000-0000-000000000000", true)]
+    [InlineData("  AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}", true)]
     [InlineData("tenant-id: ${{ secrets.AZURE_TENANT_ID }}", false)]
+    [InlineData("ARM_SUBSCRIPTION_ID: ${{ Secrets['AZURE_SUBSCRIPTION_ID'] }}", false)]
     [InlineData("client-id: ${{ vars.AZURE_DEPLOY_CLIENT_ID }}", false)]
-    public void The_azure_id_check_flags_only_variables(string line, bool flagged) =>
-        AzureIdAsVariable().IsMatch(line).ShouldBe(flagged);
+    [InlineData("# the tenant-id input is read from secrets", false)]
+    public void The_azure_id_check_accepts_only_secrets(string line, bool flagged) =>
+        ExposesAzureId(line).ShouldBe(flagged);
 
-    [GeneratedRegex(@"\bvars\.AZURE_(?:TENANT|SUBSCRIPTION)_ID\b")]
-    private static partial Regex AzureIdAsVariable();
+    // A line that sets a tenant or subscription ID (an action input or an env key), or reads one by name from any
+    // context, must take it from secrets. Contexts and names are case-insensitive in Actions.
+    private static bool ExposesAzureId(string line)
+    {
+        var code = line.TrimStart();
+        if (code.StartsWith('#'))
+        {
+            return false;
+        }
+
+        return (AzureIdKey().IsMatch(code) || AzureIdName().IsMatch(code)) && !FromSecrets().IsMatch(code);
+    }
+
+    [GeneratedRegex(@"^(?:tenant-id|subscription-id|[A-Z_]*(?:TENANT|SUBSCRIPTION)_ID)\s*:", RegexOptions.IgnoreCase)]
+    private static partial Regex AzureIdKey();
+
+    [GeneratedRegex(@"(?:TENANT|SUBSCRIPTION)_ID", RegexOptions.IgnoreCase)]
+    private static partial Regex AzureIdName();
+
+    [GeneratedRegex(@"\$\{\{\s*secrets(?:\.[A-Z_]*(?:TENANT|SUBSCRIPTION)_ID|\[\s*'[A-Z_]*(?:TENANT|SUBSCRIPTION)_ID'\s*\])\s*\}\}\s*$", RegexOptions.IgnoreCase)]
+    private static partial Regex FromSecrets();
 
     private static IEnumerable<FileInfo> WorkflowFiles() =>
         new DirectoryInfo(Path.Join(RepositoryRoot.Find().FullName, ".github", "workflows"))
