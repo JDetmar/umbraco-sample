@@ -86,6 +86,18 @@ public sealed partial class SupplyChainPolicyTests
         JobBlock("infra.yml", "preview").ShouldContain("      group: pulumi-dev");
     }
 
+    [Fact]
+    public void Pulumi_runs_in_ci_never_print_a_property_diff()
+    {
+        // Actions logs are public; a Pulumi property diff prints systemData such as the deployer's sign-in name.
+        var offenders = WorkflowFiles()
+            .Where(file => File.ReadAllLines(file.FullName).Any(line => line.Trim() == "diff: true"))
+            .Select(file => file.Name)
+            .ToList();
+
+        offenders.ShouldBeEmpty("Pulumi steps in CI set diff: false; run `make infra-preview` locally for a full diff.");
+    }
+
     private static string JobBlock(string workflow, string job)
     {
         var lines = File.ReadAllLines(Path.Join(RepositoryRoot.Find().FullName, ".github", "workflows", workflow));

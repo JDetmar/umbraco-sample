@@ -345,7 +345,9 @@ jobs:
           command: up
           stack-name: ${{ vars.PULUMI_ORG }}/umbraco-sample/dev
           work-dir: infra/UmbracoSample.Infra
-          diff: true
+          # No property diff: this repository's Actions logs are public, and a diff prints resource metadata such as
+          # systemData.createdBy (the deployer's sign-in name). The summary of operations is still logged.
+          diff: false
           pulumi-version: 3.275.0 # same pinned CLI as the preview (ES-013)
         env:
           SITE_IMAGE: ${{ needs.publish.outputs.image }}
