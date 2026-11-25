@@ -59,8 +59,25 @@ public class DatabaseUserGrantTests
     [Fact]
     public void A_user_bound_to_an_old_identity_is_rebound_not_kept()
     {
-        DatabaseUserGrant.Sql.ShouldContain("WHERE name = @name AND sid <> @sid");
+        DatabaseUserGrant.Sql.ShouldContain("WHERE name = @name AND type = 'E' AND sid <> @sid");
         DatabaseUserGrant.Sql.ShouldContain("DROP USER");
+    }
+
+    [Fact]
+    public void Dynamic_statements_are_built_in_a_variable_before_they_run()
+    {
+        // EXEC (N'...' + QUOTENAME(@name)) is a syntax error in T-SQL (the first CD run failed on it):
+        // EXEC (...) takes only literals and variables, so every dynamic statement runs from @statement.
+        System.Text.RegularExpressions.Regex.IsMatch(DatabaseUserGrant.Sql, @"EXEC\s*\(").ShouldBeFalse();
+        System.Text.RegularExpressions.Regex.Count(DatabaseUserGrant.Sql, @"sp_executesql\s+@statement").ShouldBe(3);
+    }
+
+    [Fact]
+    public void The_grant_is_one_transaction_so_a_failed_rebind_changes_nothing()
+    {
+        DatabaseUserGrant.Sql.ShouldContain("SET XACT_ABORT ON;");
+        DatabaseUserGrant.Sql.ShouldContain("BEGIN TRANSACTION;");
+        DatabaseUserGrant.Sql.TrimEnd().ShouldEndWith("COMMIT TRANSACTION;");
     }
 
     [Theory]

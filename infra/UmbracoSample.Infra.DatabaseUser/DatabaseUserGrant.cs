@@ -14,14 +14,29 @@ public static partial class DatabaseUserGrant
     /// as parameters and through QUOTENAME.
     /// </summary>
     public const string Sql = """
+        -- One transaction: a rebind that drops the old user and then fails to create the new one leaves nothing changed.
+        SET XACT_ABORT ON;
+        BEGIN TRANSACTION;
         DECLARE @sid varbinary(16) = CONVERT(varbinary(16), CONVERT(uniqueidentifier, @clientId));
         DECLARE @sidLiteral nvarchar(64) = CONVERT(nvarchar(64), @sid, 1);
         -- A replaced identity keeps its name but gets a new client ID: rebind the user rather than keep the stale one.
-        IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = @name AND sid <> @sid)
-            EXEC (N'DROP USER ' + QUOTENAME(@name));
+        -- EXEC with parentheses accepts only literals and variables, not function calls, so each statement is built first.
+        DECLARE @statement nvarchar(max);
+        -- Only an external (Entra) user is rebound; a role or SQL user of the same name fails loudly instead. DROP USER
+        -- also fails if the old user owns a schema, which is left for a person to resolve.
+        IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = @name AND type = 'E' AND sid <> @sid)
+        BEGIN
+            SET @statement = N'DROP USER ' + QUOTENAME(@name);
+            EXEC sys.sp_executesql @statement;
+        END;
         IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = @name)
-            EXEC (N'CREATE USER ' + QUOTENAME(@name) + N' WITH SID = ' + @sidLiteral + N', TYPE = E');
-        EXEC (N'ALTER ROLE db_owner ADD MEMBER ' + QUOTENAME(@name));
+        BEGIN
+            SET @statement = N'CREATE USER ' + QUOTENAME(@name) + N' WITH SID = ' + @sidLiteral + N', TYPE = E';
+            EXEC sys.sp_executesql @statement;
+        END;
+        SET @statement = N'ALTER ROLE db_owner ADD MEMBER ' + QUOTENAME(@name);
+        EXEC sys.sp_executesql @statement;
+        COMMIT TRANSACTION;
         """;
 
     public const int Attempts = 12;
