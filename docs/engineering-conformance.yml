@@ -9,7 +9,7 @@
 standard_version: "6.2"
 repository: umbraco-sample
 owner: repository-owner
-updated: 2026-11-24
+updated: 2026-11-25
 
 clauses:
   ES-002:
@@ -100,6 +100,9 @@ clauses:
       - obligation: Sensitive data is encrypted in transit
         status: deviation
         deviation: DEV-013
+      - obligation: Sensitive data is excluded from operational logs
+        status: deviation
+        deviation: DEV-019
   ES-030:
     status: compliant
     evidence:
@@ -380,3 +383,15 @@ deviations:
     owner: repository-owner
     opened: 2026-11-25
     disposition: Add an integration test that sends the batch to the Aspire SQL Server container with SET PARSEONLY ON (TYPE = E users themselves exist only in Azure SQL, so execution stays covered by the dev deploy). Not done in the fix PR to keep the production fix small.
+
+  - id: DEV-019
+    kind: gap
+    clauses: [ES-025]
+    obligations:
+      - Sensitive data is excluded from operational logs
+    summary: The public Actions log of run 45677402486 (dev deploy, 2026-11-25) contains a person's work sign-in name, twice. The deploy ran pulumi up with a property diff, which printed the container app's Azure systemData (createdBy, lastModifiedBy).
+    consequence: Anyone can read that log until it is deleted, and it may already be cached or copied. Every later deploy that updated the container app would have printed the name again.
+    compensating_controls: Only that one run printed it (the other deploy and preview logs were checked on 2026-11-25). Pulumi steps in CI now run without a property diff, and a policy test keeps it that way (ADR 0014). The name is in no commit, pull request or file in the repository.
+    owner: repository-owner
+    opened: 2026-11-25
+    disposition: "Owner action: delete the logs of run 45677402486 (Actions, the run, Delete all logs; or DELETE repos/{owner}/{repo}/actions/runs/45677402486/logs). Closes when the logs are deleted. Recreating the container app under the deploy identity would also clear createdBy on Azure's side; optional, dev only."
