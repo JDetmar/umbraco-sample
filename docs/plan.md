@@ -73,7 +73,7 @@ A deployed, tested, observable "hello page" before any real features (ES-019 SHO
 - `pulumi preview` runs on every PR and its diff is posted for review; `pulumi up` runs only from the pipeline after merge (ES-055, ES-012). No manual changes: a scheduled `pulumi refresh --preview-only` flags drift (ENV-01).
 - GitHub to Azure via OIDC federated credentials; no stored cloud secrets (ES-024). Pulumi config secrets encrypted by Pulumi Cloud (ES-024).
 - An Azure budget with alerts is part of the stack (ES-047).
-- Dev, staging and prod with a pipeline promotion path (ENV-02, ENV-03).
+- Dev, staging and prod with a pipeline promotion path (ENV-02, ENV-03). Owner decision, 2026-11-25: dev only for now; staging and prod wait until the owner plans them, and anything that truly needs another environment is raised for discussion.
 - Managed identity and Key Vault; no long-lived secrets (ES-024).
 - Backups with a scripted restore test (OPS-05, ES-031).
 - PR preview environments deferred under ES-060 until their trigger exists (ENV-04).

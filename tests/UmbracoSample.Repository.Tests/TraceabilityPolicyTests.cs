@@ -42,20 +42,30 @@ public sealed partial class TraceabilityPolicyTests
     {
         var ledger = Ledger();
         var rows = Rows(StandardRow());
-        ledger.Values.ShouldContain(clause => clause.Deviations.Count > 0, "the ledger parser found the deviation links");
 
         foreach (var (clause, row) in rows)
         {
             if (ledger.TryGetValue(clause, out var assessed))
             {
                 row.Status.ShouldBe(assessed.Status, $"{clause} must show the ledger's status.");
-                assessed.Deviations.Where(id => !row.Evidence.Contains(id, StringComparison.Ordinal)).ShouldBeEmpty($"{clause} must name the ledger's deviations.");
             }
             else
             {
                 row.Status.ShouldBe("not assessed", $"{clause} is not in the ledger, so the traceability page cannot claim a status for it.");
             }
         }
+    }
+
+    [Fact]
+    public void Every_deviation_is_named_on_each_clause_it_touches()
+    {
+        var links = DeviationLinks();
+        var rows = Rows(StandardRow());
+
+        links.Count.ShouldBeGreaterThan(0, "the ledger parser found the deviations and their clauses");
+        links.Where(link => !rows[link.Clause].Evidence.Contains(link.Deviation, StringComparison.Ordinal))
+            .Select(link => $"{link.Clause} does not name {link.Deviation}")
+            .ShouldBeEmpty("A deviation linked to a clause, from either side of the ledger, appears on that clause's row (ES-038).");
     }
 
     [Fact]
@@ -66,12 +76,35 @@ public sealed partial class TraceabilityPolicyTests
         DeviationReference().Matches(Docs("traceability.md")).Select(m => m.Value).Distinct().Where(id => !known.Contains(id)).ShouldBeEmpty();
     }
 
-    private static Dictionary<string, (string Status, HashSet<string> Deviations)> Ledger()
+    private static string LedgerClauses()
     {
         var yaml = Docs("engineering-conformance.yml");
-        var clauses = yaml[..yaml.IndexOf("\ndeviations:", StringComparison.Ordinal)];
+        return yaml[..yaml.IndexOf("\ndeviations:", StringComparison.Ordinal)];
+    }
+
+    // Links from both sides: an obligation's "deviation: DEV-nnn", and a deviation's "clauses: [ES-nnn, ...]".
+    private static HashSet<(string Clause, string Deviation)> DeviationLinks()
+    {
+        var links = Ledger().SelectMany(clause => clause.Value.Deviations.Select(id => (clause.Key, id))).ToHashSet();
+        var yaml = Docs("engineering-conformance.yml");
+        var deviations = yaml[yaml.IndexOf("\ndeviations:", StringComparison.Ordinal)..];
+        DeviationClauses().Count(deviations).ShouldBe(DeviationId().Count(deviations), "every deviation lists clauses the parser can read");
+        foreach (Match deviation in DeviationClauses().Matches(deviations))
+        {
+            foreach (Match clause in ClauseId().Matches(deviation.Groups["clauses"].Value))
+            {
+                links.Add((clause.Value, deviation.Groups["id"].Value));
+            }
+        }
+
+        return links;
+    }
+
+    private static Dictionary<string, (string Status, HashSet<string> Deviations)> Ledger()
+    {
+        var clauses = LedgerClauses();
         var blocks = LedgerClause().Matches(clauses).ToList();
-        blocks.ShouldNotBeEmpty();
+        blocks.Count.ShouldBe(ClauseKey().Count(clauses), "every clause in the ledger has a status the parser can read");
 
         var result = new Dictionary<string, (string, HashSet<string>)>();
         for (var i = 0; i < blocks.Count; i++)
@@ -95,6 +128,15 @@ public sealed partial class TraceabilityPolicyTests
 
     [GeneratedRegex(@"^  (?<id>ES-\d{3}):\r?\n    status: (?<status>\w+)", RegexOptions.Multiline)]
     private static partial Regex LedgerClause();
+
+    [GeneratedRegex(@"^  ES-\d{3}:", RegexOptions.Multiline)]
+    private static partial Regex ClauseKey();
+
+    [GeneratedRegex(@"^  - id: (?<id>DEV-\d{3})\s*\r?\n(?:    (?!clauses:)[^\n]*\r?\n)*?    clauses: \[(?<clauses>[^\]]*)\]", RegexOptions.Multiline)]
+    private static partial Regex DeviationClauses();
+
+    [GeneratedRegex(@"ES-\d{3}")]
+    private static partial Regex ClauseId();
 
     [GeneratedRegex(@"^  - id: (?<id>DEV-\d{3})", RegexOptions.Multiline)]
     private static partial Regex DeviationId();

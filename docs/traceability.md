@@ -1,11 +1,11 @@
 # Traceability
 
-Where each requirement stands: every clause of the engineering standard (ES-001 to ES-061) and every requirement in [the framework](engineering-rigor-framework.md), with the evidence or the ledger entry behind it. The [conformance ledger](engineering-conformance.yml) is the source of truth for the standard (ES-038). This page never claims more than the ledger does, and a policy test (`TraceabilityPolicyTests`) keeps the two in step.
+Where each requirement stands: every clause of the engineering standard (ES-001 to ES-061) and every requirement in [the framework](engineering-rigor-framework.md), with the evidence or the ledger entry behind it. The [conformance ledger](engineering-conformance.yml) is the source of truth for the standard (ES-038). This page never claims more than the ledger does, and a policy test (`TraceabilityPolicyTests`) keeps the two in step: every deviation the ledger links to a clause is named on that clause's row. ADRs cited here may still be Proposed; the [ADR index](adr/README.md) has their status.
 
 How to read the status column:
 
 - **Standard clauses** use the ledger's own status (`compliant`, `deviation`, `unknown`, `not_applicable`) for clauses the ledger assesses, and `not assessed` for the rest. A clause that is not assessed is not a failure: the build-out assesses clauses as the work reaches them. The related work listed for those is a pointer, not a claim.
-- **Framework requirements** use `met`, `partly`, `gap` (not started or not met; it has a ledger entry when it is also a deviation from the standard, because the ledger tracks the standard), `planned` (a phase in [the plan](plan.md) covers it), `deferred` (waiting for a trigger, ES-060), `not applicable` (with the reason), or `outside the code` (a people or process commitment this repository cannot show on its own).
+- **Framework requirements** use `met`, `partly`, `gap` (not started or not met), `planned` (a phase in [the plan](plan.md) covers it), `deferred` (waiting for a trigger, ES-060), `not applicable` (with the reason), or `outside the code` (a people or process commitment this repository cannot show on its own).
 
 ## Engineering standard
 
@@ -13,7 +13,7 @@ How to read the status column:
 |---|---|---|---|
 | ES-001 | Behavior and oracles | deviation | DEV-018: the database user tool's SQL is checked by text, not parsed by SQL Server. |
 | ES-002 | Evidence quality | compliant | Property tests (CsCheck) and weekly mutation testing (Stryker.NET) of the domain; see the ledger. |
-| ES-003 | Trustworthy signals | not assessed | No test is quarantined; six CI checks are required on `main` (ruleset main-2). |
+| ES-003 | Trustworthy signals | not assessed | No test is quarantined; six CI checks are required on `main` (ruleset main-2), though admins can bypass them (DEV-001). |
 | ES-004 | Boundaries and intent | not assessed | Component contract tests (`tests/UmbracoSample.Web.Tests/Components`). |
 | ES-005 | Determinism | not assessed | Visual baselines on seeded content; Lighthouse performance scores only warn because they vary (`e2e/lighthouserc.cjs`). |
 | ES-006 | Real contracts | deviation | DEV-018. Integration tests run the real stack through Aspire (`tests/UmbracoSample.Integration.Tests`). |
@@ -34,7 +34,7 @@ How to read the status column:
 | ES-021 | State and abstraction | compliant | Redirect rules parsed into precise types (ADR 0009). |
 | ES-022 | Value integrity | not assessed | Planned with forms: idempotency key and double-submit tests (Phase 4, threat model 0001). |
 | ES-023 | Threats and authorization | deviation | DEV-017. Threat models 0001 (lead form) and 0002 (Azure environment). |
-| ES-024 | Credentials | deviation | DEV-001. Managed identities, Key Vault, OIDC to Azure and Pulumi, no stored cloud secrets. |
+| ES-024 | Credentials | deviation | DEV-001 (admin bypass), DEV-004 (no image-URL signing key), DEV-016 (preview token, closing), DEV-017 (standing deploy identity). Managed identities, Key Vault, OIDC to Azure and Pulumi, no stored cloud secrets. |
 | ES-025 | Sensitive data | deviation | DEV-010 (no HSTS yet), DEV-013 (plain HTTP inside the Container Apps environment). |
 | ES-026 | Boundaries and audit | deviation | DEV-004 (unsigned image URLs), DEV-007 (rich text not sanitized server-side), DEV-012 (back office and 404 outside the strict policy). |
 | ES-027 | Environment isolation | compliant | Synthetic seed content only in dev and CI. DEV-002 (copying public production content to staging) is a parked proposal while dev is the only environment. |
@@ -50,22 +50,22 @@ How to read the status column:
 | ES-037 | Applicable completion | compliant | See the ledger. |
 | ES-038 | Honest conformance | not assessed | The [ledger](engineering-conformance.yml) and this page. |
 | ES-039 | Shared quality bar | not assessed | `CLAUDE.md` applies to human and agent contributors alike. |
-| ES-040 | Accountable delegation | not assessed | Delegation envelope in `CLAUDE.md`; DEV-017 limits the deploy identity. |
+| ES-040 | Accountable delegation | not assessed | Delegation envelope in `CLAUDE.md`. DEV-017: the deploy identity is broader than its job (accepted for dev, with conditions). |
 | ES-041 | Production AI configuration and evals | not assessed | The site has no AI features. |
 | ES-042 | Untrusted context and development access | not assessed | |
 | ES-043 | Deadlines and cancellation | not assessed | Planned with the forms client (Phase 4). |
 | ES-044 | Safe retries | not assessed | Planned with the forms client (Phase 4). |
 | ES-045 | Overload | not assessed | |
 | ES-046 | Lifecycle and failure testing | not assessed | Planned with the forms client (Phase 4). |
-| ES-047 | Bounded execution | not assessed | Azure budget with alerts in the stack (`infra/UmbracoSample.Infra/SiteInfrastructure.cs`); Lighthouse byte and request budgets. |
+| ES-047 | Bounded execution | not assessed | DEV-015 (single replica, accepted for dev) applies. Azure budget with alerts in the stack (`infra/UmbracoSample.Infra/SiteInfrastructure.cs`); Lighthouse byte and request budgets. |
 | ES-048 | AI and telemetry budgets | not assessed | Log Analytics with a 30-day retention cap. |
-| ES-049 | Inventory and immutable promotion | unknown | One image built per commit and promoted by digest; see the ledger. |
+| ES-049 | Inventory and immutable promotion | unknown | DEV-014 (image not signed or attested). One image built per commit and promoted by digest. |
 | ES-050 | Attestations and verification | deviation | DEV-014: the published image is not signed or attested. |
 | ES-051 | Actionable vulnerability evidence | not assessed | SBOM produced by the image job. |
 | ES-052 | Execution interface | compliant | Makefile targets, run the same way locally and in CI. |
 | ES-053 | Isolated development | compliant | `make validate` before handoff; Aspire runs the stack locally. |
-| ES-054 | Capabilities and approval | deviation | DEV-001. |
-| ES-055 | Preview and reversibility | not assessed | `pulumi preview` on infrastructure changes; every change is one revertible pull request. |
+| ES-054 | Capabilities and approval | deviation | DEV-001 (admin bypass), DEV-017 (standing deploy identity). |
+| ES-055 | Preview and reversibility | not assessed | Every change is one revertible pull request. `pulumi preview` runs only after merge on `main` or by hand, prints no diff (ADR 0014), and the dev deploy runs `up` without a preview step; a preview on every pull request (Phase 5) is not built. |
 | ES-056 | Receipts and resumability | not assessed | Pull requests and version history are the receipts (`CLAUDE.md`). |
 | ES-057 | Failure containment | not assessed | |
 | ES-058 | Ownership, purpose, and contracts | not assessed | Planned with forms: the site keeps no submissions (Phase 4). |
@@ -77,8 +77,8 @@ How to read the status column:
 
 | ID | Requirement | Status | Evidence or ledger entry |
 |---|---|---|---|
-| ARC-01 | Pages built from reusable components | met | Hero, card grid, call to action and rich text as Block List components (`src/UmbracoSample.Web/Components`). |
-| ARC-02 | Components documented and tested once, reused everywhere | met | [Component pages](components/README.md) and contract tests for empty, minimal and maximal content. |
+| ARC-01 | Pages built from reusable components | partly | Hero, card grid, call to action and rich text as Block List components (`src/UmbracoSample.Web/Components`). The form block comes with forms (Phase 4). |
+| ARC-02 | Components versioned, documented and tested once, reused everywhere | partly | [Component pages](components/README.md) and contract tests for empty, minimal and maximal content. Components are versioned only with the repository, not individually. |
 | ARC-03 | Content model in source control | met | uSync files in `src/UmbracoSample.Web/uSync/v17`. |
 | ARC-04 | Schema flows up through Git; content authored only in production | partly | Schema flows through Git and uSync; dev has only synthetic content. Production content authoring starts with a production environment, which is deferred (dev only for now). |
 | ARC-05 | Design tokens synced from the design tool into code | partly | Tokens in `frontend/tokens` build the stylesheet and are contrast-tested (ADR 0007). No sync from a design tool. |
@@ -86,15 +86,15 @@ How to read the status column:
 | ARC-07 | Analytics and A/B test hooks in components | gap | Not started; no tracker is on the site, and any would need the third-party allowlist (ADR 0008). |
 | ARC-08 | Clean structured data for AI search engines | met | JSON-LD on every page (`src/UmbracoSample.Web/StructuredData`), unit tests and `StructuredDataTests` (integration). |
 | ENV-01 | All Azure resources as code; no manual changes | partly | Pulumi C# stack (ADR 0010) and CD for dev (ADR 0013). The scheduled drift check (`pulumi refresh --preview-only`) is not built yet (Phase 5). |
-| ENV-02 | Dev, staging and production with a promotion path | deferred | The owner chose dev only for now (2026-11-25). The image is promoted by digest, so a later stage reuses the same artifact. |
+| ENV-02 | Dev, staging and production with a promotion path | deferred | Owner decision, 2026-11-25: dev only for now (recorded in [the plan](plan.md), Phase 5). Trigger: the owner plans staging or production. The image is promoted by digest, so a later stage reuses the same artifact. |
 | ENV-03 | Every deployment automated and reversible | partly | CD deploys dev from `main` after every gate (ADR 0013). Rollback follows ES-014: roll forward by default, previous revision only when compatible. |
 | ENV-04 | A preview environment per pull request | deferred | Under ES-060 until its trigger exists. |
 | ENV-05 | Feature flags | gap | Not started. |
 | ENV-06 | Schema drift fails the build | met | `/health/schema` and the integration test `Schema_matches_the_uSync_files_after_first_boot`; the deploy smoke test checks `/health/schema`. |
 | TST-01 | Lint, format and type checks on every commit | met | `make format-check`, warnings as errors, analyzers, stylesheet rules (`make frontend-test`). |
-| TST-02 | Unit tests with a coverage bar | partly | Unit tests on every commit. Coverage is read under ES-002 as a diagnostic with a floor only on critical modules ([plan](plan.md), "Where the framework and standard differ"). |
-| TST-03 | Bundle size and image optimization limits | partly | Stylesheet size limit (`frontend/scripts/check-bundle-size.mjs`) and Lighthouse byte budgets. No image optimization limit yet. |
-| TST-04 | Dependency, static code and secret scanning | met | `make vuln`, `make frontend-audit`, CodeQL, gitleaks (`make secrets`), Dependabot. |
+| TST-02 | Unit tests with a coverage bar | partly | Unit tests on every commit; weekly mutation testing of the domain fails below 75%. Coverage is not reported yet. The plan reads TST-02 under ES-002: coverage as a diagnostic with a floor only on critical modules ([plan](plan.md), "Where the framework and standard differ"). |
+| TST-03 | Bundle size and image optimization limits | partly | Stylesheet size limit (`frontend/scripts/check-bundle-size.mjs`) and Lighthouse byte budgets, including 300 KB of images per page. No image format or responsive-image check. |
+| TST-04 | Dependency, static code and secret scanning | met | `make vuln`, `make frontend-audit`, CodeQL, gitleaks (`make secrets`), Dependabot. As every gate, bypassable by admins (DEV-001). |
 | TST-05 | Contract tests: every component with empty, minimal and maximal content | met | `ComponentContractTests` and the integration fixture pages. |
 | TST-06 | Schema drift detection | met | As ENV-06. |
 | TST-07 | Form contract tests against a sandbox | planned | Phase 4: a WireMock stub with documented fidelity limits. |
@@ -108,16 +108,16 @@ How to read the status column:
 | TST-15 | SEO checks | partly | Lighthouse SEO category at 0.9 or above, canonical link, structured data tested. No broken-link crawl yet. |
 | TST-16 | Production smoke tests with automatic rollback | partly | `scripts/smoke.sh` after every dev deploy. Rollback follows ES-014 (see ENV-03); production is deferred. |
 | TST-17 | Cross-browser and mobile visual checks | gap | Not started. |
-| CMP-01 | Components meet WCAG 2.2 AA | partly | Required alt text and heading rules in the blocks, contrast-tested tokens, axe scans. DEV-008: no manual assistive-technology check yet. |
-| CMP-02 | Accessibility and tracker gates on every pull request | met | The e2e and integration jobs are required checks (ruleset main-2); admins can bypass them (DEV-001). |
+| CMP-01 | Components meet WCAG 2.2 AA | partly | Images without alt text are not rendered, heading rules in the blocks, contrast-tested tokens, axe scans. DEV-008: no manual assistive-technology check yet. |
+| CMP-02 | Accessibility and tracker gates on every pull request | partly | The e2e and integration jobs are required checks (ruleset main-2); admins can bypass them (DEV-001), and the ledger records the accessibility gate under DEV-008. |
 | CMP-03 | Legal and privacy approval for sensitive content changes | outside the code | An editorial workflow commitment; Umbraco workflow configuration would be the place to enforce it. |
-| CMP-04 | Authors guided to alt text and plain language | partly | Alt text is required on images. No plain-language guidance yet. |
+| CMP-04 | Authors guided to alt text and plain language | partly | The image alt-text field explains why it matters, and images without it are not rendered; the field is not mandatory. No plain-language guidance yet. |
 | CMP-05 | Scheduled accessibility, cookie and tracker scans | gap | Not started; scans run only on pull requests and `main`. |
 | CMP-06 | Consent banner blocks tags until opt-in | not applicable | The site loads no trackers or third-party tags (ADR 0008); applies when the first one is allowed. |
 | CMP-07 | Yearly manual accessibility audit | gap | DEV-008. |
 | OPS-01 | Web application firewall in front of the site | planned | Front Door with WAF rules (Phase 5, ADR 0010). |
 | OPS-02 | Third-party penetration test | outside the code | |
-| OPS-03 | Real user monitoring, uptime checks and alerting | partly | OpenTelemetry to Application Insights. No uptime check or alert rules yet. |
+| OPS-03 | Real user monitoring, uptime checks and alerting | partly | Server-side OpenTelemetry to Application Insights. No real user (browser) monitoring, uptime check or alert rules yet. |
 | OPS-04 | SLOs for availability and page speed | gap | Not started. |
 | OPS-05 | Backups with tested restores | planned | Phase 5: a scripted restore test. |
 | OPS-06 | Incident runbooks and on-call | outside the code | |
