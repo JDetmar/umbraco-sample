@@ -5,8 +5,9 @@ name: dev-check
 #    Pulumi is caught. Preview never saves a refresh, so the stack is not changed.
 # 2. Smoke: run the post-deployment smoke test against dev, so a broken environment is noticed even with no deploy.
 # It uses the dev environment's deploy identity (ADR 0013, accepted with conditions as DEV-017) read-only: it runs
-# only `preview`, never `up`, and only code on main. GitHub notifies a scheduled run's failure to whoever last changed
-# the schedule.
+# only `output` and `preview`, never `up`, and only code on main. It runs only once the owner sets DEV_CHECK_ENABLED,
+# which is the owner's approval of this extra use. GitHub notifies a scheduled run's failure to the user who last
+# changed the schedule, so the owner should be the one who enables it (docs/infra-setup.md).
 on:
   schedule:
     - cron: "23 6 * * *"
@@ -23,13 +24,14 @@ env:
 jobs:
   check:
     name: dev (drift and smoke)
-    if: vars.CD_DEV_ENABLED == 'true' && github.ref == 'refs/heads/main'
+    if: vars.CD_DEV_ENABLED == 'true' && vars.DEV_CHECK_ENABLED == 'true' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: dev
-    # Shares the dev stack's lock with deploy-dev and the infra preview, so a check never reads a half-finished deploy.
+    # Not the pulumi-dev group: GitHub keeps one waiting job per group and cancels the older one, so a scheduled check
+    # queued behind a deploy could cancel the next deploy. A check that overlaps a deploy may report changes; re-run it.
     concurrency:
-      group: pulumi-dev
+      group: dev-check
       cancel-in-progress: false
     permissions:
       contents: read
@@ -59,13 +61,16 @@ jobs:
           stack-name: ${{ vars.PULUMI_ORG }}/umbraco-sample/dev
           work-dir: infra/UmbracoSample.Infra
           pulumi-version: 3.275.0
-      # Dev runs the image main last published (ADR 0013); compare against that, not a rebuild.
-      - name: Look up the published image
-        id: image
+      # Compare against the image dev runs (the stack's siteImage output), so a pending or failed deploy is not drift.
+      - name: Check the deployed image is known
+        env:
+          SITE_IMAGE: ${{ steps.stack.outputs.siteImage }}
         run: |
           set -euo pipefail
-          image="$(scripts/published-image.sh "ghcr.io/${GITHUB_REPOSITORY,,}")"
-          echo "image=${image}" >> "${GITHUB_OUTPUT}"
+          if [[ ! "${SITE_IMAGE}" =~ ^ghcr\.io/[a-z0-9._/-]+@sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::The dev stack has no siteImage output pinned by digest; deploy dev from main once to set it."
+            exit 1
+          fi
       - uses: pulumi/actions@96c7761824268174e0d2a4e8c7d75671eebd24a7 # v7.1.0
         id: drift
         with:
@@ -79,7 +84,7 @@ jobs:
           diff: false
           pulumi-version: 3.275.0 # same pinned CLI as every other Pulumi job (ES-013)
         env:
-          SITE_IMAGE: ${{ steps.image.outputs.image }}
+          SITE_IMAGE: ${{ steps.stack.outputs.siteImage }}
           ARM_USE_OIDC: "true"
           ARM_CLIENT_ID: ${{ vars.AZURE_DEPLOY_CLIENT_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}

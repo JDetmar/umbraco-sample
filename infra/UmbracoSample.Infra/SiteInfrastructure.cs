@@ -426,6 +426,9 @@ public sealed class SiteInfrastructure
             ["mediaContainer"] = media.Name,
             ["keyVault"] = vault.Name,
             ["edgeEnabled"] = settings.EnableEdge.ToString(CultureInfo.InvariantCulture),
+            // The image the last update deployed, so the daily drift check compares against what dev runs, not what
+            // main published since (a pending, failed or skipped deploy is not drift).
+            ["siteImage"] = settings.Image,
         };
     }
 

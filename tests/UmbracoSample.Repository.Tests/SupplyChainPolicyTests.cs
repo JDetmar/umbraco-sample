@@ -89,16 +89,23 @@ public sealed partial class SupplyChainPolicyTests
     [Fact]
     public void The_daily_dev_check_only_previews_reviewed_code()
     {
-        // It borrows the deploy identity (DEV-017), so it must stay read-only, main-only and inside the dev lock.
+        // It borrows the deploy identity (DEV-017), so it must stay read-only, main-only and owner-enabled.
         var job = JobBlock("dev-check.yml", "check");
+        var lines = job.Split('\n');
 
-        job.ShouldContain("    environment: dev");
-        job.ShouldContain("github.ref == 'refs/heads/main'");
-        job.ShouldContain("      group: pulumi-dev");
-        job.ShouldContain("          expect-no-changes: true");
-        job.ShouldNotContain("command: up");
-        job.ShouldNotContain("command: refresh");
-        job.ShouldNotContain("command: destroy");
+        lines.ShouldContain("    if: vars.CD_DEV_ENABLED == 'true' && vars.DEV_CHECK_ENABLED == 'true' && github.ref == 'refs/heads/main'");
+        lines.ShouldContain("    environment: dev");
+        lines.ShouldContain("          persist-credentials: false");
+        lines.ShouldContain("          expect-no-changes: true");
+        lines.ShouldContain("      cancel-in-progress: false");
+        lines.ShouldNotContain("      group: pulumi-dev", "a queued check would cancel a queued deploy in a shared group");
+
+        // Only the read-only pulumi/actions commands, and no Pulumi or Azure CLI in run steps.
+        lines.Select(line => PulumiCommand().Match(line)).Where(match => match.Success)
+            .Select(match => match.Groups[1].Value).Distinct().Order()
+            .ShouldBe(["output", "preview"]);
+        lines.Where(line => !line.TrimStart().StartsWith('#') && CliInvocation().IsMatch(line))
+            .ShouldBeEmpty("run steps in the daily check never call pulumi or az");
     }
 
     [Fact]
@@ -330,6 +337,12 @@ public sealed partial class SupplyChainPolicyTests
             .Where(line => line.StartsWith("uses:", StringComparison.Ordinal));
 
     private static bool IsLocalAction(string usesLine) => usesLine.Contains("uses: ./", StringComparison.Ordinal);
+
+    [GeneratedRegex(@"^\s*command:\s*(\S+)")]
+    private static partial Regex PulumiCommand();
+
+    [GeneratedRegex(@"(?:^|[\s;&|(`$])(?:pulumi|az)\s")]
+    private static partial Regex CliInvocation();
 
     [GeneratedRegex(@"^uses:\s+[\w.-]+/[\w./-]+@[0-9a-f]{40}\s+#\s+\S+")]
     private static partial Regex PinnedUses();
