@@ -36,6 +36,13 @@ public sealed class SiteSettingsTests
         Should.Throw<ArgumentException>(() => (Valid() with { MinReplicas = min, MaxReplicas = max }).Validate());
 
     [Fact]
+    public void An_uptime_test_needs_a_warm_replica()
+    {
+        Should.Throw<ArgumentException>(() => (Valid() with { UptimeTest = true }).Validate()).Message.ShouldContain("uptimeTest");
+        Should.NotThrow(() => (Valid() with { UptimeTest = true, MinReplicas = 1 }).Validate());
+    }
+
+    [Fact]
     public void Prod_keeps_a_warm_replica() =>
         Should.Throw<ArgumentException>(() => (Valid("prod") with { MinReplicas = 0, EnableEdge = true }).Validate()).Message.ShouldContain("warm");
 

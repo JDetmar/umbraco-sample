@@ -303,6 +303,45 @@ public sealed class SiteInfrastructureTests
     }
 
     [Fact]
+    public async Task Dev_declares_no_uptime_test_by_default()
+    {
+        var mocks = await Declare(Dev);
+
+        mocks.Resources.ShouldNotContain(r => r.Type == "azure-native:applicationinsights:WebTest" || r.Type == "azure-native:monitor:MetricAlert" || r.Type == "azure-native:monitor:ActionGroup");
+    }
+
+    [Fact]
+    public async Task The_uptime_test_probes_readiness_from_three_regions_and_alerts_the_contact()
+    {
+        var mocks = await Declare(Dev with { MinReplicas = 1, UptimeTest = true });
+        var test = Single(mocks, "azure-native:applicationinsights:WebTest");
+        var alert = Single(mocks, "azure-native:monitor:MetricAlert");
+        var contacts = Single(mocks, "azure-native:monitor:ActionGroup");
+
+        test["kind"].ShouldBe("standard");
+        test["frequency"].ShouldBe(900);
+        test["retryEnabled"].ShouldBe(true);
+        Map(test["request"])["requestUrl"].ShouldBe("https://umbraco-sample-dev-web.app.example/health/ready");
+        Map(test["validationRules"])["expectedHttpStatusCode"].ShouldBe(200);
+        test["webTestKind"].ShouldBe("standard");
+        ((ImmutableArray<object>)test["locations"]).Select(l => (string)Map(l)["location"]).ShouldBe(["emea-gb-db3-azr", "emea-nl-ams-azr", "us-va-ash-azr"]);
+        Map(test["tags"])["hidden-link:/mock/azure-native:applicationinsights:Component/umbraco-sample-dev-ai"].ShouldBe("Resource");
+
+        var criteria = Map(alert["criteria"]);
+        criteria["odataType"].ShouldBe("Microsoft.Azure.Monitor.WebtestLocationAvailabilityCriteria");
+        criteria["failedLocationCount"].ShouldBe(2);
+        criteria["webTestId"].ShouldBe("/mock/azure-native:applicationinsights:WebTest/umbraco-sample-dev-uptime");
+        criteria["componentId"].ShouldBe("/mock/azure-native:applicationinsights:Component/umbraco-sample-dev-ai");
+        // Azure requires exactly the test and its component as scopes, in this order.
+        ((ImmutableArray<object>)alert["scopes"]).ShouldBe(["/mock/azure-native:applicationinsights:WebTest/umbraco-sample-dev-uptime", "/mock/azure-native:applicationinsights:Component/umbraco-sample-dev-ai"]);
+        alert["enabled"].ShouldBe(true);
+
+        var receiver = Map(((ImmutableArray<object>)contacts["emailReceivers"]).ShouldHaveSingleItem());
+        receiver["emailAddress"].ShouldBe("owner@example.invalid");
+        ((string)contacts["groupShortName"]).Length.ShouldBeLessThanOrEqualTo(12);
+    }
+
+    [Fact]
     public async Task No_resource_input_carries_a_password_or_key()
     {
         var mocks = await Declare(Dev);
