@@ -1,0 +1,23 @@
+@* Schema.org JSON-LD for the page (ARC-08). A data block, never executed, so the content security policy is unchanged.
+   Content Umbraco cannot route gets no block rather than an error (PageStructuredData.TryBuild). *@
+@inherits UmbracoViewPage
+@using UmbracoSample.Web.StructuredData
+@{
+    // The same title rule as the layout's <title> and the page's <h1>.
+    static string TitleOf(IPublishedContent page) => page.Value<string>("title") ?? page.Name;
+
+    // Umbraco 17 stores system dates in UTC; the published cache may hand them back unmarked.
+    var updated = Model.UpdateDate.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(Model.UpdateDate, DateTimeKind.Utc) : Model.UpdateDate;
+    var json = PageStructuredData.TryBuild(
+        TitleOf(Model),
+        Model.Value<string>("metaDescription"),
+        Model.Url(mode: UrlMode.Absolute),
+        new DateTimeOffset(updated),
+        Model.AncestorsOrSelf().Reverse().Select(page => (TitleOf(page), page.Url(mode: UrlMode.Absolute))));
+}
+@if (json is not null)
+{
+    @* "!" opts out of ASP.NET Core's ScriptTagHelper, which matches every <script> and would HTML-encode the "+" in
+       the type, so browsers and crawlers would no longer see a JSON-LD block. *@
+    <!script type="application/ld+json">@Html.Raw(json)</!script>
+}
