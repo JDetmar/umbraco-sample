@@ -73,7 +73,7 @@ A deployed, tested, observable "hello page" before any real features (ES-019 SHO
 - `pulumi preview` runs on every PR and its diff is posted for review; `pulumi up` runs only from the pipeline after merge (ES-055, ES-012). No manual changes: a scheduled `pulumi refresh --preview-only` flags drift (ENV-01).
 - GitHub to Azure via OIDC federated credentials; no stored cloud secrets (ES-024). Pulumi config secrets encrypted by Pulumi Cloud (ES-024).
 - An Azure budget with alerts is part of the stack (ES-047).
-- Dev, staging and prod with a pipeline promotion path (ENV-02, ENV-03).
+- Dev, staging and prod with a pipeline promotion path (ENV-02, ENV-03). Owner decision, 2026-11-25: dev only for now; staging and prod wait until the owner plans them, and anything that truly needs another environment is raised for discussion.
 - Managed identity and Key Vault; no long-lived secrets (ES-024).
 - Backups with a scripted restore test (OPS-05, ES-031).
 - PR preview environments deferred under ES-060 until their trigger exists (ENV-04).
@@ -97,7 +97,7 @@ Expected total: about $60-90/month with Front Door Standard in prod, or about $3
 - Every page has an owner and a review date, with a backoffice dashboard flagging expired or ownerless pages (GOV-02, GOV-03).
 - Structured data (JSON-LD) on pages (ARC-08). Done: `StructuredData/PageStructuredData.cs`, its unit tests and `StructuredDataTests` (integration).
 - Backoffice audit events forwarded to an append-only log store (ES-026).
-- `docs/traceability.md` maps every framework ID and ES clause to its evidence, or to a ledger entry.
+- `docs/traceability.md` maps every framework ID and ES clause to its evidence, or to a ledger entry. Done; `TraceabilityPolicyTests` keeps it complete and in step with the ledger.
 
 ## Where the framework and standard differ
 
