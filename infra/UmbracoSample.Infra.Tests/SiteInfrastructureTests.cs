@@ -125,10 +125,15 @@ public sealed class SiteInfrastructureTests
     public async Task Dev_imports_the_synthetic_seed_content_at_startup() =>
         Env(await Declare(Dev))["uSync__Settings__ImportAtStartup"]["value"].ShouldBe("All");
 
+    [Fact]
+    public async Task Other_environments_import_settings_only_at_startup() =>
+        Env(await Declare(Dev with { Environment = "staging" }))["uSync__Settings__ImportAtStartup"]["value"].ShouldBe("Settings");
+
     [Theory]
     [InlineData("dev", "All")]
+    [InlineData("staging", "Settings")]
     [InlineData("prod", "Settings")]
-    public void Only_prod_imports_settings_alone(string environment, string expected) =>
+    public void Only_dev_imports_content(string environment, string expected) =>
         SiteInfrastructure.UsyncImportGroup(environment).ShouldBe(expected);
 
     [Fact]

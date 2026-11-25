@@ -343,8 +343,9 @@ public sealed class SiteInfrastructure
                             new EnvironmentVarArgs { Name = "Umbraco__CMS__Unattended__UnattendedUserEmail", Value = secrets.AdminEmail },
                             new EnvironmentVarArgs { Name = "Umbraco__CMS__Unattended__UnattendedUserPassword", SecretRef = "umbraco-admin-password" },
                             new EnvironmentVarArgs { Name = "Umbraco__CMS__Imaging__HMACSecretKey", SecretRef = "umbraco-imaging-hmac-key" },
-                            // Dev holds the committed synthetic seed content (ES-027), imported at every start so a
-                            // database created before this setting still gets it; prod imports settings only (CLAUDE.md).
+                            // Dev imports the synthetic seed content shipped in the image (the home page; fixtures are
+                            // left out of the publish), at every start so a database created before this setting still
+                            // gets it. Every other environment imports settings only (CLAUDE.md, ES-027).
                             new EnvironmentVarArgs { Name = "uSync__Settings__ImportAtStartup", Value = UsyncImportGroup(settings.Environment) },
                         },
                         Probes =
@@ -405,8 +406,8 @@ public sealed class SiteInfrastructure
     /// <summary>Storage account names are global: 3-24 lower-case letters and digits.</summary>
     public static string StorageAccountName(string environment, string suffix) => $"umbsample{environment}{suffix}";
 
-    /// <summary>What uSync imports at startup: everything (schema and synthetic seed content) outside prod, settings only in prod.</summary>
-    public static string UsyncImportGroup(string environment) => environment == "prod" ? "Settings" : "All";
+    /// <summary>What uSync imports at startup: everything (schema and synthetic seed content) in dev only, settings elsewhere.</summary>
+    public static string UsyncImportGroup(string environment) => environment == "dev" ? "All" : "Settings";
 
     /// <summary>The first day of the current month, UTC, in the form the budget API takes.</summary>
     public static string BudgetStart(DateTime utcNow) =>
