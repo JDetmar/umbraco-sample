@@ -87,6 +87,19 @@ public sealed partial class SupplyChainPolicyTests
     }
 
     [Fact]
+    public void Azure_tenant_and_subscription_ids_come_from_secrets_so_public_logs_mask_them()
+    {
+        // A tenant ID resolves to the tenant's default domain, which can name an organisation; variables print in clear.
+        var offenders = WorkflowFiles()
+            .Where(file => File.ReadAllText(file.FullName).Contains("vars.AZURE_TENANT_ID", StringComparison.Ordinal)
+                || File.ReadAllText(file.FullName).Contains("vars.AZURE_SUBSCRIPTION_ID", StringComparison.Ordinal))
+            .Select(file => file.Name)
+            .ToList();
+
+        offenders.ShouldBeEmpty("Use secrets.AZURE_TENANT_ID and secrets.AZURE_SUBSCRIPTION_ID.");
+    }
+
+    [Fact]
     public void Pulumi_runs_in_ci_never_print_a_property_diff()
     {
         // Actions logs are public; a Pulumi property diff prints systemData, which holds the sign-in name of whoever
