@@ -305,6 +305,9 @@ public sealed class SiteInfrastructure
                             // Media in Blob storage via the managed identity: the endpoint only, never a key (MediaStorage in the site).
                             new EnvironmentVarArgs { Name = "Umbraco__Storage__AzureBlob__Media__ConnectionString", Value = storage.PrimaryEndpoints.Apply(e => e.Blob) },
                             new EnvironmentVarArgs { Name = "Umbraco__Storage__AzureBlob__Media__ContainerName", Value = media.Name },
+                            // Umbraco's Production runtime mode refuses to boot without its public URL. With no edge, that is the
+                            // app's own ingress host, built from the environment's domain (the app cannot reference its own output).
+                            new EnvironmentVarArgs { Name = "Umbraco__CMS__WebRouting__UmbracoApplicationUrl", Value = environment.DefaultDomain.Apply(d => $"https://{name}-web.{d}/") },
                             new EnvironmentVarArgs { Name = "Umbraco__CMS__Unattended__InstallUnattended", Value = "true" },
                             new EnvironmentVarArgs { Name = "Umbraco__CMS__Unattended__UpgradeUnattended", Value = "true" },
                             new EnvironmentVarArgs { Name = "Umbraco__CMS__Unattended__UnattendedUserName", Value = "Site Admin" },

@@ -38,6 +38,11 @@ internal sealed class RecordingMocks : IMocks
             state["configuration"] = configuration.SetItem("ingress", ingress);
         }
 
+        if (args.Type == "azure-native:app:ManagedEnvironment")
+        {
+            state["defaultDomain"] = "env.region.example";
+        }
+
         if (args.Type == "azure-native:keyvault:Secret")
         {
             // Key Vault returns the secret's URI, never its value, as resource state.

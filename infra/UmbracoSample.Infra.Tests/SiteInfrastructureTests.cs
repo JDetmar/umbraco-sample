@@ -83,6 +83,13 @@ public sealed class SiteInfrastructureTests
     }
 
     [Fact]
+    public async Task Umbraco_knows_its_public_url_so_production_mode_can_boot()
+    {
+        // The app's ingress host is <app name>.<environment default domain>; the mock environment's domain is env.region.example.
+        Env(await Declare(Dev))["Umbraco__CMS__WebRouting__UmbracoApplicationUrl"]["value"].ShouldBe("https://umbraco-sample-dev-web.env.region.example/");
+    }
+
+    [Fact]
     public async Task Media_goes_to_the_private_container_by_endpoint_never_by_key()
     {
         var env = Env(await Declare(Dev));
