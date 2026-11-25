@@ -21,7 +21,7 @@ public class DatabaseUserGrantTests
     {
         var request = DatabaseUserGrant.Parse(Valid.GetValueOrDefault);
 
-        // No credential in the connection string: the tool attaches an Azure CLI token itself.
+        // No credential in the connection string: the tool attaches the passed token itself.
         new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(request.ConnectionString).Authentication.ShouldBe(Microsoft.Data.SqlClient.SqlAuthenticationMethod.NotSpecified);
         request.ConnectionString.ShouldContain("Initial Catalog=umbraco");
         request.ConnectionString.ShouldNotContain("Password", Case.Insensitive);
@@ -41,10 +41,23 @@ public class DatabaseUserGrantTests
     {
         using var error = new StringWriter();
 
-        var code = await DatabaseUserGrant.RunAsync(With("SITE_IDENTITY_CLIENT_ID", null), TextWriter.Null, error, TimeSpan.Zero);
+        var withoutClientId = With("SITE_IDENTITY_CLIENT_ID", null);
+
+        var code = await DatabaseUserGrant.RunAsync(k => k == "SQL_ACCESS_TOKEN" ? "token" : withoutClientId(k), TextWriter.Null, error, TimeSpan.Zero);
 
         code.ShouldBe(2);
         error.ToString().ShouldContain("SITE_IDENTITY_CLIENT_ID");
+    }
+
+    [Fact]
+    public async Task Without_a_passed_token_the_tool_exits_before_any_connection()
+    {
+        using var error = new StringWriter();
+
+        var code = await DatabaseUserGrant.RunAsync(Valid.GetValueOrDefault, TextWriter.Null, error, TimeSpan.Zero);
+
+        code.ShouldBe(2);
+        error.ToString().ShouldContain("SQL_ACCESS_TOKEN");
     }
 
     [Fact]

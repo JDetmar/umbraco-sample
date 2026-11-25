@@ -19,6 +19,7 @@ flowchart LR
         subgraph vnet["Virtual network"]
             subgraph cae["Apps subnet: Container Apps environment<br/>peer-to-peer TLS"]
                 app["Container App: site<br/>Umbraco 17 on .NET 10<br/>image pinned by digest"]
+                job["Container Apps job: database user<br/>same image, run by up (ADR 0017)"]
             end
         end
         id["User-assigned<br/>managed identity"]
@@ -37,6 +38,7 @@ flowchart LR
     app -- runs as --> id
     cae -- "Microsoft.Sql service endpoint;<br/>SQL VNet rule admits only this subnet" --> sql
     id -- "Entra token" --> sql
+    job -- "deployer's short-lived token;<br/>creates the site's user" --> sql
     id -- "Blob Data Contributor" --> blob
     id -- "Secrets User" --> kv
     kv -- "admin password, imaging key<br/>(Key Vault references)" --> app

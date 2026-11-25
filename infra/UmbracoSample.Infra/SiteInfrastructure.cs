@@ -218,25 +218,6 @@ public sealed class SiteInfrastructure
 
         var database = new Database("umbraco", databaseArgs);
 
-        // The site's contained database user. Azure has no API for database users, so `pulumi up` runs an idempotent
-        // script as the deployer (a member of the SQL administrator group) once per database (ADR 0010). It opens a
-        // firewall rule for the deployer's IP only while it runs. Preview never runs it.
-        var databaseUser = new LocalCommand("site-database-user", new LocalCommandArgs
-        {
-            Create = "bash scripts/grant-site-database-user.sh",
-            Environment =
-            {
-                ["SQL_SERVER_FQDN"] = sqlServer.FullyQualifiedDomainName,
-                ["SQL_SERVER_NAME"] = sqlServer.Name,
-                ["RESOURCE_GROUP"] = group.Name,
-                ["DATABASE"] = database.Name,
-                ["SITE_IDENTITY_NAME"] = identity.Name,
-                ["SITE_IDENTITY_CLIENT_ID"] = identity.ClientId,
-            },
-            // Runs again only if the database or the identity is replaced.
-            Triggers = Output.Tuple(database.Id, identity.ClientId).Apply(t => ImmutableArray.Create<object>(t.Item1, t.Item2)),
-        }, new CustomResourceOptions { DependsOn = { database, sqlNetworkRule } });
-
         // The site identity gets exactly the data-plane roles it needs, scoped to the one resource each.
         _ = Grant("media-writer", storage.Id, StorageBlobDataContributor, identity, client);
         var secretsReader = Grant("secrets-reader", vault.Id, KeyVaultSecretsUser, identity, client);
@@ -281,6 +262,56 @@ public sealed class SiteInfrastructure
                 new DiagnosticsLogSettingsArgs { Category = "ContainerAppSystemLogs", Enabled = true },
             },
         });
+
+        // The site's contained database user. Azure has no API for database users, and SQL admits only the apps subnet,
+        // so the SQL runs from a manual Container Apps job in this environment, using the tool shipped in the site image
+        // (ADR 0017). The job has no identity: `up` starts it with a short-lived SQL token of the deployer, a member of
+        // the SQL administrator group, and waits for it. No firewall rule is opened. Preview never runs it.
+        var databaseUserJob = new Pulumi.AzureNative.App.Job($"{name}-db-user", new Pulumi.AzureNative.App.JobArgs
+        {
+            ResourceGroupName = group.Name,
+            JobName = $"{name}-db-user",
+            EnvironmentId = environment.Id,
+            WorkloadProfileName = "Consumption",
+            Configuration = new JobConfigurationArgs
+            {
+                TriggerType = Pulumi.AzureNative.App.TriggerType.Manual,
+                ReplicaTimeout = 600,
+                ReplicaRetryLimit = 0,
+                ManualTriggerConfig = new JobConfigurationManualTriggerConfigArgs { Parallelism = 1, ReplicaCompletionCount = 1 },
+            },
+            Template = new JobTemplateArgs
+            {
+                // The definition holds no token; each start passes the full container with its token (the script).
+                Containers =
+                {
+                    new ContainerArgs
+                    {
+                        Name = DatabaseUserContainer,
+                        Image = settings.Image,
+                        Command = { "dotnet", DatabaseUserEntryPoint },
+                        Resources = new ContainerResourcesArgs { Cpu = 0.25, Memory = "0.5Gi" },
+                    },
+                },
+            },
+            Tags = tags,
+        });
+
+        var databaseUser = new LocalCommand("site-database-user", new LocalCommandArgs
+        {
+            Create = "bash scripts/run-database-user-job.sh",
+            Environment =
+            {
+                ["JOB_ID"] = databaseUserJob.Id,
+                ["SQL_SERVER_FQDN"] = sqlServer.FullyQualifiedDomainName,
+                ["DATABASE"] = database.Name,
+                ["SITE_IDENTITY_NAME"] = identity.Name,
+                ["SITE_IDENTITY_CLIENT_ID"] = identity.ClientId,
+            },
+            // Runs again only if the database, the identity or the job is replaced. The script reads the job's current
+            // image itself, so a new image digest on every deploy does not re-run it.
+            Triggers = Output.Tuple(database.Id, identity.ClientId, databaseUserJob.Id).Apply(t => ImmutableArray.Create<object>(t.Item1, t.Item2, t.Item3)),
+        }, new CustomResourceOptions { DependsOn = { database, sqlNetworkRule, databaseUserJob } });
 
         var site = new ContainerApp($"{name}-web", new ContainerAppArgs
         {
@@ -406,6 +437,12 @@ public sealed class SiteInfrastructure
 
     /// <summary>Storage account names are global: 3-24 lower-case letters and digits.</summary>
     public static string StorageAccountName(string environment, string suffix) => $"umbsample{environment}{suffix}";
+
+    /// <summary>The database user job's container; the script that starts it sends the same name and command.</summary>
+    public const string DatabaseUserContainer = "database-user";
+
+    /// <summary>Where the Dockerfile publishes the database user tool inside the site image.</summary>
+    public const string DatabaseUserEntryPoint = "/app/tools/database-user/UmbracoSample.Infra.DatabaseUser.dll";
 
     /// <summary>What uSync imports at startup: everything (schema and synthetic seed content) in dev only, settings elsewhere.</summary>
     public static string UsyncImportGroup(string environment) => environment == "dev" ? "All" : "Settings";

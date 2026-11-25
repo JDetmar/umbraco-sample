@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Text.RegularExpressions;
 using Pulumi;
 using Pulumi.Testing;
 using Shouldly;
@@ -83,16 +84,28 @@ public sealed class SiteInfrastructureTests
     }
 
     [Fact]
-    public async Task Up_creates_the_site_database_user_as_the_deployer()
+    public async Task Up_creates_the_site_database_user_through_the_job_inside_the_network()
     {
         var command = (await Declare(Dev)).Resources.Single(r => r.Type == "command:local:Command" && r.Name == "site-database-user").Inputs;
         var environment = Map(command["environment"]);
 
-        command["create"].ShouldBe("bash scripts/grant-site-database-user.sh");
+        command["create"].ShouldBe("bash scripts/run-database-user-job.sh");
         command.ShouldNotContainKey("delete");
         environment["DATABASE"].ShouldBe("umbraco");
         environment["SITE_IDENTITY_NAME"].ShouldBe("umbraco-sample-dev-id");
-        environment.Keys.ShouldBe(["SQL_SERVER_FQDN", "SQL_SERVER_NAME", "RESOURCE_GROUP", "DATABASE", "SITE_IDENTITY_NAME", "SITE_IDENTITY_CLIENT_ID"], ignoreOrder: true);
+        environment.Keys.ShouldBe(["JOB_ID", "SQL_SERVER_FQDN", "DATABASE", "SITE_IDENTITY_NAME", "SITE_IDENTITY_CLIENT_ID"], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task The_database_user_job_runs_the_tool_from_the_site_image_with_no_identity_or_stored_token()
+    {
+        var job = Single(await Declare(Dev), "azure-native:app:Job");
+        var container = Map(((System.Collections.IEnumerable)Map(job["template"])["containers"]).Cast<object>().Single());
+
+        Map(job["configuration"])["triggerType"].ShouldBe("Manual");
+        job.ShouldNotContainKey("identity");
+        container["image"].ShouldBe(Dev.Image);
+        container.ShouldNotContainKey("env");
     }
 
     [Fact]
@@ -104,15 +117,44 @@ public sealed class SiteInfrastructureTests
     }
 
     [Fact]
-    public void The_database_user_script_always_closes_its_firewall_rule_and_needs_no_extra_tools()
+    public void The_database_user_script_opens_no_firewall_rule_and_keeps_the_token_off_the_log()
     {
-        var script = File.ReadAllText(Path.GetFullPath(Path.Join(AppContext.BaseDirectory, "../../../../UmbracoSample.Infra/scripts/grant-site-database-user.sh")));
+        var script = DatabaseUserScript();
 
         script.ShouldContain("set -euo pipefail");
-        script.ShouldContain("trap remove_rule EXIT");
-        script.ShouldContain("dotnet run --project");
-        script.ShouldNotContain("sqlcmd -");
+        script.ShouldNotContain("firewall-rule");
+        script.ShouldNotContain("ipify");
+        script.ShouldContain("chmod 600");
+        script.ShouldContain("trap 'rm -f \"$body\"' EXIT");
+        // The token is fetched alone (so set -e stops on failure), checked, written only to the private body file,
+        // and sent as --body "@file", never as a command-line argument or to the log.
+        script.ShouldContain("token=\"$(az account get-access-token");
+        script.ShouldContain("--body \"@${body}\"");
+        Regex.Count(script, @"\$token\b|\$\{token\}").ShouldBe(2); // the format check and the printf argument
+        script.ShouldNotContain("echo \"$token");
     }
+
+    [Fact]
+    public void The_script_starts_the_same_container_the_job_defines()
+    {
+        var script = DatabaseUserScript();
+
+        script.ShouldContain($"container_name=\"{SiteInfrastructure.DatabaseUserContainer}\"");
+        script.ShouldContain($"container_command='[\"dotnet\", \"{SiteInfrastructure.DatabaseUserEntryPoint}\"]'");
+    }
+
+    [Fact]
+    public void The_site_image_carries_the_database_user_tool_where_the_job_runs_it()
+    {
+        var dockerfile = File.ReadAllText(Path.GetFullPath(Path.Join(AppContext.BaseDirectory, "../../../../../src/UmbracoSample.Web/Dockerfile")));
+
+        // The tool's package versions live in infra/Directory.Packages.props; without it the restore fails (NU1010).
+        dockerfile.ShouldContain("COPY infra/Directory.Packages.props infra/");
+        dockerfile.ShouldContain($"-o {Path.GetDirectoryName(SiteInfrastructure.DatabaseUserEntryPoint)!.Replace('\\', '/')} ");
+    }
+
+    private static string DatabaseUserScript() =>
+        File.ReadAllText(Path.GetFullPath(Path.Join(AppContext.BaseDirectory, "../../../../UmbracoSample.Infra/scripts/run-database-user-job.sh")));
 
     [Fact]
     public async Task Umbraco_knows_its_public_url_so_production_mode_can_boot()
