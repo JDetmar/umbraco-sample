@@ -370,13 +370,15 @@ public sealed class SiteInfrastructure
             Amount = (double)settings.MonthlyBudget,
             Category = CategoryType.Cost,
             TimeGrain = TimeGrainType.Monthly,
-            TimePeriod = new BudgetTimePeriodArgs { StartDate = "2026-11-01T00:00:00Z" },
+            // Azure accepts a past start date only within the current month, so a new budget starts this month;
+            // ignoreChanges keeps an existing budget from being rewritten every month.
+            TimePeriod = new BudgetTimePeriodArgs { StartDate = BudgetStart(DateTime.UtcNow) },
             Notifications =
             {
                 ["actual-80"] = new NotificationArgs { Enabled = true, Operator = OperatorType.GreaterThan, Threshold = 80, ContactEmails = { secrets.BudgetContactEmail } },
                 ["forecast-100"] = new NotificationArgs { Enabled = true, Operator = OperatorType.GreaterThan, Threshold = 100, ThresholdType = ThresholdType.Forecasted, ContactEmails = { secrets.BudgetContactEmail } },
             },
-        });
+        }, new CustomResourceOptions { IgnoreChanges = { "timePeriod" } });
 
         Outputs = new Dictionary<string, object?>
         {
@@ -401,6 +403,10 @@ public sealed class SiteInfrastructure
     public static string StorageAccountName(string environment, string suffix) => $"umbsample{environment}{suffix}";
 
     /// <summary>Key Vault names are global: 3-24 letters, digits and single hyphens, starting with a letter.</summary>
+    /// <summary>The first day of the current month, UTC, in the form the budget API takes.</summary>
+    public static string BudgetStart(DateTime utcNow) =>
+        new DateTime(utcNow.Year, utcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc).ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
+
     public static string VaultName(string environment, string suffix) => $"umbs-{environment}-{suffix}";
 
     private static KeyVaultSecret StoreSecret(string secretName, Vault vault, ResourceGroup group, Output<string> value) =>

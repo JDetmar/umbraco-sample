@@ -321,6 +321,12 @@ public sealed class SiteInfrastructureTests
         Map(budget["notifications"]).Keys.ShouldBe(["actual-80", "forecast-100"], ignoreOrder: true);
     }
 
+    [Theory]
+    [InlineData(2026, 12, 15, "2026-12-01T00:00:00Z")]
+    [InlineData(2027, 1, 1, "2027-01-01T00:00:00Z")]
+    public void A_new_budget_starts_on_the_first_of_the_current_month(int year, int month, int day, string expected) =>
+        SiteInfrastructure.BudgetStart(new DateTime(year, month, day, 23, 59, 0, DateTimeKind.Utc)).ShouldBe(expected);
+
     [Fact]
     public async Task Every_resource_that_takes_tags_is_tagged_with_its_environment()
     {

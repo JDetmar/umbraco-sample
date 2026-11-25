@@ -594,6 +594,7 @@
       "umbracosample.infra.databaseuser": {
         "type": "Project",
         "dependencies": {
+          "Azure.Identity": "[1.21.0, )",
           "Microsoft.Data.SqlClient": "[6.1.6, )"
         }
       },

@@ -21,7 +21,8 @@ public class DatabaseUserGrantTests
     {
         var request = DatabaseUserGrant.Parse(Valid.GetValueOrDefault);
 
-        new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(request.ConnectionString).Authentication.ShouldBe(Microsoft.Data.SqlClient.SqlAuthenticationMethod.ActiveDirectoryDefault);
+        // No credential in the connection string: the tool attaches an Azure CLI token itself.
+        new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(request.ConnectionString).Authentication.ShouldBe(Microsoft.Data.SqlClient.SqlAuthenticationMethod.NotSpecified);
         request.ConnectionString.ShouldContain("Initial Catalog=umbraco");
         request.ConnectionString.ShouldNotContain("Password", Case.Insensitive);
     }
@@ -54,4 +55,18 @@ public class DatabaseUserGrantTests
         DatabaseUserGrant.Sql.ShouldContain("TYPE = E");
         DatabaseUserGrant.Sql.ShouldContain("ALTER ROLE db_owner");
     }
+
+    [Fact]
+    public void A_user_bound_to_an_old_identity_is_rebound_not_kept()
+    {
+        DatabaseUserGrant.Sql.ShouldContain("WHERE name = @name AND sid <> @sid");
+        DatabaseUserGrant.Sql.ShouldContain("DROP USER");
+    }
+
+    [Theory]
+    [InlineData(40613, true)]
+    [InlineData(40615, true)]
+    [InlineData(18456, false)]
+    public void Only_transient_sql_errors_are_retried(int number, bool retried) =>
+        DatabaseUserGrant.TransientErrors.Contains(number).ShouldBe(retried);
 }

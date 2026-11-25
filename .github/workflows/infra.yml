@@ -68,6 +68,7 @@ jobs:
           stack-name: ${{ vars.PULUMI_ORG }}/umbraco-sample/dev
           work-dir: infra/UmbracoSample.Infra
           diff: true
+          pulumi-version: 3.275.0 # pinned CLI, the same in every job (ES-013)
         env:
           ARM_USE_OIDC: "true"
           ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}

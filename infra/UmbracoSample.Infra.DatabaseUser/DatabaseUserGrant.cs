@@ -14,13 +14,26 @@ public static partial class DatabaseUserGrant
     /// as parameters and through QUOTENAME.
     /// </summary>
     public const string Sql = """
-        DECLARE @sid nvarchar(64) = CONVERT(nvarchar(64), CONVERT(varbinary(16), CONVERT(uniqueidentifier, @clientId)), 1);
+        DECLARE @sid varbinary(16) = CONVERT(varbinary(16), CONVERT(uniqueidentifier, @clientId));
+        DECLARE @sidLiteral nvarchar(64) = CONVERT(nvarchar(64), @sid, 1);
+        -- A replaced identity keeps its name but gets a new client ID: rebind the user rather than keep the stale one.
+        IF EXISTS (SELECT 1 FROM sys.database_principals WHERE name = @name AND sid <> @sid)
+            EXEC (N'DROP USER ' + QUOTENAME(@name));
         IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = @name)
-            EXEC (N'CREATE USER ' + QUOTENAME(@name) + N' WITH SID = ' + @sid + N', TYPE = E');
+            EXEC (N'CREATE USER ' + QUOTENAME(@name) + N' WITH SID = ' + @sidLiteral + N', TYPE = E');
         EXEC (N'ALTER ROLE db_owner ADD MEMBER ' + QUOTENAME(@name));
         """;
 
     public const int Attempts = 12;
+
+    /// <summary>
+    /// Errors worth waiting out: a paused or resuming serverless database (40613, 40197, 40501), a firewall rule not
+    /// applied yet (40615), and network timeouts (-2, 53, 10053, 10054, 10060). Anything else, such as a login the server
+    /// refuses, fails at once.
+    /// </summary>
+    public static readonly IReadOnlySet<int> TransientErrors = new HashSet<int> { 40613, 40197, 40501, 40615, 49918, 49919, 49920, -2, 53, 10053, 10054, 10060 };
+
+    private static readonly string[] SqlScope = ["https://database.windows.net/.default"];
 
     public sealed record Request(string ServerFqdn, string Database, string IdentityName, string IdentityClientId)
     {
@@ -28,7 +41,6 @@ public static partial class DatabaseUserGrant
         {
             DataSource = $"tcp:{ServerFqdn},1433",
             InitialCatalog = Database,
-            Authentication = SqlAuthenticationMethod.ActiveDirectoryDefault,
             Encrypt = SqlConnectionEncryptOption.Mandatory,
             ConnectTimeout = 60,
         }.ConnectionString;
@@ -64,8 +76,16 @@ public static partial class DatabaseUserGrant
         return request;
     }
 
-    public static async Task<int> RunAsync(Func<string, string?> env, TextWriter output, TextWriter error, TimeSpan retryDelay)
+    /// <summary>
+    /// Signs in only as the Azure CLI session (the deployer's own, or the one azure/login creates in CI), the same
+    /// principal that opened the firewall rule; never another credential in the default chain.
+    /// </summary>
+    public static async Task<int> RunAsync(Func<string, string?> env, TextWriter output, TextWriter error, TimeSpan retryDelay) =>
+        await RunAsync(env, output, error, retryDelay, new Azure.Identity.AzureCliCredential()).ConfigureAwait(false);
+
+    public static async Task<int> RunAsync(Func<string, string?> env, TextWriter output, TextWriter error, TimeSpan retryDelay, Azure.Core.TokenCredential credential)
     {
+        ArgumentNullException.ThrowIfNull(credential);
         ArgumentNullException.ThrowIfNull(output);
         ArgumentNullException.ThrowIfNull(error);
         Request request;
@@ -84,7 +104,8 @@ public static partial class DatabaseUserGrant
         {
             try
             {
-                await using var connection = new SqlConnection(request.ConnectionString);
+                var token = await credential.GetTokenAsync(new Azure.Core.TokenRequestContext(SqlScope), CancellationToken.None).ConfigureAwait(false);
+                await using var connection = new SqlConnection(request.ConnectionString) { AccessToken = token.Token };
                 await connection.OpenAsync().ConfigureAwait(false);
                 await using var command = new SqlCommand(Sql, connection);
                 command.Parameters.Add(new SqlParameter("@name", System.Data.SqlDbType.NVarChar, 128) { Value = request.IdentityName });
@@ -93,7 +114,7 @@ public static partial class DatabaseUserGrant
                 await output.WriteLineAsync($"{request.IdentityName} is db_owner of {request.Database}.").ConfigureAwait(false);
                 return 0;
             }
-            catch (SqlException e) when (attempt < Attempts)
+            catch (SqlException e) when (attempt < Attempts && TransientErrors.Contains(e.Number))
             {
                 await error.WriteLineAsync($"Attempt {attempt} of {Attempts} failed ({e.Number}: {e.Message}); retrying.").ConfigureAwait(false);
                 await Task.Delay(retryDelay).ConfigureAwait(false);
