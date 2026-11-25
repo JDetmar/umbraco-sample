@@ -1,0 +1,3 @@
+[*.cs]
+# Test names describe behaviour and condition in readable sentences (ES-005).
+dotnet_diagnostic.CA1707.severity = none

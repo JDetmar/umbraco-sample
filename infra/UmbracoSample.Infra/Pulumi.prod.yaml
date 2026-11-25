@@ -1,0 +1,8 @@
+# Prod: one warm replica (Umbraco cold starts are slow), Front Door with WAF in front (ADR 0004, ADR 0010).
+config:
+  azure-native:location: uksouth
+  umbraco-sample:environment: prod
+  umbraco-sample:minReplicas: "1"
+  umbraco-sample:monthlyBudget: "60"
+  umbraco-sample:image: ghcr.io/example/umbraco-sample@sha256:0000000000000000000000000000000000000000000000000000000000000000
+  umbraco-sample:enableEdge: "true"

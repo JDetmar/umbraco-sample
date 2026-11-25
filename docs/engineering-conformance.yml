@@ -63,6 +63,7 @@ clauses:
     evidence:
       - Every third-party action in .github/workflows is pinned to a full commit SHA.
       - Every workflow declares top-level `permissions` with read-only defaults; the policy tests reject unpinned actions, missing permissions and write-all or read-all.
+      - Job-level write grants are allowlisted by a policy test (Write_permissions_are_granted_only_to_allowlisted_jobs): packages write only to the ci publish job, which runs only on main, checks out nothing and runs no third-party build code; security-events write only to the CodeQL job; id-token write only to the infra preview job and the ci deploy-dev job, for OIDC sign-in to Azure and Pulumi Cloud (no stored Azure or Pulumi secret); preview runs only on main or a manual run, deploy-dev only on main after publish (ADR 0013).
   ES-018:
     status: compliant
     evidence:
@@ -71,6 +72,7 @@ clauses:
     status: compliant
     evidence:
       - Every docs/adr/ADR-NNNN-*.md records context, alternatives, decision and consequences; the policy test Every_record_is_named_ADR_NNNN_and_listed_in_the_index checks naming, the index and unique numbers.
+      - docs/architecture.md keeps runtime and delivery diagrams of the deployed system, updated with any infra change that alters them.
   ES-020:
     status: compliant
     evidence:
@@ -102,9 +104,10 @@ clauses:
     status: compliant
     evidence:
       - ServiceDefaults exports OpenTelemetry traces and metrics over OTLP (vendor-neutral); health-probe requests are filtered out of traces.
+      - When APPLICATIONINSIGHTS_CONNECTION_STRING is set (Azure), ServiceDefaults also exports traces and metrics to Application Insights with the Azure Monitor exporter, authenticated by the workload's managed identity (WorkloadIdentity); OTLP is unchanged for local runs.
       - Umbraco's Serilog pipeline replaces the OpenTelemetry log provider, so structured logs go to stdout as compact JSON (appsettings.json) for the container platform to collect, rather than over OTLP.
       - /health/live, /health/ready (includes Umbraco runtime level) and /health/schema (uSync schema drift) are mapped in every environment; the integration tests assert all three, and unit tests cover every drift outcome, including the vacuous no-handlers case.
-      - scripts/smoke.sh is the post-deployment check; CI runs it against the built image with SQL Server on every pull request.
+      - scripts/smoke.sh is the post-deployment check; CI runs it against the built image with SQL Server on every pull request, and the deploy-dev job (ADR 0013) runs it against dev after every deploy. A failed smoke test fails the run but does not roll back; recovery is a fix forward or a revert (docs/infra-setup.md, section 4).
   ES-036:
     status: deviation
     obligations:
@@ -124,7 +127,10 @@ clauses:
         status: unknown
         evidence:
           - The image carries the source revision as an OCI label and as the OpenTelemetry service.version; CI builds it from pinned base-image digests and records the image ID, an SPDX SBOM, and the stylesheet toolchain (Node version, npm lock-file hash, site.css hash) per run.
-          - No release or registry push exists yet; publishing to a registry and promotion by digest arrive with the deployment pipeline, which needs owner approval.
+          - On main, after every gate passes, the publish job pushes the image that passed the container smoke test (handed over with docker save, no rebuild) to GHCR as sha-<revision> and main, and writes the registry digest, source revision and SBOM artifact link to the run summary.
+          - A main run superseded while still queued is cancelled by the concurrency group, so a revision merged in quick succession may get no sha-<revision> image; the next revision's image includes its changes.
+          - The SBOM is a run artifact, not attached to the registry digest; see DEV-014.
+          - Deployed version is not recorded yet; promotion by digest arrives with the deployment pipeline, which needs owner approval.
   ES-052:
     status: compliant
     evidence:
@@ -211,7 +217,7 @@ deviations:
     compensating_controls: No environment is deployed yet; the site has no media items.
     owner: repository-owner
     opened: 2026-11-24
-    disposition: Before the first deployment, Pulumi generates a per-environment key into Key Vault and the site reads Umbraco:CMS:Imaging:HMACSecretKey from it; Front Door rate limiting covers /media.
+    disposition: "Declared in infra (ADR 0010): the owner sets a per-environment imagingHmacKey Pulumi secret, Pulumi writes it to Key Vault, and the container reads Umbraco:CMS:Imaging:HMACSecretKey as a Key Vault reference (mock test Container_secrets_are_key_vault_references_read_with_the_site_identity). Closes when a deployed environment is verified to reject unsigned resize URLs; Front Door rate limiting covers /media."
 
   - id: DEV-005
     kind: gap
@@ -257,10 +263,13 @@ deviations:
     obligations:
       - Sensitive data is encrypted in transit
     summary: The site does not send Strict-Transport-Security. The container sees plain HTTP behind the edge, so HSTS is planned at Front Door (ADR 0008).
-    consequence: Until the edge sends it, a visitor's first request over http can be downgraded. No environment is deployed yet, so nothing is exposed today.
-    compensating_controls: Nothing is deployed. Back-office sign-in will only be reachable over HTTPS through the edge (ADR 0004).
+    consequence: Until the edge sends it, a visitor's first request over http can be downgraded. The infrastructure (ADR 0010) makes a dev stack deployable without the edge, so a deployed dev site, including its back office, would be public over HTTPS without HSTS or a WAF.
+    compensating_controls: Prod cannot deploy without the edge (SiteSettings.Validate). Dev uses synthetic content only, the lead form stays off, the Container Apps ingress refuses plain HTTP, and Umbraco installs unattended so the installer is never public. The owner accepted this for dev only on 2026-11-24 (threat model 0002, R1); it does not extend to prod.
     owner: repository-owner
     opened: 2026-11-24
+    approver: repository-owner
+    approval_ref: Owner accepted the dev exposure in the project thread on 2026-11-24 (threat model 0002, R1), recorded in pull request 15; the gap stays open for prod
+    threat_model_ref: docs/threat-models/0002-azure-environment.md
     disposition: "In Phase 5, Front Door sends HSTS (max-age at least one year, includeSubDomains once every subdomain is HTTPS) and redirects http to https, and the post-deployment smoke test asserts both. Alternative recorded in ADR 0008: ForwardedHeaders plus UseHsts in the app."
 
   - id: DEV-011
@@ -297,4 +306,77 @@ deviations:
     compensating_controls: The hop stays inside the managed environment's private network; forms are not enabled on a public environment before Phase 5 (threat model 0001, R2).
     owner: repository-owner
     opened: 2026-11-24
-    disposition: "Owner to decide in Phase 5: accept the managed-environment hop as a risk (an owner decision, not an agent one), or enable end-to-end encryption inside the environment (Container Apps peer-to-peer encryption) and record its cost and evidence here."
+    disposition: "Fix declared in infra (ADR 0010): the Container Apps environment enables peer-to-peer encryption, so the ingress-to-container hop is TLS, at no extra charge (mock test The_container_apps_environment_runs_in_the_apps_subnet). Closes when a deployed environment is verified with it enabled."
+
+  - id: DEV-014
+    kind: gap
+    clauses: [ES-049, ES-050]
+    obligations:
+      - Released artifacts are traceable to their SBOM (SHOULD)
+      - Released artifacts are signed or carry build provenance (SHOULD)
+    summary: The image published to GHCR is neither signed nor attested, and its SBOM is a CI run artifact linked from the run summary rather than attached to the registry digest.
+    consequence: A consumer holding only a digest cannot verify who built it or find its SBOM once run artifacts expire (90 days by default).
+    compensating_controls: Images are pinned by digest everywhere they are used; only the main branch, behind required CI, publishes; the run summary records digest, source revision and SBOM link together.
+    owner: repository-owner
+    opened: 2026-11-24
+    disposition: Before the first production deployment, add build provenance and an SBOM attestation bound to the digest (for example actions/attest-build-provenance and actions/attest-sbom), which needs owner approval as new dependencies.
+
+  - id: DEV-015
+    kind: accepted_risk
+    clauses: [ES-030, ES-047]
+    obligations:
+      - Services scale and recover without losing user sessions
+    summary: Accepted by the owner for dev only (2026-11-24). The site runs as a single replica. Umbraco has no shared data-protection key ring and no explicit server roles, so a second replica would break back-office sign-in and antiforgery tokens, and both replicas would run scheduled publishing.
+    consequence: No horizontal scaling; a replica restart signs editors out and drops in-flight requests. A replica stuck in Umbraco's BootFailed state stays alive but unready until restarted.
+    compensating_controls: SiteSettings refuses maxReplicas above 1; multiple revisions allow rollback; a startup probe gives a resuming database five minutes.
+    owner: repository-owner
+    opened: 2026-11-24
+    approver: repository-owner
+    approval_ref: Owner decision in the project thread on 2026-11-24 (threat model 0002, R3), recorded in pull request 15
+    threat_model_ref: docs/threat-models/0002-azure-environment.md
+    review_triggers:
+      - Any stack other than dev, or prod traffic.
+      - Raising maxReplicas above 1.
+    disposition: Before prod traffic, persist the data-protection key ring to Blob storage protected by Key Vault (managed identity), set SchedulingPublisher and Subscriber server roles, make liveness fail when Umbraco's runtime level is BootFailed, then lift the replica limit.
+
+  - id: DEV-016
+    kind: gap
+    clauses: [ES-024]
+    obligations:
+      - Long-lived credentials have a documented lifetime (MUST) and are short-lived where possible (SHOULD)
+    summary: "Was: CI previews used a stored Pulumi access token that could decrypt stack secrets. Now: the preview gets a short-lived token by OIDC exchange (pulumi/auth-actions); this entry closes once a preview has run that way."
+    consequence: A leaked token exposes the Umbraco admin password and imaging key of every stack it can read, and can change stack state.
+    compensating_controls: The token lives only in the infra-preview environment (main only, owner review); preview runs only on main or a manual run; the token has a 90-day expiry and a rotation reminder (docs/infra-setup.md).
+    owner: repository-owner
+    opened: 2026-11-24
+    disposition: "Fix in place: the owner approved pulumi/auth-actions on 2026-11-24 (threat model 0002, R2), and the infra preview job now exchanges its GitHub OIDC token for a short-lived Pulumi token; no PULUMI_ACCESS_TOKEN is stored. Closes when the first preview has run this way."
+
+  - id: DEV-017
+    kind: accepted_risk
+    clauses: [ES-024, ES-040, ES-054]
+    obligations:
+      - Identities have the least privilege their job needs
+    summary: Accepted by the owner for dev, with conditions (2026-11-24). The deploy-dev identity (ADR 0013) is standing and privileged; Contributor on the subscription, Role Based Access Control Administrator limited to three roles, SQL administrator group membership, and a short-lived Pulumi token (personal, acting as the owner, on an individual Pulumi account). These rights reach any stack in the same subscription and Pulumi organization, not only dev, and during up it opens a SQL firewall rule for a shared GitHub-hosted runner's IP.
+    consequence: A merged malicious or broken change could change or read resources and stack secrets beyond dev, or reach SQL from the runner's IP while the rule is open.
+    compensating_controls: Federated only to this repository's dev environment, which runs only on main; review before merge (ES-028, not yet enforced for admins, DEV-001); CI gates before publish; post-deploy smoke test; dev holds only synthetic content; the firewall rule has one fixed name and is removed on exit; CD stays off until the owner amends the delegation envelope and sets CD_DEV_ENABLED.
+    owner: repository-owner
+    opened: 2026-11-24
+    approver: repository-owner
+    approval_ref: Owner decision in the project thread on 2026-11-24 (threat model 0002, R4, "Accept with conditions"), recorded in pull request 30
+    threat_model_ref: docs/threat-models/0002-azure-environment.md
+    review_triggers:
+      - Before any prod stack is created in the same subscription or Pulumi organization.
+      - Any change to the deploy identity's roles or federated credentials.
+    disposition: "Conditions of the acceptance, each a follow-up: (a) prod lives in a separate subscription and Pulumi project, or is never created with these credentials in reach; (b) a SQL administrator group for dev only; (c) Contributor narrowed to the resource group once a bootstrap stack creates it; (d) a team Pulumi token limited to the dev stack if the plan allows; (e) the database user step moves into the VNet, so no firewall rule is opened for a runner's IP."
+
+  - id: DEV-018
+    kind: gap
+    clauses: [ES-001, ES-006]
+    obligations:
+      - Tests have a meaningful failure oracle for the behaviour they guard
+    summary: The database user tool's T-SQL batch is checked only by text assertions in unit tests, not parsed by SQL Server in CI. A syntax error in it (EXEC with a function call) passed every test and first failed in the dev deploy on 2026-11-25.
+    consequence: A later edit to the batch that breaks its syntax is caught only by the next dev deploy, which then fails at the database user step and leaves the app on its previous revision.
+    compensating_controls: Unit tests forbid the known-bad EXEC form and assert the statement shape; the batch runs in one transaction, so a failure changes nothing; CD deploys dev on every merge, so the failure is seen within one run; dev holds only synthetic content.
+    owner: repository-owner
+    opened: 2026-11-25
+    disposition: Add an integration test that sends the batch to the Aspire SQL Server container with SET PARSEONLY ON (TYPE = E users themselves exist only in Azure SQL, so execution stays covered by the dev deploy). Not done in the fix PR to keep the production fix small.

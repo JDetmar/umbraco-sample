@@ -39,6 +39,62 @@ public sealed partial class SupplyChainPolicyTests
         broad.ShouldBeEmpty("ES-017: write-all and read-all grant more than any job needs; list each permission.");
     }
 
+    [Fact]
+    public void Write_permissions_are_granted_only_to_allowlisted_jobs()
+    {
+        // (workflow, job, permission): each write grant is reviewed here before it can exist (ES-017).
+        (string, string, string)[] allowed = [("ci.yml", "publish", "packages"), ("codeql.yml", "analyze", "security-events"), ("infra.yml", "preview", "id-token"), ("ci.yml", "deploy-dev", "id-token")];
+
+        var grants = new List<(string, string, string)>();
+        foreach (var file in WorkflowFiles())
+        {
+            string? job = null;
+            foreach (var line in File.ReadAllLines(file.FullName))
+            {
+                var jobMatch = JobHeader().Match(line);
+                if (jobMatch.Success)
+                {
+                    job = jobMatch.Groups[1].Value;
+                }
+
+                var grant = WriteGrant().Match(line);
+                if (grant.Success)
+                {
+                    grants.Add((file.Name, job ?? "<top level>", grant.Groups[1].Value));
+                }
+            }
+        }
+
+        grants.ShouldNotBeEmpty();
+        grants.Except(allowed).ShouldBeEmpty("ES-017: a new write permission needs review; add it to this allowlist with a reason in the ledger.");
+    }
+
+    [Fact]
+    public void The_dev_deploy_runs_only_from_main_in_the_dev_environment_one_at_a_time()
+    {
+        // The dev environment binds the OIDC subject the deploy identity trusts; dropping it, or the main-only
+        // condition, would let other runs ask for the deploy identity's token (ADR 0013, threat model 0002 R4).
+        var job = JobBlock("ci.yml", "deploy-dev");
+
+        job.ShouldContain("    needs: publish");
+        job.ShouldContain("    environment: dev");
+        job.ShouldContain("github.ref == 'refs/heads/main'");
+        job.ShouldContain("      group: pulumi-dev");
+        job.ShouldContain("      cancel-in-progress: false");
+        job.ShouldContain("persist-credentials: false");
+        job.ShouldContain("steps.current.outputs.deploy == 'true'");
+        JobBlock("infra.yml", "preview").ShouldContain("      group: pulumi-dev");
+    }
+
+    private static string JobBlock(string workflow, string job)
+    {
+        var lines = File.ReadAllLines(Path.Join(RepositoryRoot.Find().FullName, ".github", "workflows", workflow));
+        var start = Array.IndexOf(lines, $"  {job}:");
+        start.ShouldBeGreaterThanOrEqualTo(0, $"{workflow} has no job {job}");
+        var end = Array.FindIndex(lines, start + 1, line => JobHeader().IsMatch(line));
+        return string.Join('\n', lines[start..(end < 0 ? lines.Length : end)]);
+    }
+
     [Theory]
     [InlineData("frontend")]
     [InlineData("e2e")]
@@ -188,6 +244,12 @@ public sealed partial class SupplyChainPolicyTests
 
     [GeneratedRegex(@"^FROM mcr\.microsoft\.com/playwright:v(?<version>\d+\.\d+\.\d+)-noble@sha256:[0-9a-f]{64}$")]
     private static partial Regex PlaywrightImage();
+
+    [GeneratedRegex(@"^  ([A-Za-z0-9_-]+):\s*$")]
+    private static partial Regex JobHeader();
+
+    [GeneratedRegex(@"^\s+([a-z-]+):\s*write\s*(#.*)?$")]
+    private static partial Regex WriteGrant();
 
     [GeneratedRegex(@"permissions:\s*(write-all|read-all)")]
     private static partial Regex BroadPermissions();

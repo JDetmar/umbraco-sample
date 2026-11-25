@@ -28,6 +28,8 @@ Use the Makefile targets; CI runs the same ones (ES-052).
 | Smoke-test a running site | `make smoke URL=<base url>` |
 | Run locally (Aspire: site and SQL Server) | `make run` |
 | Apply formatting | `make format` |
+| Infrastructure build and Pulumi mock tests (no cloud account) | `make infra-test` |
+| Preview a stack (owner sign-in to Pulumi Cloud and Azure; never `up`) | `make infra-preview STACK=dev` |
 
 Prerequisites: GNU Make, the exact .NET SDK in `global.json` (`make bootstrap` restores the pinned local tools, including the Aspire CLI that the AppHost build needs), Node.js 26 LTS (for `make frontend`; any 26.x works locally, CI uses the exact version in `.nvmrc`), Docker or Podman, and gitleaks 8.30.1 (for `make secrets` and `make validate`).
 
@@ -57,8 +59,10 @@ Agents MUST run `make validate` before handing off a change, or record why it co
 | `tests/UmbracoSample.Integration.Tests` | Tests against the real stack through Aspire (`Category=Integration`) |
 | `frontend/` | Design tokens (`tokens/`), stylesheet sources and the build (ADR 0007); output goes to `wwwroot/dist`, never committed |
 | `e2e/` | Playwright journeys, axe scans and visual baselines; run by `scripts/e2e.sh` inside the image pinned in `e2e/Dockerfile` |
+| `infra/` | Pulumi (C#) project and its mock tests (ADR 0010); owner setup in `docs/infra-setup.md` |
 | `scripts/` | Operational scripts, such as the post-deployment smoke test |
 | `docs/components/` | One page per component: fields, rules, fixtures and tests |
+| `docs/architecture.md` | Architecture diagrams (Mermaid) of the deployed site and the delivery path; updated with any `infra/` change that alters them |
 | `docs/adr/` | Architecture decision records (ES-019) |
 | `docs/engineering-conformance.yml` | Conformance ledger: evidence and open deviations (ES-038) |
 | `docs/dependencies.md` | Dependency register with ES-015 justifications |
@@ -94,12 +98,12 @@ Agents MAY, without asking:
   3. The PR body lists the ES clauses and framework IDs the change touches, with the evidence for each.
 
 Bounds on delegated work (ES-048, ES-054):
-- Blast radius: this repository only. No other repository, cloud subscription, package registry or external service is changed.
+- Blast radius: this repository only, apart from the dev environment that CD deploys from `main` (ADR 0013). No other repository, cloud subscription, package registry or external service is changed.
 - Every change is a pull request that can be reverted with one revert commit; force-pushes only on the agent's own unmerged branches.
 - An unattended run stops after its stated time budget (8 hours for the first build-out run), and at any point where a step needs owner approval, failing CI cannot be fixed within three attempts, or a finding cannot be resolved without changing scope.
 
 Agents MUST NOT, without the owner's explicit approval:
-- Deploy to any Azure environment or run `pulumi up`.
+- Deploy to any Azure environment or run `pulumi up`. The one exception is CD: once the owner enables it, the `deploy-dev` job deploys a `main` revision to dev after CI passes, if it is still the head of `main` (ADR 0013), so merging your own pull request can deploy dev. Prod is never deployed by an agent or by CD.
 - Change repository settings, branch protection, secrets or GitHub App permissions.
 - Approve an exception, accepted risk or emergency in the ledger.
 - Add a dependency that is not already approved in `docs/dependencies.md`.

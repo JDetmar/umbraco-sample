@@ -1,3 +1,4 @@
+using Azure.Monitor.OpenTelemetry.Exporter;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
@@ -75,12 +76,18 @@ public static class Extensions
             builder.Services.AddOpenTelemetry().UseOtlpExporter();
         }
 
-        // Uncomment the following lines to enable the Azure Monitor exporter (requires the Azure.Monitor.OpenTelemetry.AspNetCore package)
-        //if (!string.IsNullOrEmpty(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]))
-        //{
-        //    builder.Services.AddOpenTelemetry()
-        //       .UseAzureMonitor();
-        //}
+        // In Azure, traces and metrics also go to Application Insights. The exporter authenticates with the workload's
+        // managed identity; the instrumentation key in the connection string only routes data, and the infrastructure
+        // disables key-only ingestion on the resource (ES-024). Logs stay on stdout (Serilog), which the Container Apps
+        // environment sends to Log Analytics.
+        var appInsights = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+        if (!string.IsNullOrWhiteSpace(appInsights))
+        {
+            var credential = WorkloadIdentity.Credential(builder.Configuration);
+            builder.Services.AddOpenTelemetry()
+                .WithTracing(tracing => tracing.AddAzureMonitorTraceExporter(o => { o.ConnectionString = appInsights; o.Credential = credential; }))
+                .WithMetrics(metrics => metrics.AddAzureMonitorMetricExporter(o => { o.ConnectionString = appInsights; o.Credential = credential; }));
+        }
 
         return builder;
     }

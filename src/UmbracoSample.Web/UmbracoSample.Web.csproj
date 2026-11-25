@@ -6,6 +6,7 @@
   <ItemGroup>
     <PackageReference Include="Umbraco.Cms" />
     <PackageReference Include="uSync" />
+    <PackageReference Include="Umbraco.StorageProviders.AzureBlob" />
     <ProjectReference Include="..\UmbracoSample.ServiceDefaults\UmbracoSample.ServiceDefaults.csproj" />
     <ProjectReference Include="..\UmbracoSample.Domain\UmbracoSample.Domain.csproj" />
   </ItemGroup>

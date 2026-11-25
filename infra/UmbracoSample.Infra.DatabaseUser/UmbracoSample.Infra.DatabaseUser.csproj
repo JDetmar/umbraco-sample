@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Creates the site's contained database user during `pulumi up` (ADR 0010). Azure has no API for database users,
+       so this runs SQL as the deployer, with the same SQL driver the site uses. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="Azure.Identity" />
+  </ItemGroup>
+
+</Project>

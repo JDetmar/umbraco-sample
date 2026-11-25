@@ -1,0 +1,91 @@
+name: infra
+
+# Infrastructure checks (ADR 0010). Mock tests run on infra changes here and in the required ci validate job.
+# Preview runs only once the owner enables it (repository variable PULUMI_PREVIEW_ENABLED=true), only for reviewed
+# code (main or a manual run), and never runs `up`: preview decrypts stack secrets, so pull-request code never gets the token.
+on:
+  pull_request:
+    paths: ["infra/**", ".github/workflows/infra.yml", "Directory.Packages.props", "global.json"]
+  push:
+    branches: [main]
+    paths: ["infra/**", ".github/workflows/infra.yml", "Directory.Packages.props", "global.json"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infra-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+  CI: "true"
+
+jobs:
+  test:
+    name: infra (build and Pulumi mock tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+      - run: make infra-test
+
+  preview:
+    name: infra (pulumi preview, dev)
+    needs: test
+    # Off until the owner has created the Azure federated credential and the Pulumi OIDC trust policy (docs/infra-setup.md).
+    if: vars.PULUMI_PREVIEW_ENABLED == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: infra-preview
+    # Shares the dev stack's lock with the deploy-dev job in ci.yml, so a preview never collides with a deploy.
+    concurrency:
+      group: pulumi-dev
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write # OIDC to Azure and Pulumi Cloud; no stored Azure or Pulumi secret (ES-024)
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      # Exchanges the GitHub OIDC token for a short-lived Pulumi token (sets PULUMI_ACCESS_TOKEN for later steps).
+      # Pulumi Cloud issues it only to this repository's infra-preview environment (trust policy, docs/infra-setup.md).
+      - uses: pulumi/auth-actions@273044cc19e63ea565285da8edd4e059126a0bdb # v2.1.2
+        with:
+          organization: ${{ vars.PULUMI_ORG }}
+          # Organization and team tokens need a paid Pulumi organization plan; on an individual account the
+          # organization is the user, so the exchange asks for that user's personal token (docs/infra-setup.md).
+          requested-token-type: urn:pulumi:token-type:access_token:personal
+          scope: user:${{ vars.PULUMI_ORG }}
+      # Dev's stack file pins no image; preview the one main last published (ADR 0013).
+      - name: Look up the published image
+        id: image
+        run: |
+          set -euo pipefail
+          image="$(scripts/published-image.sh "ghcr.io/${GITHUB_REPOSITORY,,}")"
+          echo "image=${image}" >> "${GITHUB_OUTPUT}"
+      - uses: pulumi/actions@96c7761824268174e0d2a4e8c7d75671eebd24a7 # v7.1.0
+        with:
+          command: preview
+          stack-name: ${{ vars.PULUMI_ORG }}/umbraco-sample/dev
+          work-dir: infra/UmbracoSample.Infra
+          diff: true
+          pulumi-version: 3.275.0 # pinned CLI, the same in every job (ES-013)
+        env:
+          SITE_IMAGE: ${{ steps.image.outputs.image }}
+          ARM_USE_OIDC: "true"
+          ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}

@@ -1,0 +1,19 @@
+# Dev: scales to zero, smallest SKUs, no edge. Secrets are never stored here; they come from Pulumi Cloud config secrets.
+config:
+  azure-native:location: westus2
+  umbraco-sample:environment: dev
+  umbraco-sample:minReplicas: "0"
+  umbraco-sample:monthlyBudget: "20"
+  umbraco-sample:budgetContactEmail:
+    secure: AAABADRPcbIs2k4b0VhcQBdI3Tbd7HAjkuR06MD0S/tlJtqB5JDQ8Uk6kPDG6t+arQ==
+  umbraco-sample:adminEmail:
+    secure: AAABAMefhF6nC4V6kuOV+ETnJ1jEEYjQkgBfzy/9R7ynNsDFJJMCBGfEoB/kpBnQlg==
+  umbraco-sample:sqlAdminGroupName:
+    secure: AAABAIHMBDCbpHediBJWQyMqwxGD39b8P8elxNVO4qjlrTuzJeR13ZdbqejnaAcstwiHXrCqQ+A/
+  umbraco-sample:sqlAdminGroupObjectId:
+    secure: AAABANz/QoGHXbsghB6Yts5yaYox2149I2QfUTYypPNim8oXX7h/06qkQ55D0N662ADCaC3UPWh2Y0ldDcmt9cGAo7Q=
+  umbraco-sample:enableEdge: "false"
+  umbraco-sample:umbracoAdminPassword:
+    secure: AAABANTqdqztk/wLTk67t3OxwscTqRc4tbX42iKrGSO6kR82yPsB7f4UgI8lTg==
+  umbraco-sample:imagingHmacKey:
+    secure: AAABAOUPHwg0RIOrTEfZiJo/XVgHlAT691bsxOnfPvTyoQUctNfiq1pRwthTk3vN4VbS3c5m0qPUU+UB9BvlMUJkRnDql4VhGXcUJZeLY6dZgWtc78LVrEcgN1fiNBFMiN4ipCoZ2f9MW4I5O87PIzTzD0hhuaOL
