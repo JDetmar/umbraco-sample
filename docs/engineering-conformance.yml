@@ -329,7 +329,7 @@ deviations:
     clauses: [ES-030, ES-047]
     obligations:
       - Services scale and recover without losing user sessions
-    summary: Accepted by the owner for dev only (2026-11-24). The site runs as a single replica. Umbraco has no shared data-protection key ring and no explicit server roles, so a second replica would break back-office sign-in and antiforgery tokens, and both replicas would run scheduled publishing.
+    summary: Accepted by the owner for dev only (2026-11-24). The site runs as a single replica. Umbraco has no shared data-protection key ring, so a second replica would break back-office sign-in and antiforgery tokens. Every instance declares itself the single Umbraco server (ServerRoleComposer), so a second replica would also run scheduled publishing. While a new revision starts, the previous one can briefly run alongside it with the same role.
     consequence: No horizontal scaling; a replica restart signs editors out and drops in-flight requests. A replica stuck in Umbraco's BootFailed state stays alive but unready until restarted.
     compensating_controls: SiteSettings refuses maxReplicas above 1; multiple revisions allow rollback; a startup probe gives a resuming database five minutes.
     owner: repository-owner
@@ -340,7 +340,7 @@ deviations:
     review_triggers:
       - Any stack other than dev, or prod traffic.
       - Raising maxReplicas above 1.
-    disposition: Before prod traffic, persist the data-protection key ring to Blob storage protected by Key Vault (managed identity), set SchedulingPublisher and Subscriber server roles, make liveness fail when Umbraco's runtime level is BootFailed, then lift the replica limit.
+    disposition: Before prod traffic, persist the data-protection key ring to Blob storage protected by Key Vault (managed identity), replace the single server role with SchedulingPublisher and Subscriber roles, make liveness fail when Umbraco's runtime level is BootFailed, then lift the replica limit.
 
   - id: DEV-016
     kind: gap
