@@ -1,6 +1,6 @@
 # 0015. Single Umbraco server role and one active revision
 
-- Status: Proposed
+- Status: Accepted by the owner on 2026-11-25 (project thread decision, "One active revision")
 - Date: 2026-11-25
 - Decider: owner
 - Clauses: ES-019, ES-014, ES-030. Amends ADR 0004's rollback by traffic shift.
