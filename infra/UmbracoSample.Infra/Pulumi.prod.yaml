@@ -6,3 +6,5 @@ config:
   umbraco-sample:monthlyBudget: "60"
   umbraco-sample:image: ghcr.io/example/umbraco-sample@sha256:0000000000000000000000000000000000000000000000000000000000000000
   umbraco-sample:enableEdge: "true"
+  # Availability test of /health/ready from three regions every 15 minutes, emailing the budget contact (OPS-03).
+  umbraco-sample:uptimeTest: "true"

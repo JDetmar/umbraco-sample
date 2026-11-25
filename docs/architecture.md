@@ -28,6 +28,7 @@ flowchart LR
         kv["Key Vault<br/>RBAC"]
         ai["Application Insights<br/>+ Log Analytics"]
         budget["Consumption budget<br/>80% / 100% alerts"]
+        uptime["Availability test and alert<br/>/health/ready, 3 regions<br/>(uptimeTest: prod only)"]
     end
 
     map["Marketing automation<br/>platform API (planned, D4)"]

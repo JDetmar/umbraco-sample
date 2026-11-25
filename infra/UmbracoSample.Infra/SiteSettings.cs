@@ -11,7 +11,8 @@ public sealed partial record SiteSettings(
     int MaxReplicas,
     decimal MonthlyBudget,
     string Image,
-    bool EnableEdge)
+    bool EnableEdge,
+    bool UptimeTest = false)
 {
     public static SiteSettings From(Config config)
     {
@@ -23,7 +24,8 @@ public sealed partial record SiteSettings(
             MaxReplicas: int.Parse(config.Get("maxReplicas") ?? "1", CultureInfo.InvariantCulture),
             MonthlyBudget: decimal.Parse(config.Require("monthlyBudget"), CultureInfo.InvariantCulture),
             Image: ResolveImage(config.Get("image"), System.Environment.GetEnvironmentVariable("SITE_IMAGE")),
-            EnableEdge: bool.Parse(config.Get("enableEdge") ?? "false"));
+            EnableEdge: bool.Parse(config.Get("enableEdge") ?? "false"),
+            UptimeTest: bool.Parse(config.Get("uptimeTest") ?? "false"));
 
         settings.Validate();
         return settings;
@@ -66,6 +68,13 @@ public sealed partial record SiteSettings(
         if (Environment == "prod" && !EnableEdge)
         {
             throw new ArgumentException("prod must sit behind the edge (Front Door with WAF, HSTS); see ADR 0010 and DEV-010.");
+        }
+
+        // A test every 15 minutes keeps a scale-to-zero app awake about a third of the time, which costs more than the
+        // dev budget; scale-to-zero environments rely on the daily smoke test instead (OPS-03).
+        if (UptimeTest && MinReplicas < 1)
+        {
+            throw new ArgumentException("uptimeTest needs minReplicas >= 1: probing a scale-to-zero app keeps it awake and wakes it cold.");
         }
 
         if (MonthlyBudget <= 0)
