@@ -85,7 +85,7 @@ How to read the status column:
 | ARC-06 | Forms native in the site, posting to the marketing automation platform | planned | Phase 4, after the owner reviews threat model 0001. |
 | ARC-07 | Analytics and A/B test hooks in components | gap | Not started; no tracker is on the site, and any would need the third-party allowlist (ADR 0008). |
 | ARC-08 | Clean structured data for AI search engines | met | JSON-LD on every page (`src/UmbracoSample.Web/StructuredData`), unit tests and `StructuredDataTests` (integration). |
-| ENV-01 | All Azure resources as code; no manual changes | partly | Pulumi C# stack (ADR 0010) and CD for dev (ADR 0013). The scheduled drift check (`pulumi refresh --preview-only`) is not built yet (Phase 5). |
+| ENV-01 | All Azure resources as code; no manual changes | partly | Pulumi C# stack (ADR 0010) and CD for dev (ADR 0013). A daily check (`dev-check.yml`) runs a refreshed preview of dev with `expect-no-changes`, so drift fails the run; dev only, and it runs once the owner approves it (DEV-017). |
 | ENV-02 | Dev, staging and production with a promotion path | deferred | Owner decision, 2026-11-25: dev only for now (recorded in [the plan](plan.md), Phase 5). Trigger: the owner plans staging or production. The image is promoted by digest, so a later stage reuses the same artifact. |
 | ENV-03 | Every deployment automated and reversible | partly | CD deploys dev from `main` after every gate (ADR 0013). Rollback follows ES-014: roll forward by default, previous revision only when compatible. |
 | ENV-04 | A preview environment per pull request | deferred | Under ES-060 until its trigger exists. |
@@ -117,7 +117,7 @@ How to read the status column:
 | CMP-07 | Yearly manual accessibility audit | gap | DEV-008. |
 | OPS-01 | Web application firewall in front of the site | planned | Front Door with WAF rules (Phase 5, ADR 0010). |
 | OPS-02 | Third-party penetration test | outside the code | |
-| OPS-03 | Real user monitoring, uptime checks and alerting | partly | Server-side OpenTelemetry to Application Insights. No real user (browser) monitoring, uptime check or alert rules yet. |
+| OPS-03 | Real user monitoring, uptime checks and alerting | partly | Server-side OpenTelemetry to Application Insights. A daily smoke test of dev (`dev-check.yml`) fails the run when the site is down; GitHub notifies on failure. No real user (browser) monitoring, continuous uptime check or alert rules yet. |
 | OPS-04 | SLOs for availability and page speed | gap | Not started. |
 | OPS-05 | Backups with tested restores | planned | Phase 5: a scripted restore test. |
 | OPS-06 | Incident runbooks and on-call | outside the code | |

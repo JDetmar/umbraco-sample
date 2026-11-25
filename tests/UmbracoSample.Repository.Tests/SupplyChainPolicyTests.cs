@@ -43,7 +43,7 @@ public sealed partial class SupplyChainPolicyTests
     public void Write_permissions_are_granted_only_to_allowlisted_jobs()
     {
         // (workflow, job, permission): each write grant is reviewed here before it can exist (ES-017).
-        (string, string, string)[] allowed = [("ci.yml", "publish", "packages"), ("codeql.yml", "analyze", "security-events"), ("infra.yml", "preview", "id-token"), ("ci.yml", "deploy-dev", "id-token")];
+        (string, string, string)[] allowed = [("ci.yml", "publish", "packages"), ("codeql.yml", "analyze", "security-events"), ("infra.yml", "preview", "id-token"), ("ci.yml", "deploy-dev", "id-token"), ("dev-check.yml", "check", "id-token")];
 
         var grants = new List<(string, string, string)>();
         foreach (var file in WorkflowFiles())
@@ -84,6 +84,21 @@ public sealed partial class SupplyChainPolicyTests
         job.ShouldContain("persist-credentials: false");
         job.ShouldContain("steps.current.outputs.deploy == 'true'");
         JobBlock("infra.yml", "preview").ShouldContain("      group: pulumi-dev");
+    }
+
+    [Fact]
+    public void The_daily_dev_check_only_previews_reviewed_code()
+    {
+        // It borrows the deploy identity (DEV-017), so it must stay read-only, main-only and inside the dev lock.
+        var job = JobBlock("dev-check.yml", "check");
+
+        job.ShouldContain("    environment: dev");
+        job.ShouldContain("github.ref == 'refs/heads/main'");
+        job.ShouldContain("      group: pulumi-dev");
+        job.ShouldContain("          expect-no-changes: true");
+        job.ShouldNotContain("command: up");
+        job.ShouldNotContain("command: refresh");
+        job.ShouldNotContain("command: destroy");
     }
 
     [Fact]

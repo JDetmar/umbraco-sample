@@ -55,6 +55,7 @@ Do not set `CD_DEV_ENABLED` until the owner-approved amendment to the `CLAUDE.md
    Add the repository secrets `AZURE_TENANT_ID` and `AZURE_SUBSCRIPTION_ID` if section 3 has not, in lowercase (see section 3, step 2 for why they are secrets).
    Add the repository variable `AZURE_DEPLOY_CLIENT_ID` (the deploy identity's client ID), then `CD_DEV_ENABLED=true`.
 6. **Check.** The next push to `main` runs `deploy (dev, pulumi up)` after `publish`; its log shows the operations Pulumi ran (not a property diff, because Actions logs are public and a diff prints the sign-in name of whoever created or last changed a resource; ADR 0014) and the smoke test. For a full diff, open the update in Pulumi Cloud, or run `make infra-preview STACK=dev` locally.
+7. **Daily dev check.** `dev-check.yml` runs every day at 06:23 UTC (and on demand) once `CD_DEV_ENABLED` is set. It uses the same `dev` environment and identity, refreshes a preview of the dev stack with `expect-no-changes`, so any drift from code fails the run, then smoke-tests the site at the stack's `siteUrl` output. It never runs `up`. Nothing else to configure; GitHub emails the owner when a scheduled run fails.
 
 **Dev content.** Dev imports every uSync group at each start, including the seed home page shipped in the image, so content edited in the dev backoffice is replaced at the next restart. Change dev content by committing it under `src/UmbracoSample.Web/uSync/v17`. Other environments import settings only.
 
