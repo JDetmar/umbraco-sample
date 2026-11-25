@@ -344,7 +344,7 @@ deviations:
     clauses: [ES-024]
     obligations:
       - Long-lived credentials have a documented lifetime (MUST) and are short-lived where possible (SHOULD)
-    summary: CI previews use a stored Pulumi access token (PULUMI_ACCESS_TOKEN) that can decrypt stack secrets, instead of OIDC token exchange.
+    summary: "Was: CI previews used a stored Pulumi access token that could decrypt stack secrets. Now: the preview gets a short-lived token by OIDC exchange (pulumi/auth-actions); this entry closes once a preview has run that way."
     consequence: A leaked token exposes the Umbraco admin password and imaging key of every stack it can read, and can change stack state.
     compensating_controls: The token lives only in the infra-preview environment (main only, owner review); preview runs only on main or a manual run; the token has a 90-day expiry and a rotation reminder (docs/infra-setup.md).
     owner: repository-owner

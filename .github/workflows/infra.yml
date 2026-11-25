@@ -72,6 +72,7 @@ jobs:
           stack-name: ${{ vars.PULUMI_ORG }}/umbraco-sample/dev
           work-dir: infra/UmbracoSample.Infra
           diff: true
+          pulumi-version: 3.275.0 # pinned CLI, the same in every job (ES-013)
         env:
           SITE_IMAGE: ${{ steps.image.outputs.image }}
           ARM_USE_OIDC: "true"
