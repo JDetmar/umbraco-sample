@@ -49,6 +49,8 @@ Do not set `CD_DEV_ENABLED` until the owner-approved amendment to the `CLAUDE.md
 5. **GitHub.** Create an environment named `dev`, restricted to the `main` branch, with no required reviewer (merging to `main` is the approval). Add the repository variable `AZURE_DEPLOY_CLIENT_ID` (the deploy identity's client ID), then `CD_DEV_ENABLED=true`.
 6. **Check.** The next push to `main` runs `deploy (dev, pulumi up)` after `publish`; its log shows the operations Pulumi ran (not a property diff, because Actions logs are public and a diff prints the sign-in name of whoever created or last changed a resource; ADR 0014) and the smoke test. For a full diff, open the update in Pulumi Cloud, or run `make infra-preview STACK=dev` locally.
 
+**Dev content.** Dev imports every uSync group at each start, including the seed home page shipped in the image, so content edited in the dev backoffice is replaced at the next restart. Change dev content by committing it under `src/UmbracoSample.Web/uSync/v17`. Other environments import settings only.
+
 **If the smoke test fails**, the new revision stays; nothing rolls back by itself. Fix forward with a new pull request, or open the last good run in Actions and re-run its `deploy (dev, pulumi up)` job. A re-run deploys only while its commit is the head of `main`, so to roll back past a newer commit, revert that commit instead.
 
 Dev's stack file pins no image: CD passes the digest it just published as `SITE_IMAGE`. To run `up` locally anyway, set `SITE_IMAGE="$(scripts/published-image.sh)"` first.
