@@ -83,16 +83,28 @@ public sealed class SiteInfrastructureTests
     }
 
     [Fact]
-    public async Task Up_creates_the_site_database_user_as_the_deployer()
+    public async Task Up_creates_the_site_database_user_through_the_job_inside_the_network()
     {
         var command = (await Declare(Dev)).Resources.Single(r => r.Type == "command:local:Command" && r.Name == "site-database-user").Inputs;
         var environment = Map(command["environment"]);
 
-        command["create"].ShouldBe("bash scripts/grant-site-database-user.sh");
+        command["create"].ShouldBe("bash scripts/run-database-user-job.sh");
         command.ShouldNotContainKey("delete");
         environment["DATABASE"].ShouldBe("umbraco");
         environment["SITE_IDENTITY_NAME"].ShouldBe("umbraco-sample-dev-id");
-        environment.Keys.ShouldBe(["SQL_SERVER_FQDN", "SQL_SERVER_NAME", "RESOURCE_GROUP", "DATABASE", "SITE_IDENTITY_NAME", "SITE_IDENTITY_CLIENT_ID"], ignoreOrder: true);
+        environment.Keys.ShouldBe(["JOB_ID", "IMAGE", "SQL_SERVER_FQDN", "DATABASE", "SITE_IDENTITY_NAME", "SITE_IDENTITY_CLIENT_ID"], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task The_database_user_job_runs_the_tool_from_the_site_image_with_no_identity_or_stored_token()
+    {
+        var job = Single(await Declare(Dev), "azure-native:app:Job");
+        var container = Map(((System.Collections.IEnumerable)Map(job["template"])["containers"]).Cast<object>().Single());
+
+        Map(job["configuration"])["triggerType"].ShouldBe("Manual");
+        job.ShouldNotContainKey("identity");
+        container["image"].ShouldBe(Dev.Image);
+        container.ShouldNotContainKey("env");
     }
 
     [Fact]
@@ -104,14 +116,18 @@ public sealed class SiteInfrastructureTests
     }
 
     [Fact]
-    public void The_database_user_script_always_closes_its_firewall_rule_and_needs_no_extra_tools()
+    public void The_database_user_script_opens_no_firewall_rule_and_keeps_the_token_off_the_log()
     {
-        var script = File.ReadAllText(Path.GetFullPath(Path.Join(AppContext.BaseDirectory, "../../../../UmbracoSample.Infra/scripts/grant-site-database-user.sh")));
+        var script = File.ReadAllText(Path.GetFullPath(Path.Join(AppContext.BaseDirectory, "../../../../UmbracoSample.Infra/scripts/run-database-user-job.sh")));
 
         script.ShouldContain("set -euo pipefail");
-        script.ShouldContain("trap remove_rule EXIT");
-        script.ShouldContain("dotnet run --project");
-        script.ShouldNotContain("sqlcmd -");
+        script.ShouldNotContain("firewall-rule");
+        script.ShouldNotContain("ipify");
+        script.ShouldContain("chmod 600");
+        script.ShouldContain("trap 'rm -f \"$body\"' EXIT");
+        // The token is read into the environment of jq only, never into a variable that is echoed or passed as an argument.
+        script.ShouldNotContain("echo \"$TOKEN");
+        script.ShouldNotContain("--arg token");
     }
 
     [Fact]

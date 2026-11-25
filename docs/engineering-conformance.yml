@@ -101,13 +101,11 @@ clauses:
         status: deviation
         deviation: DEV-013
       - obligation: Sensitive data is excluded from public CI logs
-        status: deviation
-        deviation: DEV-020
-      - obligation: Sensitive data is excluded from public CI logs
         status: compliant
         evidence:
           - Workflows read the Azure tenant and subscription IDs only from secrets, which GitHub masks everywhere in a log, kept so by the policy test Azure_tenant_and_subscription_ids_reach_workflows_only_as_secrets.
           - Pulumi steps in CI run without a property diff and post nothing to comments or summaries (ADR 0014, proposed), kept so by the policy test Pulumi_runs_in_ci_never_print_a_property_diff.
+          - The logs of the seven earlier deploy runs that printed the tenant and subscription IDs (45553973503, 45671920271, 45675530873, 45681230448, 45682355271, 45683391197, 45685164567) were deleted on 2026-11-25 at the owner's request; a scan of the 60 most recent runs afterwards found neither ID.
           - The one leaked log (run 45677402486, a sign-in name from Azure systemData) was deleted by the owner on 2026-11-25; copies made before then cannot be recalled. On 2026-11-25 at 19:10 UTC the logs of every completed run (404 of 409; the rest were in progress) were searched for email addresses, JWTs, Pulumi and GitHub tokens, storage keys, passwords, connection strings, instrumentation keys and /32 addresses; none were found beyond public noreply addresses and the placeholder admin@example.com. Later runs are covered by the policy test, not the scan.
   ES-030:
     status: compliant
@@ -365,9 +363,9 @@ deviations:
     clauses: [ES-024, ES-040, ES-054]
     obligations:
       - Identities have the least privilege their job needs
-    summary: Accepted by the owner for dev, with conditions (2026-11-24). The deploy-dev identity (ADR 0013) is standing and privileged; Contributor on the subscription, Role Based Access Control Administrator limited to three roles, SQL administrator group membership, and a short-lived Pulumi token (personal, acting as the owner, on an individual Pulumi account). These rights reach any stack in the same subscription and Pulumi organization, not only dev, and during up it opens a SQL firewall rule for a shared GitHub-hosted runner's IP.
-    consequence: A merged malicious or broken change could change or read resources and stack secrets beyond dev, or reach SQL from the runner's IP while the rule is open.
-    compensating_controls: Federated only to this repository's dev environment, which runs only on main; review before merge (ES-028, not yet enforced for admins, DEV-001); CI gates before publish; post-deploy smoke test; dev holds only synthetic content; the firewall rule has one fixed name and is removed on exit; CD stays off until the owner amends the delegation envelope and sets CD_DEV_ENABLED.
+    summary: Accepted by the owner for dev, with conditions (2026-11-24). The deploy-dev identity (ADR 0013) is standing and privileged; Contributor on the subscription, Role Based Access Control Administrator limited to three roles, SQL administrator group membership, and a short-lived Pulumi token (personal, acting as the owner, on an individual Pulumi account). These rights reach any stack in the same subscription and Pulumi organization, not only dev.
+    consequence: A merged malicious or broken change could change or read resources and stack secrets beyond dev.
+    compensating_controls: Federated only to this repository's dev environment, which runs only on main; review before merge (ES-028, not yet enforced for admins, DEV-001); CI gates before publish; post-deploy smoke test; dev holds only synthetic content; the database user step runs inside the VNet with a short-lived token, so no firewall rule is opened (ADR 0016); CD stays off until the owner amends the delegation envelope and sets CD_DEV_ENABLED.
     owner: repository-owner
     opened: 2026-11-24
     approver: repository-owner
@@ -376,7 +374,7 @@ deviations:
     review_triggers:
       - Before any prod stack is created in the same subscription or Pulumi organization.
       - Any change to the deploy identity's roles or federated credentials.
-    disposition: "Conditions of the acceptance, each a follow-up: (a) prod lives in a separate subscription and Pulumi project, or is never created with these credentials in reach; (b) a SQL administrator group for dev only; (c) Contributor narrowed to the resource group once a bootstrap stack creates it; (d) a team Pulumi token limited to the dev stack if the plan allows; (e) the database user step moves into the VNet, so no firewall rule is opened for a runner's IP."
+    disposition: "Conditions of the acceptance, each a follow-up: (a) prod lives in a separate subscription and Pulumi project, or is never created with these credentials in reach; (b) a SQL administrator group for dev only; (c) Contributor narrowed to the resource group once a bootstrap stack creates it; (d) a team Pulumi token limited to the dev stack if the plan allows; (e) the database user step moves into the VNet, so no firewall rule is opened for a runner's IP; met on 2026-11-25 (ADR 0016)."
 
   - id: DEV-018
     kind: gap
@@ -389,14 +387,3 @@ deviations:
     owner: repository-owner
     opened: 2026-11-25
     disposition: Add an integration test that sends the batch to the Aspire SQL Server container with SET PARSEONLY ON (TYPE = E users themselves exist only in Azure SQL, so execution stays covered by the dev deploy). Not done in the fix PR to keep the production fix small.
-  - id: DEV-020
-    kind: gap
-    clauses: [ES-025]
-    obligations:
-      - Sensitive data is excluded from public CI logs
-    summary: Before the IDs moved to secrets, the deploy-dev job printed the Azure tenant and subscription IDs in plain text (azure/login input and pulumi/actions env headers). Those logs are public, and a tenant ID resolves to the tenant's display name and default domain, which identify more than this repository should.
-    consequence: Anyone reading the logs of the earlier deploy-dev runs on main (45553973503, 45671920271, 45675530873, 45677402486, 45681230448, 45682355271, 45683391197, and any later run before this change merged) can read both IDs. Neither ID can be changed.
-    compensating_controls: The IDs are not credentials; sign-in needs OIDC federation limited to this repository's environments. New runs mask both values. Run 45677402486's logs are already deleted (for a different leak).
-    owner: repository-owner
-    opened: 2026-11-25
-    disposition: The owner decides whether to delete the logs of the listed runs (permanent; the runs stay listed). Close this gap once they are deleted; otherwise the owner records the remaining exposure as an accepted risk.
