@@ -1,6 +1,6 @@
 # 0013. Continuous deployment to dev
 
-- Status: Proposed (direction chosen by the owner on 2026-11-24; the deploy identity's rights wait on threat model 0002, R4)
+- Status: Accepted by the owner on 2026-11-24 (project thread). The deploy identity's rights remain threat model 0002, R4, a separate owner decision; CD stays off until it is decided and the delegation envelope allows it.
 - Date: 2026-11-24
 - Decider: owner
 - Clauses: ES-011, ES-017, ES-019, ES-024, ES-030, ES-040, ES-048, ES-054; framework ENV-01, OPS-01
