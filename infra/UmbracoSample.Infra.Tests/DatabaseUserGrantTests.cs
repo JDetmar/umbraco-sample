@@ -69,7 +69,7 @@ public class DatabaseUserGrantTests
         // EXEC (N'...' + QUOTENAME(@name)) is a syntax error in T-SQL (the first CD run failed on it):
         // EXEC (...) takes only literals and variables, so every dynamic statement runs from @statement.
         System.Text.RegularExpressions.Regex.IsMatch(DatabaseUserGrant.Sql, @"EXEC\s*\(").ShouldBeFalse();
-        System.Text.RegularExpressions.Regex.Matches(DatabaseUserGrant.Sql, @"EXEC sys\.sp_executesql @statement;").Count.ShouldBe(3);
+        System.Text.RegularExpressions.Regex.Count(DatabaseUserGrant.Sql, @"EXEC sys\.sp_executesql @statement;").ShouldBe(3);
     }
 
     [Theory]
