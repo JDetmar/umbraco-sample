@@ -100,10 +100,11 @@ clauses:
       - obligation: Sensitive data is encrypted in transit
         status: deviation
         deviation: DEV-013
-      - obligation: Sensitive data is excluded from operational logs
+      - obligation: Sensitive data is excluded from public CI logs
         status: compliant
         evidence:
-          - Pulumi steps in CI run without a property diff and post nothing to comments or summaries (ADR 0014), kept so by the policy test Pulumi_runs_in_ci_never_print_a_property_diff. The one leaked log (run 45677402486, a sign-in name from Azure systemData) was deleted by the owner on 2026-11-25; a scan of every remaining run's logs that day found no other email address, credential or key.
+          - Pulumi steps in CI run without a property diff and post nothing to comments or summaries (ADR 0014, proposed), kept so by the policy test Pulumi_runs_in_ci_never_print_a_property_diff.
+          - The one leaked log (run 45677402486, a sign-in name from Azure systemData) was deleted by the owner on 2026-11-25; copies made before then cannot be recalled. On 2026-11-25 at 19:10 UTC the logs of every completed run (404 of 409; the rest were in progress) were searched for email addresses, JWTs, Pulumi and GitHub tokens, storage keys, passwords, connection strings, instrumentation keys and /32 addresses; none were found beyond public noreply addresses and the placeholder admin@example.com. Later runs are covered by the policy test, not the scan.
   ES-030:
     status: compliant
     evidence:
