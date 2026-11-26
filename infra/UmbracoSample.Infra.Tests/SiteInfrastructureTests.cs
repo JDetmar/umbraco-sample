@@ -315,6 +315,7 @@ public sealed class SiteInfrastructureTests
 
         var siteUrl = await Pulumi.Utilities.OutputUtilities.GetValueAsync((Output<string>)infrastructure!.Outputs["siteUrl"]!);
         siteUrl.ShouldBe("https://umbraco-sample-dev-web.app.example");
+        infrastructure.Outputs["siteImage"].ShouldBe(Dev.Image);
     }
 
     [Fact]
