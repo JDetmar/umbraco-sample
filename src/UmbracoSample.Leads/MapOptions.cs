@@ -29,7 +29,7 @@ public sealed class MapOptions
     [Range(1, 1000)]
     public int MaxConcurrentCalls { get; set; } = 20;
 
-    /// <summary>The longest pause before the single retry; the actual pause is random below it.</summary>
+    /// <summary>The longest pause before the single retry; the actual pause is random, between half of it and all of it.</summary>
     public TimeSpan MaxRetryJitter { get; set; } = TimeSpan.FromMilliseconds(500);
 
     internal string? Validate()

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
 namespace UmbracoSample.Leads;
@@ -21,7 +22,7 @@ public static class LeadsServiceCollectionExtensions
             .Validate(o => o.Validate() is null, "Leads:Map is invalid; see MapOptions.Validate.")
             .ValidateOnStart();
         services.AddSingleton<MapBulkhead>();
-        services.AddSingleton(TimeProvider.System);
+        services.TryAddSingleton(TimeProvider.System);
         var client = services.AddHttpClient<MapClient>((provider, http) =>
         {
             var options = provider.GetRequiredService<IOptions<MapOptions>>().Value;

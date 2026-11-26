@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using UmbracoSample.Domain.Leads;
 using WireMock.Logging;
@@ -19,7 +20,7 @@ internal sealed class MapStub : IDisposable
 {
     public const string ApiKey = "test-key-not-a-secret";
 
-    private readonly ServiceProvider _services;
+    private readonly IHost _host;
 
     public MapStub(Action<Dictionary<string, string?>>? configure = null)
     {
@@ -33,18 +34,23 @@ internal sealed class MapStub : IDisposable
             ["Leads:Map:MaxRetryJitter"] = "00:00:00.020",
         };
         configure?.Invoke(settings);
-        var services = new ServiceCollection();
-        services.AddLogging(logging => logging.AddProvider(Logs).SetMinimumLevel(LogLevel.Trace));
-        services.ConfigureHttpClientDefaults(http => http.AddStandardResilienceHandler());
-        services.AddMapClient(new ConfigurationBuilder().AddInMemoryCollection(settings).Build());
-        _services = services.BuildServiceProvider();
+        var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
+        builder.Configuration.AddInMemoryCollection(settings);
+        builder.AddServiceDefaults();
+        builder.Logging.AddProvider(Logs).SetMinimumLevel(LogLevel.Trace);
+        builder.Services.AddMapClient(builder.Configuration);
+        _host = builder.Build();
+
+        // An unmapped lookup would get WireMock's 404, which reads as "not found" and triggers a create. A test that does
+        // not script the lookup gets "cannot tell" instead, so it never retries by accident.
+        Server.Given(Request.Create().WithPath("/api/leads/lookup").UsingPost()).AtPriority(1000).RespondWith(Response.Create().WithStatusCode(599));
     }
 
     public WireMockServer Server { get; }
 
     public CapturingLoggerProvider Logs { get; } = new();
 
-    public MapClient Client => _services.GetRequiredService<MapClient>();
+    public MapClient Client => _host.Services.GetRequiredService<MapClient>();
 
     public IReadOnlyList<ILogEntry> Creates => [.. Server.LogEntries.Where(e => e.RequestMessage!.Path == "/api/leads")];
 
@@ -70,7 +76,7 @@ internal sealed class MapStub : IDisposable
 
     public void Dispose()
     {
-        _services.Dispose();
+        _host.Dispose();
         Server.Stop();
         Server.Dispose();
     }

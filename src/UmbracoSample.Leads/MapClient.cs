@@ -10,7 +10,7 @@ namespace UmbracoSample.Leads;
 /// <summary>
 /// Sends a lead to the MAP (threat model 0001). The rules it keeps:
 /// <list type="bullet">
-/// <item>The site owns retries: at most one retry, after random jitter, always with the same idempotency key (ES-044).</item>
+/// <item>The site owns retries: at most one retry, after a random pause of half to all of <see cref="MapOptions.MaxRetryJitter"/>, always with the same idempotency key (ES-044).</item>
 /// <item>A timeout is not a failure (ES-043): after one, the client looks the key up before deciding, and if it cannot
 /// tell, the outcome is <see cref="MapOutcome.Unknown"/>.</item>
 /// <item>One budget covers the whole submission; the create call gets at most <see cref="MapOptions.CreateTimeout"/>.</item>
@@ -61,6 +61,9 @@ public sealed partial class MapClient(HttpClient http, MapBulkhead bulkhead, IOp
                     return Done(MapOutcome.Accepted, attempt);
                 case Attempt.Rejected:
                     return Done(MapOutcome.Rejected, attempt);
+                case Attempt.Refused:
+                    // The MAP refused the call itself (credential or conflict): no retry can help, and nothing was stored.
+                    return Done(MapOutcome.Failed, attempt);
                 case Attempt.CallerCancelled:
                     // The request may have reached the MAP; the next submission's idempotency key reconciles it.
                     return Done(MapOutcome.Unknown, attempt);
@@ -86,11 +89,14 @@ public sealed partial class MapClient(HttpClient http, MapBulkhead bulkhead, IOp
                     break;
             }
 
+            // Whatever went wrong may have been stored (a 5xx can follow a commit), so leaving before the retry because the
+            // budget ran out or the visitor left is "unknown", never "failed" (threat model 0001: an exhausted budget is
+            // never "failed").
             retried = true;
-            var pause = TimeSpan.FromMilliseconds(Random.Shared.NextDouble() * _options.MaxRetryJitter.TotalMilliseconds);
+            var pause = _options.MaxRetryJitter * (0.5 + (Random.Shared.NextDouble() / 2)); // between half and all of it
             if (Remaining(started) <= pause)
             {
-                return Done(attempt is Attempt.TimedOut ? MapOutcome.Unknown : MapOutcome.Failed, attempt);
+                return Done(MapOutcome.Unknown, attempt);
             }
 
             try
@@ -99,7 +105,7 @@ public sealed partial class MapClient(HttpClient http, MapBulkhead bulkhead, IOp
             }
             catch (OperationCanceledException)
             {
-                return Done(attempt is Attempt.TimedOut ? MapOutcome.Unknown : MapOutcome.Failed, attempt);
+                return Done(MapOutcome.Unknown, Attempt.CallerCancelled);
             }
         }
     }
@@ -111,8 +117,8 @@ public sealed partial class MapClient(HttpClient http, MapBulkhead bulkhead, IOp
             return Attempt.TimedOut;
         }
 
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(Min(_options.CreateTimeout, remaining));
+        using var limit = new CancellationTokenSource(Min(_options.CreateTimeout, remaining), time);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, limit.Token);
         using var request = new HttpRequestMessage(HttpMethod.Post, CreatePath) { Content = JsonContent.Create(CreateBody.From(submission), MapJsonContext.Default.CreateBody) };
         request.Headers.Add(IdempotencyHeader, submission.IdempotencyKey);
         request.Headers.Add(ApiKeyHeader, _options.ApiKey);
@@ -123,6 +129,7 @@ public sealed partial class MapClient(HttpClient http, MapBulkhead bulkhead, IOp
             {
                 HttpStatusCode.OK or HttpStatusCode.Created => Attempt.Accepted,
                 HttpStatusCode.BadRequest or HttpStatusCode.UnprocessableEntity => Attempt.Rejected,
+                HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden or HttpStatusCode.Conflict => Attempt.Refused,
                 _ => Attempt.Retryable,
             };
         }
@@ -148,8 +155,8 @@ public sealed partial class MapClient(HttpClient http, MapBulkhead bulkhead, IOp
             return Lookup.Unavailable;
         }
 
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(Min(_options.CreateTimeout, remaining));
+        using var limit = new CancellationTokenSource(Min(_options.CreateTimeout, remaining), time);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, limit.Token);
         using var request = new HttpRequestMessage(HttpMethod.Post, LookupPath) { Content = JsonContent.Create(new LookupBody(submission.IdempotencyKey), MapJsonContext.Default.LookupBody) };
         request.Headers.Add(ApiKeyHeader, _options.ApiKey);
         try
@@ -186,6 +193,7 @@ public sealed partial class MapClient(HttpClient http, MapBulkhead bulkhead, IOp
     {
         Accepted,
         Rejected,
+        Refused,
         Retryable,
         TimedOut,
         CallerCancelled,

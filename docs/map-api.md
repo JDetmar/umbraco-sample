@@ -33,7 +33,8 @@ Both requests are `POST` with a JSON body, relative to the configured `Leads:Map
 | `201 Created` | New lead | Accepted |
 | `200 OK` | The key was already used: the existing lead stands | Accepted (the visitor sees the same as a new lead) |
 | `400` or `422` | The MAP refused the lead | Rejected, no retry |
-| anything else, or no connection | The MAP may or may not have it | One retry with the same key |
+| `401`, `403` or `409` | The MAP refused the call (credential or conflict) | Failed, no retry |
+| anything else (5xx, 408, 429), or no connection | The MAP may or may not have it | One retry with the same key; if the budget runs out or the visitor leaves first, unknown |
 
 ### Look up a key: `POST leads/lookup`
 
@@ -50,7 +51,7 @@ Both requests are `POST` with a JSON body, relative to the configured `Leads:Map
 ## How the client uses it
 
 - **Budget.** One submission gets 10 s in all (`Leads:Map:Budget`), and each call at most 5 s (`Leads:Map:CreateTimeout`).
-- **Retries.** At most one retry, after a random pause of up to 500 ms, always with the same key. ServiceDefaults' standard resilience handler is removed from this client, so retries do not multiply.
+- **Retries.** At most one retry, after a random pause of 250 to 500 ms, always with the same key. ServiceDefaults' standard resilience handler is removed from this client, so retries do not multiply.
 - **Timeouts.** A timed-out create is followed by a lookup:
   - found: accepted;
   - not found: one more create;
