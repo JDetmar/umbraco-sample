@@ -19,14 +19,16 @@ flowchart LR
         subgraph vnet["Virtual network"]
             subgraph cae["Apps subnet: Container Apps environment<br/>peer-to-peer TLS"]
                 app["Container App: site<br/>Umbraco 17 on .NET 10<br/>image pinned by digest"]
+                job["Container Apps job: database user<br/>same image, run by up (ADR 0017)"]
             end
         end
         id["User-assigned<br/>managed identity"]
         sql[("Azure SQL serverless<br/>Entra-only auth")]
-        blob[("Storage: private<br/>media container")]
+        blob[("Storage: private<br/>media container<br/>soft delete 7 / 30 days")]
         kv["Key Vault<br/>RBAC"]
         ai["Application Insights<br/>+ Log Analytics"]
         budget["Consumption budget<br/>80% / 100% alerts"]
+        uptime["Availability test and alert<br/>/health/ready, 3 regions<br/>(declared for prod, not deployed)"]
     end
 
     map["Marketing automation<br/>platform API (planned, D4)"]
@@ -37,6 +39,7 @@ flowchart LR
     app -- runs as --> id
     cae -- "Microsoft.Sql service endpoint;<br/>SQL VNet rule admits only this subnet" --> sql
     id -- "Entra token" --> sql
+    job -- "deployer's short-lived token;<br/>creates the site's user" --> sql
     id -- "Blob Data Contributor" --> blob
     id -- "Secrets User" --> kv
     kv -- "admin password, imaging key<br/>(Key Vault references)" --> app

@@ -42,9 +42,9 @@ public static partial class DatabaseUserGrant
     public const int Attempts = 12;
 
     /// <summary>
-    /// Errors worth waiting out: a paused or resuming serverless database (40613, 40197, 40501), a firewall rule not
-    /// applied yet (40615), and network timeouts (-2, 53, 10053, 10054, 10060). Anything else, such as a login the server
-    /// refuses, fails at once.
+    /// Errors worth waiting out: a paused or resuming serverless database (40613, 40197, 40501, 49918-49920), a network
+    /// rule not applied yet (40615), and network timeouts (-2, 53, 10053, 10054, 10060). Anything else, such as a login
+    /// the server refuses, fails at once.
     /// </summary>
     public static readonly IReadOnlySet<int> TransientErrors = new HashSet<int> { 40613, 40197, 40501, 40615, 49918, 49919, 49920, -2, 53, 10053, 10054, 10060 };
 
@@ -92,11 +92,22 @@ public static partial class DatabaseUserGrant
     }
 
     /// <summary>
-    /// Signs in only as the Azure CLI session (the deployer's own, or the one azure/login creates in CI), the same
-    /// principal that opened the firewall rule; never another credential in the default chain.
+    /// Signs in only with the SQL access token the deploy passes in <c>SQL_ACCESS_TOKEN</c>: a token of the deployer, a
+    /// member of the SQL administrator group, valid for about an hour (ADR 0017). The job has no identity of its own and
+    /// no other credential is tried.
     /// </summary>
-    public static async Task<int> RunAsync(Func<string, string?> env, TextWriter output, TextWriter error, TimeSpan retryDelay) =>
-        await RunAsync(env, output, error, retryDelay, new Azure.Identity.AzureCliCredential()).ConfigureAwait(false);
+    public static async Task<int> RunAsync(Func<string, string?> env, TextWriter output, TextWriter error, TimeSpan retryDelay)
+    {
+        ArgumentNullException.ThrowIfNull(env);
+        ArgumentNullException.ThrowIfNull(error);
+        if (env("SQL_ACCESS_TOKEN") is not { Length: > 0 } token)
+        {
+            await error.WriteLineAsync("SQL_ACCESS_TOKEN is not set.").ConfigureAwait(false);
+            return 2;
+        }
+
+        return await RunAsync(env, output, error, retryDelay, new PassedToken(token)).ConfigureAwait(false);
+    }
 
     public static async Task<int> RunAsync(Func<string, string?> env, TextWriter output, TextWriter error, TimeSpan retryDelay, Azure.Core.TokenCredential credential)
     {
@@ -114,7 +125,7 @@ public static partial class DatabaseUserGrant
             return 2;
         }
 
-        // A new firewall rule, or a paused serverless database, can take a minute or two to accept connections.
+        // A paused serverless database can take a minute or two to accept connections.
         for (var attempt = 1; attempt <= Attempts; attempt++)
         {
             try
@@ -144,4 +155,14 @@ public static partial class DatabaseUserGrant
 
     [GeneratedRegex(@"^[a-z0-9-]{1,63}\.database\.windows\.net$")]
     private static partial Regex ServerPattern();
+
+    /// <summary>A token obtained by the caller; the job runs for minutes, well inside its lifetime.</summary>
+    private sealed class PassedToken(string token) : Azure.Core.TokenCredential
+    {
+        public override Azure.Core.AccessToken GetToken(Azure.Core.TokenRequestContext requestContext, CancellationToken cancellationToken) =>
+            new(token, DateTimeOffset.UtcNow.AddMinutes(5));
+
+        public override ValueTask<Azure.Core.AccessToken> GetTokenAsync(Azure.Core.TokenRequestContext requestContext, CancellationToken cancellationToken) =>
+            ValueTask.FromResult(GetToken(requestContext, cancellationToken));
+    }
 }

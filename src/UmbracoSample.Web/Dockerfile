@@ -11,7 +11,10 @@ COPY global.json Directory.Build.props Directory.Packages.props .editorconfig ./
 COPY src/UmbracoSample.ServiceDefaults/*.csproj src/UmbracoSample.ServiceDefaults/packages.lock.json src/UmbracoSample.ServiceDefaults/
 COPY src/UmbracoSample.Domain/*.csproj src/UmbracoSample.Domain/packages.lock.json src/UmbracoSample.Domain/
 COPY src/UmbracoSample.Web/*.csproj src/UmbracoSample.Web/packages.lock.json src/UmbracoSample.Web/
-RUN dotnet restore src/UmbracoSample.Web/UmbracoSample.Web.csproj
+COPY infra/Directory.Packages.props infra/
+COPY infra/UmbracoSample.Infra.DatabaseUser/*.csproj infra/UmbracoSample.Infra.DatabaseUser/packages.lock.json infra/UmbracoSample.Infra.DatabaseUser/
+RUN dotnet restore src/UmbracoSample.Web/UmbracoSample.Web.csproj \
+    && dotnet restore infra/UmbracoSample.Infra.DatabaseUser/UmbracoSample.Infra.DatabaseUser.csproj
 
 COPY src/UmbracoSample.ServiceDefaults/ src/UmbracoSample.ServiceDefaults/
 COPY src/UmbracoSample.Domain/ src/UmbracoSample.Domain/
@@ -19,6 +22,10 @@ COPY src/UmbracoSample.Web/ src/UmbracoSample.Web/
 # The stylesheet is built before the image (make frontend, or the CI step), so this image needs no Node toolchain.
 RUN test -f src/UmbracoSample.Web/wwwroot/dist/site.css || { echo 'Run make frontend before building the image.' >&2; exit 1; }
 RUN dotnet publish src/UmbracoSample.Web/UmbracoSample.Web.csproj -c Release --no-restore -o /app /p:UseAppHost=false
+# The database user tool ships in the same image as a second entry point, run by a Container Apps job inside the
+# virtual network (ADR 0017), so no second image or registry is needed.
+COPY infra/UmbracoSample.Infra.DatabaseUser/ infra/UmbracoSample.Infra.DatabaseUser/
+RUN dotnet publish infra/UmbracoSample.Infra.DatabaseUser/UmbracoSample.Infra.DatabaseUser.csproj -c Release --no-restore -o /app/tools/database-user /p:UseAppHost=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:aac50ceef10391e78a899e3d2ccd00bbafa2dcb56ccf4586cbccf00edb84fc21 AS final
 WORKDIR /app
