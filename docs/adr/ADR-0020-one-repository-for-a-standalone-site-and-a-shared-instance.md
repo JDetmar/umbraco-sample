@@ -1,6 +1,6 @@
 # 0020. One repository for a standalone site and a later shared multi-site instance
 
-- Status: Proposed
+- Status: Accepted by the owner on 2026-11-26 (project thread decision, "Keep seams, accept ADR, merge"), with the per-host seams kept
 - Date: 2026-11-26
 - Decider: owner
 - Clauses: ES-001, ES-013, ES-015, ES-018, ES-019, ES-023, ES-028, ES-049, ES-052; framework ARC-01, ARC-05, TST-08, TST-10
