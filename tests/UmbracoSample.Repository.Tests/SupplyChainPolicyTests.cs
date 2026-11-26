@@ -43,7 +43,7 @@ public sealed partial class SupplyChainPolicyTests
     public void Write_permissions_are_granted_only_to_allowlisted_jobs()
     {
         // (workflow, job, permission): each write grant is reviewed here before it can exist (ES-017).
-        (string, string, string)[] allowed = [("ci.yml", "publish", "packages"), ("codeql.yml", "analyze", "security-events"), ("infra.yml", "preview", "id-token"), ("ci.yml", "deploy-dev", "id-token"), ("dev-check.yml", "check", "id-token")];
+        (string, string, string)[] allowed = [("ci.yml", "publish", "packages"), ("codeql.yml", "analyze", "security-events"), ("infra.yml", "preview", "id-token"), ("ci.yml", "deploy-dev", "id-token"), ("dev-check.yml", "check", "id-token"), ("restore-test.yml", "restore", "id-token")];
 
         var grants = new List<(string, string, string)>();
         foreach (var file in WorkflowFiles())
@@ -145,6 +145,25 @@ public sealed partial class SupplyChainPolicyTests
     // Any value other than a literal false turns the input on, including quoted or expression values.
     [GeneratedRegex(@"^(?:diff|comment-on-pr|comment-on-summary|always-include-summary)\s*:\s*(?!false\s*$)\S|pulumi\b.*\s--(?:diff|show-secrets)\b", RegexOptions.IgnoreCase)]
     private static partial Regex PrintsPulumiProperties();
+
+    [Fact]
+    public void The_restore_test_runs_only_the_reviewed_script_on_main()
+    {
+        // It borrows the deploy identity (DEV-017, ADR 0019); everything it does to Azure is in the reviewed script.
+        var lines = JobBlock("restore-test.yml", "restore").Split('\n');
+
+        lines.ShouldContain("    if: vars.CD_DEV_ENABLED == 'true' && github.ref == 'refs/heads/main'");
+        lines.ShouldContain("    environment: dev");
+        lines.ShouldContain("          persist-credentials: false");
+        lines.ShouldContain("      cancel-in-progress: false");
+        lines.ShouldNotContain("      group: pulumi-dev");
+        lines.Where(line => line.TrimStart().StartsWith("command:", StringComparison.Ordinal)).ShouldBe(["          command: output"]);
+        lines.Where(line => line.TrimStart().StartsWith("run:", StringComparison.Ordinal)).ShouldBe(["        run: bash infra/UmbracoSample.Infra/scripts/restore-test.sh"]);
+        // No other step can act on Azure: only these actions, in this order.
+        lines.Where(line => line.TrimStart().StartsWith("- uses:", StringComparison.Ordinal)).Select(line => line.Trim()[8..line.Trim().IndexOf('@', StringComparison.Ordinal)])
+            .ShouldBe(["actions/checkout", "azure/login", "pulumi/auth-actions", "pulumi/actions"]);
+        lines.ShouldNotContain(line => line.Contains("inlineScript", StringComparison.Ordinal) || line.Contains("shell:", StringComparison.Ordinal));
+    }
 
     private static string JobBlock(string workflow, string job)
     {

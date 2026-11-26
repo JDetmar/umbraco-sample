@@ -1,0 +1,57 @@
+name: restore-test
+
+# Weekly restore test of the dev database (ADR 0019, accepted by the owner on 2026-11-26; ES-031, OPS-05). It restores
+# the database to a temporary copy, checks the copy from inside the network and deletes it, timing the restore. It uses
+# the dev environment's deploy identity (DEV-017) and touches only the copy, which a policy test and the check tool's
+# name rule enforce. GitHub notifies a scheduled run's failure to the user who last changed the schedule.
+on:
+  schedule:
+    - cron: "17 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  restore:
+    name: restore test (dev)
+    if: vars.CD_DEV_ENABLED == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: dev
+    # Its own group: sharing pulumi-dev would let a queued run cancel a queued deploy.
+    concurrency:
+      group: restore-test
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write # OIDC to Azure and Pulumi Cloud; no stored credential (ES-024)
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_DEPLOY_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - uses: pulumi/auth-actions@273044cc19e63ea565285da8edd4e059126a0bdb # v2.1.2
+        with:
+          organization: ${{ vars.PULUMI_ORG }}
+          requested-token-type: urn:pulumi:token-type:access_token:personal
+          scope: user:${{ vars.PULUMI_ORG }}
+      # Names come from the stack's outputs, so nothing is copied by hand.
+      - uses: pulumi/actions@96c7761824268174e0d2a4e8c7d75671eebd24a7 # v7.1.0
+        id: stack
+        with:
+          command: output
+          stack-name: ${{ vars.PULUMI_ORG }}/umbraco-sample/dev
+          work-dir: infra/UmbracoSample.Infra
+          pulumi-version: 3.275.0
+      - name: Restore, check and delete a copy
+        env:
+          RESOURCE_GROUP: ${{ steps.stack.outputs.resourceGroup }}
+          SQL_SERVER_FQDN: ${{ steps.stack.outputs.sqlServer }}
+          DATABASE: ${{ steps.stack.outputs.database }}
+          JOB_ID: ${{ steps.stack.outputs.databaseUserJob }}
+        run: bash infra/UmbracoSample.Infra/scripts/restore-test.sh

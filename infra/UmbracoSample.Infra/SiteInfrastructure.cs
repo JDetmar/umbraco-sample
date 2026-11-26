@@ -445,6 +445,9 @@ public sealed class SiteInfrastructure
             ["sqlServer"] = sqlServer.FullyQualifiedDomainName,
             ["mediaContainer"] = media.Name,
             ["keyVault"] = vault.Name,
+            // For the weekly restore test (ADR 0019): the database it restores and the job that checks the copy.
+            ["database"] = database.Name,
+            ["databaseUserJob"] = databaseUserJob.Id,
             ["edgeEnabled"] = settings.EnableEdge.ToString(CultureInfo.InvariantCulture),
             // The image the last update deployed, so the daily drift check compares against what dev runs, not what
             // main published since (a pending, failed or skipped deploy is not drift).
