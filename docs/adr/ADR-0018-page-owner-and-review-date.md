@@ -1,9 +1,9 @@
 # 0018. Page owner and review cycle, inherited down the tree
 
-- Status: Accepted by the owner on 2026-11-26 (project thread), with the 12-month default cycle as written
+- Status: Accepted by the owner on 2026-11-26 (project thread), with the 12-month default cycle as written. Amended on 2026-11-26 after review (missing cycle uses the default, first due date from the later of start and creation date, unset start date is an error, no owner fallback), confirmed by the owner on 2026-11-26 (decision card in the project thread)
 - Date: 2026-11-25; revised 2026-11-26 for a site of about 1,500 pages
 - Decider: owner
-- Clauses: ES-002, ES-019, ES-020, ES-023, ES-047, ES-058; framework GOV-02, GOV-03
+- Clauses: ES-002, ES-019, ES-020, ES-023, ES-025, ES-047, ES-058; framework GOV-02, GOV-03
 
 ## Context
 
@@ -23,7 +23,7 @@ That number decides the design:
   Owners need to be told which of their pages are due.
 
 The first version of this ADR (one owner and one review date on each page, flagged by an on-demand health check, naming up to 20 pages) is built on `main`.
-It is sound for a handful of pages but fails every point above, so this revision replaces it before it is accepted.
+It is sound for a handful of pages but fails every point above, so this revision replaces it.
 
 ## Alternatives considered
 
@@ -46,7 +46,7 @@ It is sound for a handful of pages but fails every point above, so this revision
 **How a page that has never been reviewed gets its first due date**
 
 - **Today plus the cycle.** Every page falls due on the same day.
-- **Spread across the first cycle by a stable hash of the page key.** Each page gets a fixed first due date somewhere in the first cycle after governance starts, so about 1/52 of the site falls due each week, and the date does not move between runs.
+- **Spread across the first cycle by a stable hash of the page key.** Each page gets a fixed first due date somewhere in its first cycle, counted from the later of when governance starts and when the page was created, so on a 12-month cycle about 1/52 of those pages falls due each week, and the date does not move between runs.
   Chosen.
 
 **Where the full list lives**
@@ -63,6 +63,10 @@ It is sound for a handful of pages but fails every point above, so this revision
 
 ## Decision
 
+None of this is built yet.
+`main` still has the first version: a fixed review date on each page, `PageReview.Assess`, and a `GovernanceReport` that names up to 20 pages per finding.
+The sections below describe what replaces it.
+
 **Schema.**
 The `contentGovernance` composition, on every page type, has three optional properties in the Governance group:
 
@@ -71,7 +75,8 @@ The `contentGovernance` composition, on every page type, has three optional prop
 - **Last reviewed**: a date the owner sets when they have checked the page.
 
 The single **Review date** property is removed.
-The home page is the root of inheritance; the health check reports an error while the home page has no owner or no cycle.
+The home page is the root of inheritance; the health check reports an error while the home page has no owner.
+A page with no cycle on itself or any ancestor uses the default cycle (12 months, below), so a missing cycle is never an error.
 
 **Rules, in the domain (ES-020).**
 `UmbracoSample.Domain.Governance` holds pure functions with no CMS types, property-tested (ES-002) with the clock passed in:
@@ -79,14 +84,16 @@ The home page is the root of inheritance; the health check reports an error whil
 - **Effective owner and cycle**: the value on the page if set, otherwise the nearest ancestor's.
   The result records which page it came from.
 - **Due date**: last reviewed plus the effective cycle.
-  With no last-reviewed date, the first due date is the governance start date plus a fraction of the cycle given by a stable hash of the page key.
-  The start date is configuration, so each environment sets when the clock starts.
-- **Findings**: no effective owner; the owner's account is disabled or deleted (counted as no owner, because the page is effectively orphaned); overdue; due within 30 days.
+  With no last-reviewed date, the first due date is the later of the governance start date and the page's creation date, plus a fraction of the cycle given by a stable hash of the page key.
+  A page created after governance starts therefore gets its first due date inside its own first cycle, not one computed from a start date that preceded it.
+  A start date set in the past can still give older pages a first due date that has already passed; that is intended, since those pages are then genuinely due.
+  The start date is configuration, so each environment sets when the clock starts; while it is unset the health check reports an error and computes no first due dates.
+- **Findings**: no effective owner; the owner's account is disabled or deleted (counted as no owner, because the page is effectively orphaned; the page does not fall back to an ancestor's owner, so the gap stays visible until someone is named); overdue; due within 30 days.
 
 Properties the tests cover include:
 
 - inheritance from the nearest ancestor that sets a value;
-- the first due date always falls inside the first cycle;
+- the first due date always falls inside the first cycle after the later of the start date and the page's creation date;
 - the spread of first due dates is close to uniform;
 - the due date never changes between runs for the same input.
 
@@ -114,20 +121,21 @@ Nothing new about the user is stored.
 
 **Before implementation.**
 The export endpoint is a new authenticated route.
-An update to threat model 0002 covering it comes before the code (ES-023).
+Threat model 0002 models the back office at the internet boundary (row 1, T6); the export adds an authenticated route behind it, so that model is extended rather than a new one started. The update covers authorization, what each row reveals, and that it lists names but no email addresses (ES-025), and comes before the code (ES-023).
 
 ## Consequences
 
-- **GOV-02 is met by construction once the home page has an owner and a cycle.**
+- **GOV-02 is met by construction once the home page has an owner.**
   Every page then has an effective owner and a due date, and the backfill is a few dozen section pages, not 1,500.
 - **GOV-03 stays partly met.**
-  Flagging is automatic in the health check and export, but nobody is told unless they look: the digest is deferred.
+  Once built, findings are computed automatically for the health check and export, but nobody is told unless they look: the digest is deferred.
   `docs/traceability.md` keeps GOV-03 as "partly" until owners are notified.
 - An owner leaving shows up immediately: disabling their account makes all their pages ownerless in the next report.
 - An inherited owner can surprise the people who own a section.
   The export shows where each owner came from, so a section owner can filter for everything they inherit.
 - Removing **Review date** is a schema change.
-  No published page uses it outside the synthetic seed content, so it needs no data migration; the uSync files change with the code.
+  Only the synthetic seed content uses it today, so the change needs no data migration script: the uSync files and seed content change with the code.
+  A site with real review dates would need them copied into **Last reviewed** (review date minus the page's effective cycle) before the property is removed.
 - Marking a page as reviewed means setting **Last reviewed** and publishing.
   A one-click "mark reviewed" action would need back-office front-end code; revisit it if editors find the field awkward.
 - The hash spread applies only to a page's first cycle.

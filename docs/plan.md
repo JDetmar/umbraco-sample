@@ -95,7 +95,7 @@ Expected total: about $60-90/month with Front Door Standard in prod, or about $3
 
 ## Phase 6: Governance features
 
-- Every page has an owner and a review date, with a backoffice dashboard flagging expired or ownerless pages (GOV-02, GOV-03). Partly done (ADR 0018): owner and review date on every page type, flagged by a back-office health check on demand. Not yet enforced at publish or flagged on a schedule.
+- Every page has an owner and a review date, with a backoffice dashboard flagging expired or ownerless pages (GOV-02, GOV-03). Partly done (ADR 0018 v1; the accepted revision is not yet implemented): owner and review date on every page type, flagged by a back-office health check on demand. Not yet enforced at publish or flagged on a schedule.
 - Structured data (JSON-LD) on pages (ARC-08). Done: `StructuredData/PageStructuredData.cs`, its unit tests and `StructuredDataTests` (integration).
 - Backoffice audit events forwarded to an append-only log store (ES-026).
 - `docs/traceability.md` maps every framework ID and ES clause to its evidence, or to a ledger entry. Done; `TraceabilityPolicyTests` keeps it complete and in step with the ledger.
