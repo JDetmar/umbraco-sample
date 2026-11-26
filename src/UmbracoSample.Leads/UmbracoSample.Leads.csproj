@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Shared by every site host (ADR 0020): the client that sends a parsed lead to the marketing automation platform (the
+    "MAP", threat model 0001). The rules are in the domain; this project only does HTTP. No site-specific values: the
+    host supplies the MAP address and credential through configuration.
+  -->
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+    <ProjectReference Include="..\UmbracoSample.Domain\UmbracoSample.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="UmbracoSample.Leads.Tests" />
+  </ItemGroup>
+
+</Project>
