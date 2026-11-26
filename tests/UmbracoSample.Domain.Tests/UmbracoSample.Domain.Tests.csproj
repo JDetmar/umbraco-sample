@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <None Include="Redirects\corpus\**" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Leads\corpus\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

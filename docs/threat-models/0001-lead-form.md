@@ -1,6 +1,7 @@
 # Threat model 0001: lead form forwarded to the marketing automation platform
 
 - Status: **Approved by the owner on 2026-11-24, with decisions D1 to D4 recorded below (ES-023).**
+- Reviewed again by the owner on 2026-11-26 before Phase 4 started (project thread): no changes.
 - Date: 2026-11-24
 - Scope: plan Phase 4, the Form component and its submission endpoint
 - Clauses: ES-022, ES-023, ES-025, ES-026, ES-043, ES-044, ES-045, ES-046, ES-058, ES-059; framework TST-07
