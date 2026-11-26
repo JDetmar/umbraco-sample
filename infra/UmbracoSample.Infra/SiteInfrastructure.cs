@@ -196,7 +196,17 @@ public sealed class SiteInfrastructure
             ResourceGroupName = group.Name,
             VirtualNetworkName = network.Name,
             AddressPrefix = "10.40.0.0/23",
-            Delegations = { new DelegationArgs { Name = "container-apps", ServiceName = "Microsoft.App/environments" } },
+            // Azure fills in the actions the service needs when it applies the delegation. Declaring the same value keeps the
+            // stored state equal to what a refresh reads, so the daily drift check (dev-check.yml) sees no change.
+            Delegations =
+            {
+                new DelegationArgs
+                {
+                    Name = "container-apps",
+                    ServiceName = "Microsoft.App/environments",
+                    Actions = { "Microsoft.Network/virtualNetworks/subnets/join/action" },
+                },
+            },
             ServiceEndpoints = { new ServiceEndpointPropertiesFormatArgs { Service = "Microsoft.Sql" } },
         });
 
