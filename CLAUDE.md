@@ -53,10 +53,12 @@ Agents MUST run `make validate` before handing off a change, or record why it co
 | `src/UmbracoSample.Security` | Shared: security headers and the content security policy built per host from an allowlist (ADR 0008, ADR 0020) |
 | `src/UmbracoSample.Components` | Shared: component view models and the mapping from blocks; views stay in the host, in `Views/Partials/Components` |
 | `src/UmbracoSample.Governance` | Shared: the content governance health check (ADR 0018) |
+| `src/UmbracoSample.Leads` | Shared: the client that sends a parsed lead to the marketing automation platform (threat model 0001, `docs/map-api.md`) |
 | `src/UmbracoSample.Web/Security` | This site's third-party allowlist (ADR 0008) |
 | `src/UmbracoSample.Web/uSync/v17` | Schema (and synthetic seed content) as code, imported on first boot and checked for drift |
 | `tests/UmbracoSample.Repository.Tests` | Fast policy tests over the repository itself |
 | `tests/UmbracoSample.Domain.Tests` | Property, example and corpus tests for the domain, and the architecture rule that keeps it framework-free |
+| `tests/UmbracoSample.Leads.Tests` | Contract tests for the MAP client against a WireMock.Net stub |
 | `tests/UmbracoSample.Web.Tests` | Fast unit and component contract tests |
 | `tests/UmbracoSample.Integration.Tests` | Tests against the real stack through Aspire (`Category=Integration`) |
 | `frontend/` | Design tokens (`tokens/`), stylesheet sources and the build (ADR 0007); output goes to `wwwroot/dist`, never committed |
