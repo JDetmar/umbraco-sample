@@ -4,6 +4,9 @@
   </PropertyGroup>
   <ItemGroup Label="Umbraco">
     <PackageVersion Include="Umbraco.Cms" Version="17.8.2" />
+    <!-- Parts of Umbraco.Cms, at its version, for the shared libraries that need Umbraco but not the web host (ADR 0020). -->
+    <PackageVersion Include="Umbraco.Cms.Core" Version="17.8.2" />
+    <PackageVersion Include="Umbraco.Cms.Web.Common" Version="17.8.2" />
     <PackageVersion Include="uSync" Version="17.6.3" />
   </ItemGroup>
   <ItemGroup Label="Azure">

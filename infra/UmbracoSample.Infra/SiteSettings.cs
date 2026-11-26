@@ -12,8 +12,12 @@ public sealed partial record SiteSettings(
     decimal MonthlyBudget,
     string Image,
     bool EnableEdge,
-    bool UptimeTest = false)
+    bool UptimeTest = false,
+    string SiteSlug = SiteSettings.DefaultSiteSlug)
 {
+    /// <summary>The slug of this repository's site; with it, every resource keeps the name it had before slugs (ADR 0020).</summary>
+    public const string DefaultSiteSlug = "umbraco-sample";
+
     public static SiteSettings From(Config config)
     {
         ArgumentNullException.ThrowIfNull(config);
@@ -25,7 +29,8 @@ public sealed partial record SiteSettings(
             MonthlyBudget: decimal.Parse(config.Require("monthlyBudget"), CultureInfo.InvariantCulture),
             Image: ResolveImage(config.Get("image"), System.Environment.GetEnvironmentVariable("SITE_IMAGE")),
             EnableEdge: bool.Parse(config.Get("enableEdge") ?? "false"),
-            UptimeTest: bool.Parse(config.Get("uptimeTest") ?? "false"));
+            UptimeTest: bool.Parse(config.Get("uptimeTest") ?? "false"),
+            SiteSlug: config.Get("siteSlug") ?? DefaultSiteSlug);
 
         settings.Validate();
         return settings;
@@ -44,6 +49,13 @@ public sealed partial record SiteSettings(
     /// <summary>Rejects settings that would break the hosting decisions in ADR 0004 and ADR 0010.</summary>
     public void Validate()
     {
+        // The slug names the site's resources (ADR 0020). The longest name built from it, "<slug>-staging-db-user",
+        // must fit the 32-character limit on Container Apps jobs.
+        if (!SiteSlugFormat().IsMatch(SiteSlug))
+        {
+            throw new ArgumentException($"siteSlug must be 3 to 16 lower-case letters, digits and single hyphens, starting with a letter and not ending with a hyphen, not '{SiteSlug}'.");
+        }
+
         if (Environment is not ("dev" or "staging" or "prod"))
         {
             throw new ArgumentException($"environment must be dev, staging or prod, not '{Environment}'.");
@@ -95,6 +107,9 @@ public sealed partial record SiteSettings(
             throw new ArgumentException($"image must be pinned by sha256 digest, not '{Image}'.");
         }
     }
+
+    [GeneratedRegex("^[a-z](?!.*--)[a-z0-9-]{1,14}[a-z0-9]$")]
+    private static partial Regex SiteSlugFormat();
 
     [GeneratedRegex("^[a-z0-9.-]+(/[a-z0-9._-]+)+@sha256:[0-9a-f]{64}$")]
     private static partial Regex ImageByDigest();

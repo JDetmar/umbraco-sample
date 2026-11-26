@@ -46,9 +46,11 @@ format-check: ## Fail if formatting or code style would change
 FAST_TEST_PROJECTS := $(filter-out %Integration.Tests,$(wildcard tests/*.Tests))
 
 COVERAGE_DIR := artifacts/coverage
+WEB_TESTED_LIBRARIES := UmbracoSample.Components UmbracoSample.Governance UmbracoSample.Security
 
 # A test project that references coverlet.MTP reports the coverage of the assembly it is named after, and only that
-# one, so a floor measures that assembly's own tests. Coverage is a diagnostic (ES-002): only assemblies in
+# one, so a floor measures that assembly's own tests. The Web tests also report the shared libraries moved out of the
+# site (ADR 0020), until those get test projects of their own. Coverage is a diagnostic (ES-002): only assemblies in
 # tests/coverage-floors.json can fail the build. The stale-report cleanup names its directory literally on purpose.
 test: ## Fast tests: unit and policy tests, no containers; reports coverage (floor on the domain only)
 	@find artifacts/coverage -name '*.cobertura.*xml' -delete 2>/dev/null || true
@@ -56,7 +58,11 @@ test: ## Fast tests: unit and policy tests, no containers; reports coverage (flo
 		name=$$(basename "$$project"); \
 		coverage=""; \
 		if grep -q '"coverlet.MTP"' "$$project"/*.csproj; then \
-			coverage="--coverlet --coverlet-output-format cobertura --coverlet-include [$${name%.Tests}]* --coverlet-file-prefix $$name --results-directory $(COVERAGE_DIR)"; \
+			include="--coverlet-include [$${name%.Tests}]*"; \
+			if [ "$$name" = UmbracoSample.Web.Tests ]; then \
+				include="$$include $(foreach lib,$(WEB_TESTED_LIBRARIES),--coverlet-include [$(lib)]*)"; \
+			fi; \
+			coverage="--coverlet --coverlet-output-format cobertura $$include --coverlet-file-prefix $$name --results-directory $(COVERAGE_DIR)"; \
 		fi; \
 		set -f; dotnet test --project "$$project" -c $(CONFIG) --no-build $$coverage || exit 1; set +f; \
 	done

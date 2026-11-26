@@ -70,7 +70,7 @@ A deployed, tested, observable "hello page" before any real features (ES-019 SHO
 
 - Pulumi C# project (`infra/`) for the container host, Azure SQL, Blob storage for media, Front Door with WAF, Key Vault and Application Insights via the OpenTelemetry exporter (ENV-01, OPS-01, OPS-03).
 - One Pulumi stack per environment (dev, staging, prod); provider and package versions pinned with lock files (ES-013).
-- `pulumi preview` runs on every PR and its diff is posted for review; `pulumi up` runs only from the pipeline after merge (ES-055, ES-012). No manual changes: a scheduled `pulumi refresh --preview-only` flags drift (ENV-01).
+- `pulumi preview` runs on every PR and its diff is posted for review; `pulumi up` runs only from the pipeline after merge (ES-055, ES-012). No manual changes: a scheduled `pulumi preview --refresh --expect-no-changes` flags drift (ENV-01; `dev-check.yml`, dev only).
 - GitHub to Azure via OIDC federated credentials; no stored cloud secrets (ES-024). Pulumi config secrets encrypted by Pulumi Cloud (ES-024).
 - An Azure budget with alerts is part of the stack (ES-047).
 - An availability test and alert for always-on stacks (`uptimeTest`, OPS-03). Off in dev: a test every 5 to 15 minutes keeps a scale-to-zero app awake, which would cost more than the dev budget. Standard tests are billed per run (about $0.0012 at list price; confirm with the pricing calculator), so prod tests three regions every 15 minutes, about $10 a month.

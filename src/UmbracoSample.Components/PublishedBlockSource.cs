@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Html;
+using Microsoft.Extensions.Logging;
 using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Core.Models.Blocks;
 using Umbraco.Cms.Core.Models.PublishedContent;
 using Umbraco.Cms.Core.Strings;
+using Umbraco.Extensions;
 
-namespace UmbracoSample.Web.Components;
+namespace UmbracoSample.Components;
 
 /// <summary>Reads block values from published Umbraco content. Covered by the integration tests against the fixtures.</summary>
 public sealed partial class PublishedBlockSource(IPublishedElement element, ILogger logger) : IBlockSource

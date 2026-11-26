@@ -109,6 +109,21 @@ public sealed class SiteInfrastructureTests
     }
 
     [Fact]
+    public async Task The_stack_exposes_what_the_restore_test_needs()
+    {
+        SiteInfrastructure? infrastructure = null;
+        await Deployment.TestAsync(new RecordingMocks(), new TestOptions { IsPreview = false, ProjectName = "umbraco-sample", StackName = "dev" },
+            () =>
+            {
+                infrastructure = new SiteInfrastructure(Dev, Secrets());
+                return infrastructure.Outputs;
+            });
+
+        (await Pulumi.Utilities.OutputUtilities.GetValueAsync((Output<string>)infrastructure!.Outputs["database"]!)).ShouldBe("umbraco");
+        (await Pulumi.Utilities.OutputUtilities.GetValueAsync((Output<string>)infrastructure.Outputs["databaseUserJob"]!)).ShouldBe("/mock/azure-native:app:Job/umbraco-sample-dev-db-user");
+    }
+
+    [Fact]
     public async Task The_app_waits_for_its_key_vault_access_to_propagate()
     {
         var wait = (await Declare(Dev)).Resources.Single(r => r.Type == "command:local:Command" && r.Name == "wait-for-secret-access").Inputs;
@@ -258,8 +273,32 @@ public sealed class SiteInfrastructureTests
 
         storage.ShouldMatch("^[a-z0-9]{3,24}$");
         vault.ShouldMatch("^[a-zA-Z](?!.*--)[a-zA-Z0-9-]{1,22}[a-zA-Z0-9]$");
-        $"umbraco-sample-{environment}-web".Length.ShouldBeLessThanOrEqualTo(32, "Container App names are at most 32 characters.");
+        $"site-sixteen-chr-{environment}-db-user".Length.ShouldBeLessThanOrEqualTo(32, "Container Apps job names are at most 32 characters, with the longest slug.");
         SiteInfrastructure.Suffix("ffffffff-ffff-ffff-ffff-ffffffffffff", environment).ShouldBe(suffix, "names must be stable across runs");
+    }
+
+    [Fact]
+    public void The_default_site_keeps_the_names_it_had_before_site_slugs()
+    {
+        // ADR 0020: adding siteSlug must not rename, and so replace, any resource of an existing stack.
+        // The first six hex characters of SHA-256("<subscription>/dev"), the formula before slugs, pinned as a literal.
+        const string before = "f5b6c4";
+
+        SiteInfrastructure.Suffix(RecordingMocks.SubscriptionId, "dev").ShouldBe(before);
+        SiteInfrastructure.Suffix(RecordingMocks.SubscriptionId, "dev", SiteSettings.DefaultSiteSlug).ShouldBe(before);
+    }
+
+    [Fact]
+    public async Task Another_site_gets_its_own_names_in_the_same_subscription()
+    {
+        var mocks = await Declare(Dev with { SiteSlug = "other-site" });
+        var suffix = SiteInfrastructure.Suffix(RecordingMocks.SubscriptionId, "dev", "other-site");
+
+        suffix.ShouldNotBe(DevSuffix);
+        Single(mocks, "azure-native:storage:StorageAccount")["accountName"].ShouldBe(SiteInfrastructure.StorageAccountName("dev", suffix));
+        Single(mocks, "azure-native:keyvault:Vault")["vaultName"].ShouldBe(SiteInfrastructure.VaultName("dev", suffix));
+        Single(mocks, "azure-native:app:ContainerApp")["containerAppName"].ShouldBe("other-site-dev-web");
+        Map(Single(mocks, "azure-native:resources:ResourceGroup")["tags"])["application"].ShouldBe("other-site");
     }
 
     [Fact]
@@ -300,6 +339,7 @@ public sealed class SiteInfrastructureTests
 
         var siteUrl = await Pulumi.Utilities.OutputUtilities.GetValueAsync((Output<string>)infrastructure!.Outputs["siteUrl"]!);
         siteUrl.ShouldBe("https://umbraco-sample-dev-web.app.example");
+        infrastructure.Outputs["siteImage"].ShouldBe(Dev.Image);
     }
 
     [Fact]

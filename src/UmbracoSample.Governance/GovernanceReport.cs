@@ -3,7 +3,7 @@ using System.Net;
 using Umbraco.Cms.Core.HealthChecks;
 using UmbracoSample.Domain.Governance;
 
-namespace UmbracoSample.Web.Governance;
+namespace UmbracoSample.Governance;
 
 /// <summary>A published page and what is wrong with its ownership or review.</summary>
 public sealed record ReviewedPage(string Name, int Id, ReviewFinding Findings);

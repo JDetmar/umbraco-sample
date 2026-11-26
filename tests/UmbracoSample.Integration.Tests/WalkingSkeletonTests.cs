@@ -14,6 +14,15 @@ public sealed class WalkingSkeletonTests(SiteFixture site)
         html.ShouldContain("<html lang=\"en\">");
     }
 
+    [Fact]
+    public async Task Every_page_is_branded_with_its_site_root_title()
+    {
+        // ADR 0020: the header names the site from its root node, so each root in a shared instance names its own site.
+        var html = await site.Web.GetStringAsync("/fixture-minimal/", TestContext.Current.CancellationToken);
+
+        html.ShouldContain("<a class=\"site-header__brand\" href=\"/\">Umbraco sample</a>");
+    }
+
     [Theory]
     [InlineData("/health/ready")]
     [InlineData("/health/live")]
