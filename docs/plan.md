@@ -73,6 +73,7 @@ A deployed, tested, observable "hello page" before any real features (ES-019 SHO
 - `pulumi preview` runs on every PR and its diff is posted for review; `pulumi up` runs only from the pipeline after merge (ES-055, ES-012). No manual changes: a scheduled `pulumi preview --refresh --expect-no-changes` flags drift (ENV-01; `dev-check.yml`, dev only).
 - GitHub to Azure via OIDC federated credentials; no stored cloud secrets (ES-024). Pulumi config secrets encrypted by Pulumi Cloud (ES-024).
 - An Azure budget with alerts is part of the stack (ES-047).
+- An availability test and alert for always-on stacks (`uptimeTest`, OPS-03). Off in dev: a test every 5 to 15 minutes keeps a scale-to-zero app awake, which would cost more than the dev budget. Standard tests are billed per run (about $0.0012 at list price; confirm with the pricing calculator), so prod tests three regions every 15 minutes, about $10 a month.
 - Dev, staging and prod with a pipeline promotion path (ENV-02, ENV-03). Owner decision, 2026-11-25: dev only for now; staging and prod wait until the owner plans them, and anything that truly needs another environment is raised for discussion.
 - Managed identity and Key Vault; no long-lived secrets (ES-024).
 - Backups with a scripted restore test (OPS-05, ES-031).
@@ -90,11 +91,11 @@ Rough list prices, to confirm with the Azure pricing calculator before Phase 5. 
 | Media, Key Vault, App Insights | Blob storage, Key Vault, App Insights free ingestion tier | a few dollars |
 | Edge and WAF | Front Door Standard with custom WAF rules (rate limiting, geo); managed OWASP rule sets need Premium | ~$35-40 (Premium ~$330, off by default) |
 
-Expected total: about $60-90/month with Front Door Standard in prod, or about $30-40 without it. Front Door Premium would be a toggle for demos only. Running Standard instead of Premium means OPS-01 is only partly met, recorded in the ledger as a gap with the toggle as its fix.
+Expected total: about $60-90/month with Front Door Standard in prod, or about $30-40 without it, plus about $10 for the prod availability test (OPS-03). Front Door Premium would be a toggle for demos only. Running Standard instead of Premium means OPS-01 is only partly met, recorded in the ledger as a gap with the toggle as its fix.
 
 ## Phase 6: Governance features
 
-- Every page has an owner and a review date, with a backoffice dashboard flagging expired or ownerless pages (GOV-02, GOV-03).
+- Every page has an owner and a review date, with a backoffice dashboard flagging expired or ownerless pages (GOV-02, GOV-03). Partly done (ADR 0018): owner and review date on every page type, flagged by a back-office health check on demand. Not yet enforced at publish or flagged on a schedule.
 - Structured data (JSON-LD) on pages (ARC-08). Done: `StructuredData/PageStructuredData.cs`, its unit tests and `StructuredDataTests` (integration).
 - Backoffice audit events forwarded to an append-only log store (ES-026).
 - `docs/traceability.md` maps every framework ID and ES clause to its evidence, or to a ledger entry. Done; `TraceabilityPolicyTests` keeps it complete and in step with the ledger.

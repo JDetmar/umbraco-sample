@@ -41,7 +41,7 @@ How to read the status column:
 | ES-028 | Final review and authorization | not assessed | Delegation envelope in `CLAUDE.md`: an independent reviewer context for every agent pull request. |
 | ES-029 | Review focus | not assessed | |
 | ES-030 | Diagnostic signals | deviation | DEV-011 (no CSP reporting), DEV-015 (single replica). OpenTelemetry to Application Insights. |
-| ES-031 | Recovery | not assessed | Planned: backups with a scripted restore test (Phase 5, OPS-05). |
+| ES-031 | Recovery | not assessed | Media soft delete declared; database restore test proposed, pending the owner (OPS-05). |
 | ES-032 | Learning | not assessed | |
 | ES-033 | Reader and contract | not assessed | One page per component in [docs/components](components/README.md). |
 | ES-034 | Failure semantics | not assessed | The site refuses to start on an invalid redirect map (ADR 0009). |
@@ -85,7 +85,7 @@ How to read the status column:
 | ARC-06 | Forms native in the site, posting to the marketing automation platform | planned | Phase 4, after the owner reviews threat model 0001. |
 | ARC-07 | Analytics and A/B test hooks in components | gap | Not started; no tracker is on the site, and any would need the third-party allowlist (ADR 0008). |
 | ARC-08 | Clean structured data for AI search engines | met | JSON-LD on every page (`src/UmbracoSample.Web/StructuredData`), unit tests and `StructuredDataTests` (integration). |
-| ENV-01 | All Azure resources as code; no manual changes | partly | Pulumi C# stack (ADR 0010) and CD for dev (ADR 0013). A daily check (`dev-check.yml`) runs a refreshed preview of dev with `expect-no-changes` against the deployed image, so drift fails the run. Dev only; off until the owner sets `DEV_CHECK_ENABLED` (pending decision under DEV-017), and no run has proved it yet. |
+| ENV-01 | All Azure resources as code; no manual changes | partly | Pulumi C# stack (ADR 0010) and CD for dev (ADR 0013). A daily check (`dev-check.yml`) runs a refreshed preview of dev with `expect-no-changes` against the deployed image, so drift fails the run. Dev only; approved by the owner on 2026-11-26 under DEV-017, on once `DEV_CHECK_ENABLED` is set; no run has proved it yet. |
 | ENV-02 | Dev, staging and production with a promotion path | deferred | Owner decision, 2026-11-25: dev only for now (recorded in [the plan](plan.md), Phase 5). Trigger: the owner plans staging or production. The image is promoted by digest, so a later stage reuses the same artifact. |
 | ENV-03 | Every deployment automated and reversible | partly | CD deploys dev from `main` after every gate (ADR 0013). Rollback follows ES-014: roll forward by default, previous revision only when compatible. |
 | ENV-04 | A preview environment per pull request | deferred | Under ES-060 until its trigger exists. |
@@ -117,17 +117,17 @@ How to read the status column:
 | CMP-07 | Yearly manual accessibility audit | gap | DEV-008. |
 | OPS-01 | Web application firewall in front of the site | planned | Front Door with WAF rules (Phase 5, ADR 0010). |
 | OPS-02 | Third-party penetration test | outside the code | |
-| OPS-03 | Real user monitoring, uptime checks and alerting | partly | Server-side OpenTelemetry to Application Insights. A daily smoke test of dev (`dev-check.yml`, off until the owner enables it) fails the run when the site is down; GitHub emails a scheduled run's failure to the user who last changed the schedule. No real user (browser) monitoring, continuous uptime check or alert rules yet. |
+| OPS-03 | Real user monitoring, uptime checks and alerting | partly | Server-side OpenTelemetry to Application Insights. A daily smoke test of dev (`dev-check.yml`, on once the owner sets `DEV_CHECK_ENABLED`) fails the run when the site is down; GitHub emails a scheduled run's failure to the user who last changed the schedule. An availability test of `/health/ready` from three regions with an email alert is declared for always-on stacks (`uptimeTest`, on in prod, mock-tested in `SiteInfrastructureTests`); it is off in dev, which scales to zero, and prod is not deployed, so no alert has fired yet; prod waits on the edge (DEV-010) and the owner's environment plan. No real user (browser) monitoring. |
 | OPS-04 | SLOs for availability and page speed | gap | Not started. |
-| OPS-05 | Backups with tested restores | planned | Phase 5: a scripted restore test. |
+| OPS-05 | Backups with tested restores | planned | Media: blob and container soft delete declared, 7 days in dev and 30 in prod (`Media_soft_delete_is_declared`); it does not cover deleting the storage account itself. Database: Azure SQL automatic backups. No restore has been tested yet; a scheduled restore test is proposed, pending the owner. |
 | OPS-06 | Incident runbooks and on-call | outside the code | |
 | OWN-01 | One team owns the repository, environments and pipeline; no direct production access | partly | Infrastructure only through Pulumi and the pipeline; dev deploys only through CD (ADR 0013). Production is deferred. |
 | OWN-02 | All work arrives as pull requests and merges after review | partly | Every change is a pull request with an independent review (delegation envelope); not enforced for admins (DEV-001). |
 | OWN-03 | Named product owner and marketing counterpart | outside the code | |
 | OWN-04 | Legal and privacy own regulated content approval | outside the code | |
 | OWN-05 | A durable product team with a roadmap | outside the code | |
-| GOV-02 | Every page has an owner and a review date | planned | Phase 6. |
-| GOV-03 | Expired or ownerless pages flagged | planned | Phase 6. |
+| GOV-02 | Every page has an owner and a review date | partly | Content owner and review date on every page type (`contentGovernance` composition, ADR 0018), kept there by `GovernanceSchemaTests`. Optional in the editor, so detected rather than enforced. |
+| GOV-03 | Expired or ownerless pages flagged | partly | The Content governance health check flags ownerless, undated, overdue and due-soon pages on demand (`PageReviewTests`, `GovernanceReportTests`). Not yet on a schedule. |
 | GOV-04 | ADRs for major choices | met | [ADRs](adr/README.md); a policy test keeps the index complete. |
 | GOV-05 | Coding standards and definition of done, enforced in review | partly | `CLAUDE.md`, the engineering standard and the review rule in the delegation envelope. Review is not enforced for admins (DEV-001). |
 | GOV-06 | What belongs on the site versus a no-code tool | outside the code | |

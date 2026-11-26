@@ -6,6 +6,7 @@ using Pulumi;
 using Pulumi.AzureNative.App;
 using Pulumi.AzureNative.App.Inputs;
 using Pulumi.AzureNative.ApplicationInsights;
+using Pulumi.AzureNative.ApplicationInsights.Inputs;
 using Pulumi.AzureNative.Authorization;
 using Pulumi.AzureNative.Consumption;
 using Pulumi.AzureNative.Consumption.Inputs;
@@ -126,6 +127,20 @@ public sealed class SiteInfrastructure
             ContainerName = "media",
             AccountName = storage.Name,
             PublicAccess = PublicAccess.None,
+        });
+
+        // Recovery (ES-031, OPS-05): soft delete keeps deleted or overwritten media, and deleted containers, for a
+        // retention window. Soft delete covers overwrites too, so versioning (which keeps every version until a
+        // lifecycle rule removes it) is not needed. Soft-deleted data is billed as storage until it expires. It does not
+        // protect against deleting the storage account itself.
+        var mediaRetentionDays = MediaRetentionDays(settings.Environment);
+        _ = new BlobServiceProperties($"{name}-media-recovery", new BlobServicePropertiesArgs
+        {
+            ResourceGroupName = group.Name,
+            AccountName = storage.Name,
+            BlobServicesName = "default",
+            DeleteRetentionPolicy = new DeleteRetentionPolicyArgs { Enabled = true, Days = mediaRetentionDays, AllowPermanentDelete = false },
+            ContainerDeleteRetentionPolicy = new DeleteRetentionPolicyArgs { Enabled = true, Days = mediaRetentionDays },
         });
 
         // Secrets: RBAC-authorised Key Vault with purge protection.
@@ -416,6 +431,11 @@ public sealed class SiteInfrastructure
             },
         }, new CustomResourceOptions { IgnoreChanges = { "timePeriod" } });
 
+        if (settings.UptimeTest)
+        {
+            DeclareUptimeAlert(name, settings, group, insights, site, secrets.BudgetContactEmail, tags);
+        }
+
         Outputs = new Dictionary<string, object?>
         {
             ["resourceGroup"] = group.Name,
@@ -433,6 +453,80 @@ public sealed class SiteInfrastructure
     }
 
     public IDictionary<string, object?> Outputs { get; }
+
+    /// <summary>Days that deleted or overwritten media can be recovered: 30 in prod, 7 elsewhere.</summary>
+    public static int MediaRetentionDays(string environment) => environment == "prod" ? 30 : 7;
+
+    /// <summary>
+    /// OPS-03: a standard availability test of the site's health endpoint from three regions every 15 minutes, and an
+    /// alert that emails the contact when two regions fail. Azure retries a failed probe before it counts.
+    /// </summary>
+    private static void DeclareUptimeAlert(string name, SiteSettings settings, ResourceGroup group, Component insights, ContainerApp site, Output<string> contact, InputMap<string> tags)
+    {
+        // The app's own hostname until the edge exists; when Front Door lands (DEV-010) the probe moves to its endpoint,
+        // or it would bypass the WAF, or be refused once ingress admits only Front Door.
+        var url = site.Configuration.Apply(c => $"https://{c?.Ingress?.Fqdn}/health/ready");
+
+        // Azure links a test to its Application Insights resource only through this hidden-link tag.
+        var testTags = Output.Tuple(insights.Id, tags.ToOutput()).Apply(t =>
+            t.Item2.SetItem($"hidden-link:{t.Item1}", "Resource"));
+
+        var test = new WebTest($"{name}-uptime", new WebTestArgs
+        {
+            ResourceGroupName = group.Name,
+            Kind = WebTestKind.Standard,
+            WebTestKind = WebTestKind.Standard,
+            SyntheticMonitorId = $"{name}-uptime",
+            WebTestName = $"{name}-uptime",
+            Description = "Health endpoint from three regions (OPS-03).",
+            Enabled = true,
+            // Every 15 minutes: about $10 a month for three regions at list price, against about $30 at 5 minutes.
+            Frequency = 900,
+            Timeout = 60,
+            RetryEnabled = true,
+            Locations =
+            {
+                new WebTestGeolocationArgs { Location = "emea-gb-db3-azr" }, // UK South
+                new WebTestGeolocationArgs { Location = "emea-nl-ams-azr" }, // West Europe
+                new WebTestGeolocationArgs { Location = "us-va-ash-azr" }, // East US
+            },
+            Request = new WebTestPropertiesRequestArgs { RequestUrl = url, HttpVerb = "GET", FollowRedirects = false, ParseDependentRequests = false },
+            ValidationRules = new WebTestPropertiesValidationRulesArgs { ExpectedHttpStatusCode = 200, SSLCheck = true, SSLCertRemainingLifetimeCheck = 7 },
+            Tags = testTags,
+        });
+
+        var contacts = new ActionGroup($"{name}-alerts", new Pulumi.AzureNative.Monitor.ActionGroupArgs
+        {
+            ResourceGroupName = group.Name,
+            Location = "global",
+            GroupShortName = settings.Environment.Length <= 6 ? $"us-{settings.Environment}" : "us-alerts",
+            Enabled = true,
+            EmailReceivers = { new MicrosoftCommonEmailReceiverArgs { Name = "owner", EmailAddress = contact, UseCommonAlertSchema = true } },
+            Tags = tags,
+        });
+
+        _ = new MetricAlert($"{name}-uptime-alert", new MetricAlertArgs
+        {
+            ResourceGroupName = group.Name,
+            Location = "global",
+            Description = "The site's health endpoint failed from two or more regions (OPS-03).",
+            Severity = 1,
+            Enabled = true,
+            Scopes = { test.Id, insights.Id },
+            EvaluationFrequency = "PT1M",
+            WindowSize = "PT15M",
+            AutoMitigate = true,
+            Criteria = new WebtestLocationAvailabilityCriteriaArgs
+            {
+                OdataType = "Microsoft.Azure.Monitor.WebtestLocationAvailabilityCriteria",
+                WebTestId = test.Id,
+                ComponentId = insights.Id,
+                FailedLocationCount = 2,
+            },
+            Actions = { new MetricAlertActionArgs { ActionGroupId = contacts.Id } },
+            Tags = tags,
+        });
+    }
 
     /// <summary>Six hex characters from subscription and environment: unique enough for global names, stable across runs.</summary>
     public static string Suffix(string subscriptionId, string environment) =>
