@@ -1,9 +1,9 @@
 # 0018. Page owner and review cycle, inherited down the tree
 
-- Status: Accepted by the owner on 2026-11-26 (project thread), with the 12-month default cycle as written
+- Status: Accepted by the owner on 2026-11-26 (project thread), with the 12-month default cycle as written. Amendment of 2026-11-26 (missing cycle uses the default, first due date from the later of start and creation date, unset start date, no owner fallback) proposed after review, pending the owner's confirmation
 - Date: 2026-11-25; revised 2026-11-26 for a site of about 1,500 pages
 - Decider: owner
-- Clauses: ES-002, ES-019, ES-020, ES-023, ES-025, ES-047, ES-058, ES-059; framework GOV-02, GOV-03
+- Clauses: ES-002, ES-019, ES-020, ES-023, ES-025, ES-047, ES-058; framework GOV-02, GOV-03
 
 ## Context
 
@@ -23,7 +23,7 @@ That number decides the design:
   Owners need to be told which of their pages are due.
 
 The first version of this ADR (one owner and one review date on each page, flagged by an on-demand health check, naming up to 20 pages) is built on `main`.
-It is sound for a handful of pages but fails every point above, so this revision replaces it before it is accepted.
+It is sound for a handful of pages but fails every point above, so this revision replaces it.
 
 ## Alternatives considered
 
@@ -46,7 +46,7 @@ It is sound for a handful of pages but fails every point above, so this revision
 **How a page that has never been reviewed gets its first due date**
 
 - **Today plus the cycle.** Every page falls due on the same day.
-- **Spread across the first cycle by a stable hash of the page key.** Each page gets a fixed first due date somewhere in the first cycle after governance starts, so on a 12-month cycle about 1/52 of those pages falls due each week, and the date does not move between runs.
+- **Spread across the first cycle by a stable hash of the page key.** Each page gets a fixed first due date somewhere in its first cycle, counted from the later of when governance starts and when the page was created, so on a 12-month cycle about 1/52 of those pages falls due each week, and the date does not move between runs.
   Chosen.
 
 **Where the full list lives**
@@ -85,7 +85,8 @@ A page with no cycle on itself or any ancestor uses the default cycle (12 months
   The result records which page it came from.
 - **Due date**: last reviewed plus the effective cycle.
   With no last-reviewed date, the first due date is the later of the governance start date and the page's creation date, plus a fraction of the cycle given by a stable hash of the page key.
-  A page created after governance starts therefore gets its first due date inside its own first cycle, never in the past.
+  A page created after governance starts therefore gets its first due date inside its own first cycle, not one computed from a start date that preceded it.
+  A start date set in the past can still give older pages a first due date that has already passed; that is intended, since those pages are then genuinely due.
   The start date is configuration, so each environment sets when the clock starts; while it is unset the health check reports an error and computes no first due dates.
 - **Findings**: no effective owner; the owner's account is disabled or deleted (counted as no owner, because the page is effectively orphaned; the page does not fall back to an ancestor's owner, so the gap stays visible until someone is named); overdue; due within 30 days.
 
@@ -120,11 +121,11 @@ Nothing new about the user is stored.
 
 **Before implementation.**
 The export endpoint is a new authenticated route.
-Threat model 0002 already covers the back office as a trust boundary, so it is extended rather than starting a new one: an update covering the export (authorization, what each row reveals, and that it lists names but no email addresses, ES-025, ES-059) comes before the code (ES-023).
+Threat model 0002 models the back office at the internet boundary (row 1, T6); the export adds an authenticated route behind it, so that model is extended rather than a new one started. The update covers authorization, what each row reveals, and that it lists names but no email addresses (ES-025), and comes before the code (ES-023).
 
 ## Consequences
 
-- **GOV-02 is met by construction once the home page has an owner and a cycle.**
+- **GOV-02 is met by construction once the home page has an owner.**
   Every page then has an effective owner and a due date, and the backfill is a few dozen section pages, not 1,500.
 - **GOV-03 stays partly met.**
   Once built, findings are computed automatically for the health check and export, but nobody is told unless they look: the digest is deferred.
@@ -134,7 +135,7 @@ Threat model 0002 already covers the back office as a trust boundary, so it is e
   The export shows where each owner came from, so a section owner can filter for everything they inherit.
 - Removing **Review date** is a schema change.
   Only the synthetic seed content uses it today, so the change needs no data migration script: the uSync files and seed content change with the code.
-  A site with real review dates would need them copied into **Last reviewed** (date minus the cycle) before the property is removed.
+  A site with real review dates would need them copied into **Last reviewed** (review date minus the page's effective cycle) before the property is removed.
 - Marking a page as reviewed means setting **Last reviewed** and publishing.
   A one-click "mark reviewed" action would need back-office front-end code; revisit it if editors find the field awkward.
 - The hash spread applies only to a page's first cycle.
