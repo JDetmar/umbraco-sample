@@ -1,6 +1,6 @@
 # 0008. Security headers, content security policy and the third-party allowlist
 
-- Status: Proposed
+- Status: Accepted by the owner on 2026-11-26 (project thread, "0008 approved")
 - Date: 2026-11-24
 - Decider: owner
 - Clauses: ES-019, ES-026; framework TST-09, TST-10, CMP-02

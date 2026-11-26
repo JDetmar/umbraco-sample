@@ -1,6 +1,6 @@
 # 0009. Redirect map as a parsed file, and a domain project for real logic
 
-- Status: Proposed
+- Status: Accepted by the owner on 2026-11-26 (project thread, "0009 approved")
 - Date: 2026-11-24
 - Decider: owner
 - Clauses: ES-002, ES-007, ES-018, ES-019, ES-020, ES-021; framework TST-08

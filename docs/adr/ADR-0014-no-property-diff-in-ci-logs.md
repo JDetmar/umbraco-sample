@@ -1,6 +1,6 @@
 # 0014. No Pulumi property diff in CI logs
 
-- Status: Proposed
+- Status: Accepted by the owner on 2026-11-26 (project thread, "0014 approved")
 - Date: 2026-11-25
 - Decider: owner
 - Clauses: ES-019, ES-025, ES-056. Amends one consequence of ADR 0013.

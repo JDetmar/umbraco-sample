@@ -1,6 +1,6 @@
 # 0007. Front-end build: design tokens and one stylesheet, built outside the image
 
-- Status: Proposed
+- Status: Accepted by the owner on 2026-11-26 (project thread, "0007 approved")
 - Date: 2026-11-24
 - Decider: owner
 - Clauses: ES-013, ES-016, ES-019, ES-049, ES-052; framework ARC-05, TST-03
