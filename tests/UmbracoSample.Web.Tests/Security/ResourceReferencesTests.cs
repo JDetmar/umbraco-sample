@@ -1,4 +1,5 @@
 using Shouldly;
+using UmbracoSample.Security;
 using UmbracoSample.Tests.Support;
 using UmbracoSample.Web.Security;
 

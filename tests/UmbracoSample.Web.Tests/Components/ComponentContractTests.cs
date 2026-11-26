@@ -1,5 +1,5 @@
 using Shouldly;
-using UmbracoSample.Web.Components;
+using UmbracoSample.Components;
 
 namespace UmbracoSample.Web.Tests.Components;
 

@@ -1,7 +1,7 @@
 using Shouldly;
 using Umbraco.Cms.Core.HealthChecks;
 using UmbracoSample.Domain.Governance;
-using UmbracoSample.Web.Governance;
+using UmbracoSample.Governance;
 
 namespace UmbracoSample.Web.Tests.Governance;
 

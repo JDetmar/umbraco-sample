@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Shared by every site host (ADR 0020): security headers and the content security policy built from a host's allowlist
+    (ADR 0008). Only ASP.NET Core, no packages and no site-specific values: each host supplies its own allowlist.
+  -->
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

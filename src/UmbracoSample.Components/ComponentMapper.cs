@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Html;
 
-namespace UmbracoSample.Web.Components;
+namespace UmbracoSample.Components;
 
 /// <summary>Reads one block's values. Implemented over Umbraco content at runtime and by fakes in contract tests.</summary>
 public interface IBlockSource

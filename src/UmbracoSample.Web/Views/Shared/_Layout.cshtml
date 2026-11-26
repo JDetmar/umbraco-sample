@@ -2,6 +2,10 @@
 @{
     var title = Model.Value<string>("title") ?? Model.Name;
     var description = Model.Value<string>("metaDescription");
+    // The site is named by its root's title, as the structured data's WebSite is, so each root node in a shared
+    // instance names its own site (ADR 0020).
+    var site = Model.Root();
+    var siteName = site.Value<string>("title") ?? site.Name;
 }
 <!doctype html>
 <html lang="en">
@@ -20,7 +24,7 @@
 <body>
     <a class="skip-link" href="#main">Skip to main content</a>
     <header class="site-header">
-        <a class="site-header__brand" href="/">Umbraco sample</a>
+        <a class="site-header__brand" href="/">@siteName</a>
     </header>
     <main id="main" tabindex="-1">
         @RenderBody()
