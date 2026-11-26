@@ -273,8 +273,31 @@ public sealed class SiteInfrastructureTests
 
         storage.ShouldMatch("^[a-z0-9]{3,24}$");
         vault.ShouldMatch("^[a-zA-Z](?!.*--)[a-zA-Z0-9-]{1,22}[a-zA-Z0-9]$");
-        $"umbraco-sample-{environment}-web".Length.ShouldBeLessThanOrEqualTo(32, "Container App names are at most 32 characters.");
+        $"site-sixteen-chr-{environment}-db-user".Length.ShouldBeLessThanOrEqualTo(32, "Container Apps job names are at most 32 characters, with the longest slug.");
         SiteInfrastructure.Suffix("ffffffff-ffff-ffff-ffff-ffffffffffff", environment).ShouldBe(suffix, "names must be stable across runs");
+    }
+
+    [Fact]
+    public void The_default_site_keeps_the_names_it_had_before_site_slugs()
+    {
+        // ADR 0020: adding siteSlug must not rename, and so replace, any resource of an existing stack.
+        var before = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes($"{RecordingMocks.SubscriptionId}/dev")))[..6];
+
+        SiteInfrastructure.Suffix(RecordingMocks.SubscriptionId, "dev").ShouldBe(before);
+        SiteInfrastructure.Suffix(RecordingMocks.SubscriptionId, "dev", SiteSettings.DefaultSiteSlug).ShouldBe(before);
+    }
+
+    [Fact]
+    public async Task Another_site_gets_its_own_names_in_the_same_subscription()
+    {
+        var mocks = await Declare(Dev with { SiteSlug = "other-site" });
+        var suffix = SiteInfrastructure.Suffix(RecordingMocks.SubscriptionId, "dev", "other-site");
+
+        suffix.ShouldNotBe(DevSuffix);
+        Single(mocks, "azure-native:storage:StorageAccount")["accountName"].ShouldBe(SiteInfrastructure.StorageAccountName("dev", suffix));
+        Single(mocks, "azure-native:keyvault:Vault")["vaultName"].ShouldBe(SiteInfrastructure.VaultName("dev", suffix));
+        Single(mocks, "azure-native:app:ContainerApp")["containerAppName"].ShouldBe("other-site-dev-web");
+        Map(Single(mocks, "azure-native:resources:ResourceGroup")["tags"])["application"].ShouldBe("other-site");
     }
 
     [Fact]

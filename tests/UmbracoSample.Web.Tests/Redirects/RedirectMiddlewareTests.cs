@@ -19,9 +19,17 @@ public sealed class RedirectMiddlewareTests
     public void The_committed_redirect_map_is_valid()
     {
         // The map is copied next to the site; this fails fast, before the site would refuse to start.
-        var map = RedirectMiddleware.Load(AppContext.BaseDirectory);
+        var redirects = RedirectMiddleware.Load(AppContext.BaseDirectory);
 
-        map.Rules.ShouldNotBeEmpty();
+        redirects.Default.Rules.ShouldNotBeEmpty();
+    }
+
+    [Fact]
+    public void No_host_map_is_committed_until_the_integration_tests_follow_it()
+    {
+        // The integration test follows every rule of redirects.csv on the real stack (TST-08), but sends no Host header,
+        // so it cannot reach a host map. The first host map must extend that test, then remove this guard (ADR 0020).
+        RedirectMiddleware.Load(AppContext.BaseDirectory).ByHost.ShouldBeEmpty();
     }
 
     [Theory]
@@ -67,10 +75,73 @@ public sealed class RedirectMiddlewareTests
         }
     }
 
-    private static DefaultHttpContext Invoke(string method, string path, string query)
+    [Fact]
+    public void A_host_map_replaces_the_default_map_for_that_host_only()
+    {
+        // ADR 0020: one site's rules never apply to another site in a shared instance.
+        WithMaps(
+            new()
+            {
+                [RedirectMiddleware.FileName] = "source,target,kind\n/old,/new,permanent\n",
+                ["redirects.one.example.com.csv"] = "source,target,kind\n/offer,/offers,temporary\n",
+            },
+            folder =>
+            {
+                var redirects = RedirectMiddleware.Load(folder);
+
+                redirects.ByHost.Keys.ShouldBe(["one.example.com"]);
+                Invoke("GET", "/offer", string.Empty, redirects, "ONE.example.com").Response.StatusCode.ShouldBe(302);
+                Invoke("GET", "/old", string.Empty, redirects, "one.example.com").Response.StatusCode.ShouldBe(PassedThrough, "a host map replaces the default; it does not add to it");
+                Invoke("GET", "/old", string.Empty, redirects, "two.example.com").Response.StatusCode.ShouldBe(301);
+                Invoke("GET", "/offer", string.Empty, redirects, "two.example.com").Response.StatusCode.ShouldBe(PassedThrough);
+            });
+    }
+
+    [Fact]
+    public void Every_error_in_every_map_stops_startup_and_names_its_file()
+    {
+        WithMaps(
+            new()
+            {
+                [RedirectMiddleware.FileName] = "source,target,kind\n/a,/a,gone\n",
+                ["redirects.one.example.com.csv"] = "source,target,kind\n/umbraco/x,/b,permanent\n",
+                ["redirects.Not_A_Host.csv"] = "source,target,kind\n",
+            },
+            folder =>
+            {
+                var message = Should.Throw<InvalidOperationException>(() => RedirectMiddleware.Load(folder)).Message;
+
+                message.ShouldContain("redirects.csv line 2");
+                message.ShouldContain("redirects.one.example.com.csv line 2");
+                message.ShouldContain("'Not_A_Host' is not a host");
+            });
+    }
+
+    private static void WithMaps(Dictionary<string, string> files, Action<string> test)
+    {
+        var folder = Directory.CreateTempSubdirectory();
+        try
+        {
+            foreach (var (name, text) in files)
+            {
+                File.WriteAllText(Path.Join(folder.FullName, name), text);
+            }
+
+            test(folder.FullName);
+        }
+        finally
+        {
+            folder.Delete(recursive: true);
+        }
+    }
+
+    private static DefaultHttpContext Invoke(string method, string path, string query) =>
+        Invoke(method, path, query, SiteRedirects.ForEveryHost(Map), "localhost");
+
+    private static DefaultHttpContext Invoke(string method, string path, string query, SiteRedirects redirects, string host)
     {
         var app = new ApplicationBuilder(new ServiceCollection().BuildServiceProvider());
-        app.UseRedirectMap(Map);
+        app.UseRedirectMap(redirects);
         app.Run(context =>
         {
             context.Response.StatusCode = PassedThrough;
@@ -78,6 +149,7 @@ public sealed class RedirectMiddlewareTests
         });
 
         var context = new DefaultHttpContext();
+        context.Request.Host = new HostString(host);
         context.Request.Method = method;
         context.Request.Path = path;
         context.Request.QueryString = new QueryString(query.Length == 0 ? null : query);

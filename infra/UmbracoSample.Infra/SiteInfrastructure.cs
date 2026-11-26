@@ -64,10 +64,10 @@ public sealed class SiteInfrastructure
             throw new NotSupportedException("enableEdge is true but the edge is not declared yet; see ADR 0010 and DEV-010.");
         }
 
-        var name = $"umbraco-sample-{settings.Environment}";
+        var name = $"{settings.SiteSlug}-{settings.Environment}";
         var tags = new InputMap<string>
         {
-            ["application"] = "umbraco-sample",
+            ["application"] = settings.SiteSlug,
             ["environment"] = settings.Environment,
             ["managed-by"] = "pulumi",
         };
@@ -76,8 +76,8 @@ public sealed class SiteInfrastructure
         var group = new ResourceGroup(name, new ResourceGroupArgs { Tags = tags });
 
         // Globally unique names are set explicitly: Pulumi's random auto-name suffix would push Key Vault and storage past
-        // Azure's 24-character limits. A short hash of subscription and environment keeps them unique and stable.
-        var suffix = client.Apply(c => Suffix(c.SubscriptionId, settings.Environment));
+        // Azure's 24-character limits. A short hash of subscription, site and environment keeps them unique and stable.
+        var suffix = client.Apply(c => Suffix(c.SubscriptionId, settings.Environment, settings.SiteSlug));
 
         var identity = new UserAssignedIdentity($"{name}-id", new UserAssignedIdentityArgs
         {
@@ -531,9 +531,14 @@ public sealed class SiteInfrastructure
         });
     }
 
-    /// <summary>Six hex characters from subscription and environment: unique enough for global names, stable across runs.</summary>
-    public static string Suffix(string subscriptionId, string environment) =>
-        Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes($"{subscriptionId}/{environment}")))[..6];
+    /// <summary>
+    /// Six hex characters from subscription, site and environment: unique enough for global names, stable across runs.
+    /// The default site hashes as it did before slugs existed, so its storage, Key Vault and SQL server keep their names
+    /// (ADR 0020); any other site's slug is part of the hash, so two sites in one subscription never collide.
+    /// </summary>
+    public static string Suffix(string subscriptionId, string environment, string siteSlug = SiteSettings.DefaultSiteSlug) =>
+        Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(
+            siteSlug == SiteSettings.DefaultSiteSlug ? $"{subscriptionId}/{environment}" : $"{subscriptionId}/{siteSlug}/{environment}")))[..6];
 
     /// <summary>Storage account names are global: 3-24 lower-case letters and digits.</summary>
     public static string StorageAccountName(string environment, string suffix) => $"umbsample{environment}{suffix}";

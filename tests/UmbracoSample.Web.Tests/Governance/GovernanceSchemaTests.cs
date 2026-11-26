@@ -1,6 +1,6 @@
 using System.Xml.Linq;
 using Shouldly;
-using UmbracoSample.Web.Governance;
+using UmbracoSample.Governance;
 
 namespace UmbracoSample.Web.Tests.Governance;
 

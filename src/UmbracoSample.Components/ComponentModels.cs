@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Html;
 
-namespace UmbracoSample.Web.Components;
+namespace UmbracoSample.Components;
 
 /// <summary>A component ready to render. Views receive these, never Umbraco content (ADR 0001: no Models Builder).</summary>
 public interface IComponentModel

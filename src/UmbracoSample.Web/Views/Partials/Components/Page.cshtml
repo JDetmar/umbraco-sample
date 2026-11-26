@@ -1,6 +1,6 @@
 @* Shared body for every page type: one h1, then the page's components. *@
 @inherits UmbracoViewPage
-@inject UmbracoSample.Web.Components.PageComponents Components
+@inject UmbracoSample.Components.PageComponents Components
 <h1>@(Model.Value<string>("title") ?? Model.Name)</h1>
 @foreach (var component in Components.For(Model))
 {

@@ -77,7 +77,7 @@ How to read the status column:
 
 | ID | Requirement | Status | Evidence or ledger entry |
 |---|---|---|---|
-| ARC-01 | Pages built from reusable components | partly | Hero, card grid, call to action and rich text as Block List components (`src/UmbracoSample.Web/Components`). The form block comes with forms (Phase 4). |
+| ARC-01 | Pages built from reusable components | partly | Hero, card grid, call to action and rich text as Block List components (`src/UmbracoSample.Components`). The form block comes with forms (Phase 4). |
 | ARC-02 | Components versioned, documented and tested once, reused everywhere | partly | [Component pages](components/README.md) and contract tests for empty, minimal and maximal content. Components are versioned only with the repository, not individually. |
 | ARC-03 | Content model in source control | met | uSync files in `src/UmbracoSample.Web/uSync/v17`. |
 | ARC-04 | Schema flows up through Git; content authored only in production | partly | Schema flows through Git and uSync; dev has only synthetic content. Production content authoring starts with a production environment, which is deferred (dev only for now). |

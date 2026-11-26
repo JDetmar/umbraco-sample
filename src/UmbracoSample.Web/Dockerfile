@@ -10,6 +10,9 @@ ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 CI=true
 COPY global.json Directory.Build.props Directory.Packages.props .editorconfig ./
 COPY src/UmbracoSample.ServiceDefaults/*.csproj src/UmbracoSample.ServiceDefaults/packages.lock.json src/UmbracoSample.ServiceDefaults/
 COPY src/UmbracoSample.Domain/*.csproj src/UmbracoSample.Domain/packages.lock.json src/UmbracoSample.Domain/
+COPY src/UmbracoSample.Components/*.csproj src/UmbracoSample.Components/packages.lock.json src/UmbracoSample.Components/
+COPY src/UmbracoSample.Governance/*.csproj src/UmbracoSample.Governance/packages.lock.json src/UmbracoSample.Governance/
+COPY src/UmbracoSample.Security/*.csproj src/UmbracoSample.Security/packages.lock.json src/UmbracoSample.Security/
 COPY src/UmbracoSample.Web/*.csproj src/UmbracoSample.Web/packages.lock.json src/UmbracoSample.Web/
 COPY infra/Directory.Packages.props infra/
 COPY infra/UmbracoSample.Infra.DatabaseUser/*.csproj infra/UmbracoSample.Infra.DatabaseUser/packages.lock.json infra/UmbracoSample.Infra.DatabaseUser/
@@ -18,6 +21,9 @@ RUN dotnet restore src/UmbracoSample.Web/UmbracoSample.Web.csproj \
 
 COPY src/UmbracoSample.ServiceDefaults/ src/UmbracoSample.ServiceDefaults/
 COPY src/UmbracoSample.Domain/ src/UmbracoSample.Domain/
+COPY src/UmbracoSample.Components/ src/UmbracoSample.Components/
+COPY src/UmbracoSample.Governance/ src/UmbracoSample.Governance/
+COPY src/UmbracoSample.Security/ src/UmbracoSample.Security/
 COPY src/UmbracoSample.Web/ src/UmbracoSample.Web/
 # The stylesheet is built before the image (make frontend, or the CI step), so this image needs no Node toolchain.
 RUN test -f src/UmbracoSample.Web/wwwroot/dist/site.css || { echo 'Run make frontend before building the image.' >&2; exit 1; }

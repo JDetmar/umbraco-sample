@@ -1,4 +1,4 @@
-@model UmbracoSample.Web.Components.CardModel
+@model UmbracoSample.Components.CardModel
 @if (Model.Link is not null)
 {
     @await Html.PartialAsync("Components/Link", Model.Link with { Text = Model.Title })

@@ -9,6 +9,9 @@
     <PackageReference Include="Umbraco.StorageProviders.AzureBlob" />
     <ProjectReference Include="..\UmbracoSample.ServiceDefaults\UmbracoSample.ServiceDefaults.csproj" />
     <ProjectReference Include="..\UmbracoSample.Domain\UmbracoSample.Domain.csproj" />
+    <ProjectReference Include="..\UmbracoSample.Components\UmbracoSample.Components.csproj" />
+    <ProjectReference Include="..\UmbracoSample.Governance\UmbracoSample.Governance.csproj" />
+    <ProjectReference Include="..\UmbracoSample.Security\UmbracoSample.Security.csproj" />
   </ItemGroup>
 
 
@@ -20,8 +23,8 @@
   <ItemGroup>
     <!-- Keep the local appsettings.json override out of publish output -->
     <Content Update="appsettings.Local.json" CopyToPublishDirectory="Never" />
-    <!-- The redirect map is read at startup from the content root (Redirects/RedirectMiddleware.cs). -->
-    <Content Include="redirects.csv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The redirect maps (redirects.csv and any redirects.<host>.csv, ADR 0020) are read at startup from the content root (Redirects/RedirectMiddleware.cs). -->
+    <Content Include="redirects*.csv" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- Fixture content and media are synthetic seed data for Development and CI (ES-027). uSync's package targets publish

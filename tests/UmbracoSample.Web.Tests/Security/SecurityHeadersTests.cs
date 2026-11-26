@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Shouldly;
+using UmbracoSample.Security;
 using UmbracoSample.Web.Security;
 
 namespace UmbracoSample.Web.Tests.Security;
@@ -58,6 +59,45 @@ public sealed class SecurityHeadersTests
     public void The_committed_allowlist_is_valid()
     {
         Should.NotThrow(() => SecurityHeaders.Validate(ThirdPartyAllowlist.Origins));
+    }
+
+    [Fact]
+    public void An_entry_scoped_to_a_host_appears_only_in_that_hosts_policy()
+    {
+        // ADR 0020: in a shared instance, one site's tag must not widen another site's policy.
+        var scoped = new ThirdPartyOrigin("https://tag.example.com", "Test", ScriptOnly, new HashSet<string> { "one.example.com" });
+        var everywhere = new ThirdPartyOrigin("https://cdn.example.com", "Test", ScriptOnly);
+        ThirdPartyOrigin[] allowlist = [scoped, everywhere];
+
+        Directive(SecurityHeaders.ContentSecurityPolicy(allowlist, "one.example.com"), "script-src").ShouldBe("script-src 'self' https://cdn.example.com https://tag.example.com");
+        Directive(SecurityHeaders.ContentSecurityPolicy(allowlist, "two.example.com"), "script-src").ShouldBe("script-src 'self' https://cdn.example.com");
+        Directive(SecurityHeaders.ContentSecurityPolicy(allowlist), "script-src").ShouldBe("script-src 'self' https://cdn.example.com");
+    }
+
+    [Fact]
+    public void Each_host_is_served_its_own_policy_and_unknown_hosts_the_shared_one()
+    {
+        var allowlist = new[] { new ThirdPartyOrigin("https://tag.example.com", "Test", ScriptOnly, new HashSet<string> { "one.example.com" }) };
+        var policies = SitePolicies.From(allowlist);
+
+        policies.For("ONE.example.com").ShouldContain("https://tag.example.com");
+        policies.For("two.example.com").ShouldNotContain("tag.example.com");
+        policies.For(null).ShouldNotContain("tag.example.com");
+        policies.For("two.example.com").ShouldBe(SecurityHeaders.ContentSecurityPolicy([]));
+    }
+
+    [Theory]
+    [InlineData("One.example.com")]
+    [InlineData("*.example.com")]
+    [InlineData("one.example.com:443")]
+    [InlineData("https://one.example.com")]
+    [InlineData("one.example.com/path")]
+    [InlineData("")]
+    public void A_host_that_is_not_a_plain_dns_name_is_rejected(string host)
+    {
+        var entry = new ThirdPartyOrigin("https://cdn.example.com", "Test", ScriptOnly, new HashSet<string> { host });
+
+        Should.Throw<ArgumentException>(() => SecurityHeaders.Validate([entry])).Message.ShouldContain("host");
     }
 
     [Theory]

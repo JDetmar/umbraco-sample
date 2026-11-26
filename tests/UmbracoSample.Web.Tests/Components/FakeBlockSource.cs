@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Html;
-using UmbracoSample.Web.Components;
+using UmbracoSample.Components;
 
 namespace UmbracoSample.Web.Tests.Components;
 
