@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -41,7 +43,39 @@ public static class LeadsServiceCollectionExtensions
 #pragma warning disable EXTEXP0001
         client.RemoveAllResilienceHandlers();
 #pragma warning restore EXTEXP0001
+        services.AddTransient<IMapClient>(provider => provider.GetRequiredService<MapClient>());
         return services;
+    }
+
+    /// <summary>
+    /// Registers the lead form (threat model 0001): its options, the render token protector, the rate-limit policy
+    /// <see cref="LeadFormRateLimitPolicy.Name"/> and the submission handler, plus the MAP client. The host supplies an
+    /// <see cref="ILeadFormCatalog"/>, maps its endpoint with antiforgery, the 16 KB body limit and the rate-limit policy,
+    /// and calls <c>UseRateLimiter</c>. With the CAPTCHA switched on and no <see cref="ICaptchaVerifier"/> registered, the
+    /// options fail validation and the site does not start (D1: fail closed).
+    /// </summary>
+    public static IServiceCollection AddLeadForm(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddMapClient(configuration);
+        services.AddOptions<LeadFormOptions>().Bind(configuration.GetSection(LeadFormOptions.Section)).ValidateDataAnnotations()
+            .Validate(o => o.Window > TimeSpan.Zero, "Leads:Form:Window must be positive.").ValidateOnStart();
+        services.AddOptions<EdgeOptions>().Bind(configuration.GetSection(EdgeOptions.Section));
+        services.AddOptions<CaptchaOptions>().Bind(configuration.GetSection(CaptchaOptions.Section));
+        services.AddSingleton<IValidateOptions<CaptchaOptions>, CaptchaNeedsAVerifier>();
+        services.AddOptions<CaptchaOptions>().ValidateOnStart();
+        services.AddDataProtection();
+        services.AddSingleton<RenderTokenProtector>();
+        services.AddScoped<LeadSubmissionHandler>();
+        services.AddRateLimiter(limiter => limiter.AddPolicy<string, LeadFormRateLimitPolicy>(LeadFormRateLimitPolicy.Name));
+        return services;
+    }
+
+    private sealed class CaptchaNeedsAVerifier(IEnumerable<ICaptchaVerifier> verifiers) : IValidateOptions<CaptchaOptions>
+    {
+        public ValidateOptionsResult Validate(string? name, CaptchaOptions options) =>
+            options.Enabled && !verifiers.Any()
+                ? ValidateOptionsResult.Fail("Leads:Captcha:Enabled is on, but no CAPTCHA verifier is registered (threat model 0001, D1).")
+                : ValidateOptionsResult.Success;
     }
 
     private static Uri EnsureTrailingSlash(Uri address) =>

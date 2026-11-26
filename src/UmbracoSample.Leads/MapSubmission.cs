@@ -6,7 +6,8 @@ namespace UmbracoSample.Leads;
 /// One lead to send. The idempotency key comes from the signed render token, so a resubmission of the same rendered form
 /// carries the same key and the MAP keeps one lead (threat model 0001, section 5).
 /// </summary>
-public sealed record MapSubmission(Lead Lead, string ListId, string IdempotencyKey, DateTimeOffset SubmittedAt);
+/// <remarks>The list is null when the lead goes to no list (no consent and no sales list on the block).</remarks>
+public sealed record MapSubmission(Lead Lead, string? ListId, string IdempotencyKey, DateTimeOffset SubmittedAt);
 
 /// <summary>What happened to a submission, in the terms the visitor is told.</summary>
 public enum MapOutcome
