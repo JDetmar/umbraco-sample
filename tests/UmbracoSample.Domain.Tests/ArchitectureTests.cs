@@ -23,7 +23,8 @@ public sealed class ArchitectureTests
     [Fact]
     public void The_domain_depends_on_no_framework_infrastructure_or_io()
     {
-        var result = Rule(Types.InAssembly(typeof(RedirectMap).Assembly)).GetResult();
+        // Coverage collection in `make test` adds one tracker type to the instrumented assembly; it is not domain code.
+        var result = Rule(Types.InAssembly(typeof(RedirectMap).Assembly).That().DoNotResideInNamespace(CoverageTrackerNamespace)).GetResult();
 
         result.IsSuccessful.ShouldBeTrue($"Offending types: {string.Join(", ", result.FailingTypeNames ?? [])}");
     }
@@ -50,7 +51,13 @@ public sealed class ArchitectureTests
         references.ShouldBeEmpty("ES-020: the domain uses only the base class library.");
     }
 
-    private static ConditionList Rule(Types types) => types.ShouldNot().HaveDependencyOnAny(Forbidden);
+    private const string CoverageTrackerNamespace = "Coverlet.Core.Instrumentation.Tracker";
+
+    [Fact]
+    public void No_domain_code_hides_in_the_coverage_tracker_namespace() =>
+        Directory.EnumerateFiles(Path.Join(RepositoryRoot(), "src", "UmbracoSample.Domain"), "*.cs", SearchOption.AllDirectories)
+            .Where(file => File.ReadAllText(file).Contains("Coverlet", StringComparison.Ordinal))
+            .ShouldBeEmpty();
 
     private static ConditionList Rule(PredicateList types) => types.ShouldNot().HaveDependencyOnAny(Forbidden);
 

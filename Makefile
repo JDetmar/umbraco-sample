@@ -45,10 +45,23 @@ format-check: ## Fail if formatting or code style would change
 
 FAST_TEST_PROJECTS := $(filter-out %Integration.Tests,$(wildcard tests/*.Tests))
 
-test: ## Fast tests: unit and policy tests, no containers
+COVERAGE_DIR := artifacts/coverage
+
+# A test project that references coverlet.MTP reports the coverage of the assembly it is named after, and only that
+# one, so a floor measures that assembly's own tests. Coverage is a diagnostic (ES-002): only assemblies in
+# tests/coverage-floors.json can fail the build. The stale-report cleanup names its directory literally on purpose.
+test: ## Fast tests: unit and policy tests, no containers; reports coverage (floor on the domain only)
+	@find artifacts/coverage -name '*.cobertura.*xml' -delete 2>/dev/null || true
 	@for project in $(FAST_TEST_PROJECTS); do \
-		dotnet test --project "$$project" -c $(CONFIG) --no-build || exit 1; \
+		name=$$(basename "$$project"); \
+		coverage=""; \
+		if grep -q '"coverlet.MTP"' "$$project"/*.csproj; then \
+			coverage="--coverlet --coverlet-output-format cobertura --coverlet-include [$${name%.Tests}]* --coverlet-file-prefix $$name --results-directory $(COVERAGE_DIR)"; \
+		fi; \
+		set -f; dotnet test --project "$$project" -c $(CONFIG) --no-build $$coverage || exit 1; set +f; \
 	done
+	node --test "scripts/test/*.test.mjs"
+	node scripts/coverage-report.mjs $(COVERAGE_DIR) tests/coverage-floors.json
 
 mutation: ## Mutation testing of the domain (Stryker.NET, ES-002); fails below the break threshold in stryker-config.json
 	dotnet tool restore
