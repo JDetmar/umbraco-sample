@@ -540,7 +540,10 @@ public sealed class SiteInfrastructure
         Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(
             siteSlug == SiteSettings.DefaultSiteSlug ? $"{subscriptionId}/{environment}" : $"{subscriptionId}/{siteSlug}/{environment}")))[..6];
 
-    /// <summary>Storage account names are global: 3-24 lower-case letters and digits.</summary>
+    /// <summary>
+    /// Storage account names are global: 3-24 lower-case letters and digits. The prefix is fixed for every site, because a
+    /// slug would not fit; the suffix, which hashes the slug, keeps two sites apart (ADR 0020).
+    /// </summary>
     public static string StorageAccountName(string environment, string suffix) => $"umbsample{environment}{suffix}";
 
     /// <summary>The database user job's container; the script that starts it sends the same name and command.</summary>
@@ -556,7 +559,10 @@ public sealed class SiteInfrastructure
     public static string BudgetStart(DateTime utcNow) =>
         new DateTime(utcNow.Year, utcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc).ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
 
-    /// <summary>Key Vault names are global: 3-24 letters, digits and single hyphens, starting with a letter.</summary>
+    /// <summary>
+    /// Key Vault names are global: 3-24 letters, digits and single hyphens, starting with a letter. Like the storage
+    /// account, the prefix is the same for every site and the suffix tells sites apart (ADR 0020).
+    /// </summary>
     public static string VaultName(string environment, string suffix) => $"umbs-{environment}-{suffix}";
 
     private static KeyVaultSecret StoreSecret(string secretName, Vault vault, ResourceGroup group, Output<string> value) =>

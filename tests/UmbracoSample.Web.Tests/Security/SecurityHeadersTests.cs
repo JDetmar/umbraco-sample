@@ -93,11 +93,31 @@ public sealed class SecurityHeadersTests
     [InlineData("https://one.example.com")]
     [InlineData("one.example.com/path")]
     [InlineData("")]
+    [InlineData("bücher.example")]
+    [InlineData("example.com.")]
+    [InlineData("backup")]
     public void A_host_that_is_not_a_plain_dns_name_is_rejected(string host)
     {
+        // A Unicode or trailing-dot spelling would never equal the Host header browsers send, so the entry would silently
+        // not apply; such hosts are refused instead (ADR 0020).
+        SiteHost.IsValid(host).ShouldBeFalse();
         var entry = new ThirdPartyOrigin("https://cdn.example.com", "Test", ScriptOnly, new HashSet<string> { host });
 
         Should.Throw<ArgumentException>(() => SecurityHeaders.Validate([entry])).Message.ShouldContain("host");
+    }
+
+    [Theory]
+    [InlineData("www.example.com")]
+    [InlineData("xn--bcher-kva.example")]
+    [InlineData("a-b.example.co.uk")]
+    public void A_lower_case_ascii_host_is_accepted(string host) => SiteHost.IsValid(host).ShouldBeTrue();
+
+    [Fact]
+    public void An_empty_host_set_is_rejected_so_every_host_has_one_spelling()
+    {
+        var entry = new ThirdPartyOrigin("https://cdn.example.com", "Test", ScriptOnly, new HashSet<string>());
+
+        Should.Throw<ArgumentException>(() => SecurityHeaders.Validate([entry])).Message.ShouldContain("empty host set");
     }
 
     [Theory]

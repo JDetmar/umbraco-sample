@@ -106,6 +106,7 @@ public sealed class RedirectMiddlewareTests
                 [RedirectMiddleware.FileName] = "source,target,kind\n/a,/a,gone\n",
                 ["redirects.one.example.com.csv"] = "source,target,kind\n/umbraco/x,/b,permanent\n",
                 ["redirects.Not_A_Host.csv"] = "source,target,kind\n",
+                ["redirects.backup.csv"] = "source,target,kind\n",
             },
             folder =>
             {
@@ -114,6 +115,7 @@ public sealed class RedirectMiddlewareTests
                 message.ShouldContain("redirects.csv line 2");
                 message.ShouldContain("redirects.one.example.com.csv line 2");
                 message.ShouldContain("'Not_A_Host' is not a host");
+                message.ShouldContain("'backup' is not a host");
             });
     }
 

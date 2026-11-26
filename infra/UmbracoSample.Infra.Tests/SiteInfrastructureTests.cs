@@ -281,7 +281,8 @@ public sealed class SiteInfrastructureTests
     public void The_default_site_keeps_the_names_it_had_before_site_slugs()
     {
         // ADR 0020: adding siteSlug must not rename, and so replace, any resource of an existing stack.
-        var before = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes($"{RecordingMocks.SubscriptionId}/dev")))[..6];
+        // The first six hex characters of SHA-256("<subscription>/dev"), the formula before slugs, pinned as a literal.
+        const string before = "f5b6c4";
 
         SiteInfrastructure.Suffix(RecordingMocks.SubscriptionId, "dev").ShouldBe(before);
         SiteInfrastructure.Suffix(RecordingMocks.SubscriptionId, "dev", SiteSettings.DefaultSiteSlug).ShouldBe(before);

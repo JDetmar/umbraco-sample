@@ -13,7 +13,7 @@ Pages are built from blocks in a Block List property called `blocks`, on both th
 ## How a block becomes HTML
 
 1. `PageComponents.For(page)` reads the `blocks` property.
-2. `ComponentMapper.Map` turns each block into a view model (`Components/ComponentModels.cs`). It reads values through `IBlockSource`, which `PublishedBlockSource` implements over Umbraco content.
+2. `ComponentMapper.Map` turns each block into a view model (`src/UmbracoSample.Components/ComponentModels.cs`). It reads values through `IBlockSource`, which `PublishedBlockSource` implements over Umbraco content.
 3. `Views/Partials/Components/Page.cshtml` renders the page `h1`, then each model's partial view.
 
 A block with missing required values maps to `null` and is skipped with a warning log naming the block key and type, never content. Required values are also mandatory in the back office, so this only catches content that predates a rule change, or a type without a renderer.

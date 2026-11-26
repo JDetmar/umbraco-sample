@@ -1,4 +1,5 @@
 using UmbracoSample.Domain.Redirects;
+using UmbracoSample.Security;
 
 namespace UmbracoSample.Web.Redirects;
 
@@ -33,9 +34,9 @@ public static class RedirectMiddleware
         {
             var name = Path.GetFileName(file);
             var host = name["redirects.".Length..^".csv".Length];
-            if (!SiteRedirects.IsPlainHost(host))
+            if (!SiteHost.IsValid(host))
             {
-                errors.Add($"{name}: '{host}' is not a host; name a host map redirects.<host>.csv with a lower-case DNS name, such as redirects.www.example.com.csv.");
+                errors.Add($"{name}: '{host}' is not a host; name a host map redirects.<host>.csv with a lower-case ASCII DNS name (punycode for international names), such as redirects.www.example.com.csv.");
                 continue;
             }
 
@@ -103,9 +104,4 @@ public sealed class SiteRedirects(RedirectMap fallback, IReadOnlyDictionary<stri
 
     /// <summary>The map that serves requests for <paramref name="host"/>.</summary>
     public RedirectMap For(string? host) => host is not null && ByHost.TryGetValue(host, out var map) ? map : Default;
-
-    internal static bool IsPlainHost(string host) =>
-        host.Length > 0
-        && string.Equals(host, host.ToLowerInvariant(), StringComparison.Ordinal)
-        && Uri.CheckHostName(host) == UriHostNameType.Dns;
 }

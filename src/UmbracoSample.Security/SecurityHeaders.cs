@@ -68,8 +68,8 @@ public static class SecurityHeaders
     }
 
     /// <summary>
-    /// Rejects allowlist entries that would weaken the policy: wildcards, plain http, paths, no stated purpose, or a
-    /// host that is not a plain lower-case DNS name.
+    /// Rejects allowlist entries that would weaken the policy: wildcards, plain http, paths, no stated purpose, an empty
+    /// host set, or a host that is not valid under <see cref="SiteHost.IsValid"/>.
     /// </summary>
     public static void Validate(IEnumerable<ThirdPartyOrigin> allowlist)
     {
@@ -93,20 +93,20 @@ public static class SecurityHeaders
                 throw new ArgumentException($"Allowlist entry {entry.Origin} must be an exact https origin, such as https://cdn.example.com, with no wildcard or path.", nameof(allowlist));
             }
 
+            if (entry.Hosts is { Count: 0 })
+            {
+                throw new ArgumentException($"Allowlist entry {entry.Origin} has an empty host set; leave Hosts null to apply it to every host.", nameof(allowlist));
+            }
+
             foreach (var host in entry.Hosts ?? Enumerable.Empty<string>())
             {
-                if (!IsPlainHost(host))
+                if (!SiteHost.IsValid(host))
                 {
-                    throw new ArgumentException($"Allowlist entry {entry.Origin} names host '{host}'; a host is a lower-case DNS name such as www.example.com, with no scheme, port, path or wildcard.", nameof(allowlist));
+                    throw new ArgumentException($"Allowlist entry {entry.Origin} names host '{host}'; a host is a lower-case ASCII DNS name such as www.example.com (punycode for international names), with no scheme, port, path, wildcard or trailing dot.", nameof(allowlist));
                 }
             }
         }
     }
-
-    private static bool IsPlainHost(string host) =>
-        !string.IsNullOrEmpty(host)
-        && string.Equals(host, host.ToLowerInvariant(), StringComparison.Ordinal)
-        && Uri.CheckHostName(host) == UriHostNameType.Dns;
 
     /// <summary>True for back-office paths, which keep Umbraco's own scripts and are not constrained by the site policy.</summary>
     public static bool IsBackOffice(PathString path) => path.StartsWithSegments("/umbraco", StringComparison.OrdinalIgnoreCase);
