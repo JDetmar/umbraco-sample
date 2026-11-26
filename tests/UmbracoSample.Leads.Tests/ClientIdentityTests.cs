@@ -40,6 +40,27 @@ public sealed class ClientIdentityTests
         ClientIdentity.Resolve(Request(("X-Azure-FDID", ""), ("X-Azure-ClientIP", "203.0.113.7")), new EdgeOptions()).ShouldBe("10.0.0.5");
 
     [Theory]
+    [InlineData("2001:db8:1:2:aaaa::1", "2001:db8:1:2::1:5")]
+    [InlineData("2001:db8:1:2::", "2001:db8:1:2:ffff:ffff:ffff:ffff")]
+    public void Ipv6_addresses_in_one_64_network_are_one_client(string first, string second)
+    {
+        string Of(string ip) => ClientIdentity.Resolve(Request(("X-Azure-FDID", "fd-1234"), ("X-Azure-ClientIP", ip)), Edge);
+
+        Of(first).ShouldBe(Of(second));
+        Of(first).ShouldBe("2001:db8:1:2::/64");
+        Of("2001:db8:1:3::1").ShouldNotBe(Of(first));
+    }
+
+    [Fact]
+    public void An_ipv4_mapped_connection_counts_as_its_ipv4_address()
+    {
+        var context = Request();
+        context.Connection.RemoteIpAddress = IPAddress.Parse("::ffff:10.0.0.5");
+
+        ClientIdentity.Resolve(context, Edge).ShouldBe("10.0.0.5");
+    }
+
+    [Theory]
     [InlineData("not-an-ip")]
     [InlineData("203.0.113.7, 198.51.100.1")]
     public void An_unparseable_edge_client_ip_falls_back_to_the_connection(string value) =>

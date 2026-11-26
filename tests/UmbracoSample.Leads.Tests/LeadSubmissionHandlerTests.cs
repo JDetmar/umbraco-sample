@@ -128,7 +128,7 @@ public sealed class LeadSubmissionHandlerTests
 
     [Theory]
     [InlineData(MapOutcome.Accepted, LeadFormResultKind.ThankYou)]
-    [InlineData(MapOutcome.Rejected, LeadFormResultKind.TryAgain)]
+    [InlineData(MapOutcome.Rejected, LeadFormResultKind.NotAccepted)]
     [InlineData(MapOutcome.Failed, LeadFormResultKind.TryAgain)]
     [InlineData(MapOutcome.Overloaded, LeadFormResultKind.TryAgain)]
     [InlineData(MapOutcome.Unknown, LeadFormResultKind.OutcomeUnknown)]

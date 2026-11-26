@@ -18,7 +18,7 @@ public sealed class LeadFormStartupTests
         };
         if (captcha is { } on)
         {
-            settings["Leads:Captcha:Enabled"] = on ? "true" : "false";
+            settings["Forms:Captcha:Enabled"] = on ? "true" : "false";
         }
 
         builder.Configuration.AddInMemoryCollection(settings);
@@ -37,11 +37,40 @@ public sealed class LeadFormStartupTests
     }
 
     [Fact]
+    public async Task With_the_captcha_on_and_a_scoped_verifier_the_site_starts()
+    {
+        var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Leads:Map:BaseAddress"] = "http://127.0.0.1:9/",
+            ["Leads:Map:ApiKey"] = "test-key-not-a-secret",
+            ["Forms:Captcha:Enabled"] = "true",
+        });
+        builder.Services.AddLeadForm(builder.Configuration);
+        builder.Services.AddScoped<ICaptchaVerifier, PassingVerifier>();
+        builder.Services.AddSingleton<ILeadFormCatalog, NoForms>(); // the host supplies the catalog
+        builder.ConfigureContainer(new DefaultServiceProviderFactory(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true }));
+        using var host = builder.Build();
+        await host.StartAsync(TestContext.Current.CancellationToken);
+        await host.StopAsync(TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
     public async Task With_the_captcha_on_and_no_verifier_the_site_refuses_to_start()
     {
         using var host = Build(captcha: true);
 
         var failure = await Should.ThrowAsync<Microsoft.Extensions.Options.OptionsValidationException>(() => host.StartAsync(TestContext.Current.CancellationToken));
         failure.Message.ShouldContain("no CAPTCHA verifier");
+    }
+
+    private sealed class NoForms : ILeadFormCatalog
+    {
+        public LeadFormSettings? Find(Guid blockKey) => null;
+    }
+
+    private sealed class PassingVerifier : ICaptchaVerifier
+    {
+        public Task<bool> VerifyAsync(string? response, CancellationToken cancellationToken) => Task.FromResult(true);
     }
 }

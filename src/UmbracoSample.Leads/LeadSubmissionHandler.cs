@@ -18,6 +18,9 @@ public enum LeadFormResultKind
     /// <summary>The lead was not sent: ask the visitor to try again, keeping the input.</summary>
     TryAgain,
 
+    /// <summary>The MAP refused this lead as invalid: resubmitting will not help, so offer another way to get in touch.</summary>
+    NotAccepted,
+
     /// <summary>The lead may have been sent: ask the visitor not to resubmit for a few minutes.</summary>
     OutcomeUnknown,
 
@@ -37,6 +40,12 @@ public sealed record LeadFormResult(LeadFormResultKind Kind, IReadOnlyDictionary
 /// is verified when it is on; the block must be published; the fields are parsed with the block's consent versions; the
 /// list is chosen from the block, never the request; then the MAP is called with the token's idempotency key. Nothing is
 /// stored, and nothing the visitor typed is logged.
+/// <para>
+/// When the host re-renders the form after <see cref="LeadFormResultKind.TryAgain"/>, <see cref="LeadFormResultKind.OutcomeUnknown"/>
+/// or <see cref="LeadFormResultKind.Invalid"/>, it must put the posted render token back in the form, not issue a new
+/// one: the token carries the idempotency key, and a new key on resubmission would let the MAP store the lead twice
+/// (threat model 0001, section 5). Only a fresh page view issues a new token.
+/// </para>
 /// </summary>
 public sealed partial class LeadSubmissionHandler(
     RenderTokenProtector tokens,
@@ -86,6 +95,7 @@ public sealed partial class LeadSubmissionHandler(
         {
             MapOutcome.Accepted => LeadFormResultKind.ThankYou,
             MapOutcome.Unknown => LeadFormResultKind.OutcomeUnknown,
+            MapOutcome.Rejected => LeadFormResultKind.NotAccepted,
             _ => LeadFormResultKind.TryAgain,
         };
         LogMapResult(logger, kind, outcome);

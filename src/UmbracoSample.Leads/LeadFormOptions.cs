@@ -8,7 +8,7 @@ public sealed class LeadFormOptions
 {
     public const string Section = "Leads:Form";
 
-    /// <summary>The largest request body the form endpoint reads.</summary>
+    /// <summary>The largest request body the form endpoint reads (D3). Applied by the host's endpoint in step 4.</summary>
     public const int MaxBodyBytes = 16 * 1024;
 
     [Range(1, 1000)]
@@ -32,12 +32,12 @@ public sealed class LeadFormOptions
 }
 
 /// <summary>
-/// The CAPTCHA switch (threat model 0001, D1), bound from <c>Leads:Captcha</c>. Off by default and everywhere until the
+/// The CAPTCHA switch (threat model 0001, D1), bound from <c>Forms:Captcha</c> as the threat model names it. Off by default and everywhere until the
 /// owner chooses a provider. On without a registered <see cref="ICaptchaVerifier"/>, the site refuses to start.
 /// </summary>
 public sealed class CaptchaOptions
 {
-    public const string Section = "Leads:Captcha";
+    public const string Section = "Forms:Captcha";
 
     public bool Enabled { get; set; }
 }

@@ -70,11 +70,12 @@ public static class LeadsServiceCollectionExtensions
         return services;
     }
 
-    private sealed class CaptchaNeedsAVerifier(IEnumerable<ICaptchaVerifier> verifiers) : IValidateOptions<CaptchaOptions>
+    // Checks the registration without building a verifier, so a scoped verifier does not break startup.
+    private sealed class CaptchaNeedsAVerifier(IServiceProviderIsService registered) : IValidateOptions<CaptchaOptions>
     {
         public ValidateOptionsResult Validate(string? name, CaptchaOptions options) =>
-            options.Enabled && !verifiers.Any()
-                ? ValidateOptionsResult.Fail("Leads:Captcha:Enabled is on, but no CAPTCHA verifier is registered (threat model 0001, D1).")
+            options.Enabled && !registered.IsService(typeof(ICaptchaVerifier))
+                ? ValidateOptionsResult.Fail("Forms:Captcha:Enabled is on, but no CAPTCHA verifier is registered (threat model 0001, D1).")
                 : ValidateOptionsResult.Success;
     }
 
