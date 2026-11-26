@@ -1,6 +1,6 @@
 # 0010. Azure environment design
 
-- Status: Proposed; partly superseded by ADR 0013 (CD deploys dev, so the owner no longer runs `up` for dev)
+- Status: Accepted by the owner on 2026-11-26 (project thread, "0010 approved"); partly superseded by ADR 0013 (CD deploys dev, so the owner no longer runs `up` for dev)
 - Date: 2026-11-24
 - Decider: owner
 - Clauses: ES-019, ES-024, ES-030, ES-047, ES-048, ES-049, ES-054; framework ENV-01, OPS-01, OPS-03
