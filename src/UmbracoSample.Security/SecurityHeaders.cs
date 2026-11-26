@@ -1,7 +1,7 @@
 using System.Text;
 using Microsoft.AspNetCore.Http;
 
-namespace UmbracoSample.Web.Security;
+namespace UmbracoSample.Security;
 
 /// <summary>
 /// Response headers that harden site pages (TST-09, ES-026). Site pages, including previews, get a strict content security
@@ -38,11 +38,15 @@ public static class SecurityHeaders
     /// <summary>The policy for back-office paths: no plugins, no base-URL hijack, no framing by other sites.</summary>
     public const string BackOfficePolicy = "object-src 'none'; base-uri 'self'; frame-ancestors 'self'";
 
-    /// <summary>Builds the content security policy for site pages from the third-party allowlist.</summary>
-    public static string ContentSecurityPolicy(IEnumerable<ThirdPartyOrigin> allowlist)
+    /// <summary>
+    /// Builds the content security policy for site pages on <paramref name="host"/> from the entries of the third-party
+    /// allowlist that apply to it. With no host, only the entries that name no hosts apply.
+    /// </summary>
+    public static string ContentSecurityPolicy(IEnumerable<ThirdPartyOrigin> allowlist, string? host = null)
     {
-        var origins = allowlist.ToList();
-        Validate(origins);
+        var all = allowlist.ToList();
+        Validate(all);
+        var origins = all.Where(entry => entry.AppliesTo(host)).ToList();
 
         var policy = new StringBuilder("default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'self'");
         foreach (var (kind, directive) in FetchDirectives)
@@ -63,7 +67,10 @@ public static class SecurityHeaders
         return policy.ToString();
     }
 
-    /// <summary>Rejects allowlist entries that would weaken the policy: wildcards, plain http, paths, or no stated purpose.</summary>
+    /// <summary>
+    /// Rejects allowlist entries that would weaken the policy: wildcards, plain http, paths, no stated purpose, an empty
+    /// host set, or a host that is not valid under <see cref="SiteHost.IsValid"/>.
+    /// </summary>
     public static void Validate(IEnumerable<ThirdPartyOrigin> allowlist)
     {
         foreach (var entry in allowlist)
@@ -84,6 +91,19 @@ public static class SecurityHeaders
                 || !string.Equals(entry.Origin, uri.GetLeftPart(UriPartial.Authority), StringComparison.Ordinal))
             {
                 throw new ArgumentException($"Allowlist entry {entry.Origin} must be an exact https origin, such as https://cdn.example.com, with no wildcard or path.", nameof(allowlist));
+            }
+
+            if (entry.Hosts is { Count: 0 })
+            {
+                throw new ArgumentException($"Allowlist entry {entry.Origin} has an empty host set; leave Hosts null to apply it to every host.", nameof(allowlist));
+            }
+
+            foreach (var host in entry.Hosts ?? Enumerable.Empty<string>())
+            {
+                if (!SiteHost.IsValid(host))
+                {
+                    throw new ArgumentException($"Allowlist entry {entry.Origin} names host '{host}'; a host is a lower-case ASCII DNS name such as www.example.com (punycode for international names), with no scheme, port, path, wildcard or trailing dot.", nameof(allowlist));
+                }
             }
         }
     }

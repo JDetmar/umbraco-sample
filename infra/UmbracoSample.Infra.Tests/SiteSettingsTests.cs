@@ -22,6 +22,24 @@ public sealed class SiteSettingsTests
         Should.Throw<ArgumentException>(() => (Valid() with { Image = image }).Validate()).Message.ShouldContain("digest");
 
     [Theory]
+    [InlineData("ab")]
+    [InlineData("a-site-slug-that-is-too-long")]
+    [InlineData("Site")]
+    [InlineData("1site")]
+    [InlineData("site-")]
+    [InlineData("my--site")]
+    [InlineData("my_site")]
+    public void A_site_slug_must_fit_azure_names(string slug) =>
+        Should.Throw<ArgumentException>(() => (Valid() with { SiteSlug = slug }).Validate()).Message.ShouldContain("siteSlug");
+
+    [Theory]
+    [InlineData("umbraco-sample")]
+    [InlineData("abc")]
+    [InlineData("site-sixteen-chr")]
+    public void A_short_lower_case_site_slug_is_accepted(string slug) =>
+        Should.NotThrow(() => (Valid() with { SiteSlug = slug }).Validate());
+
+    [Theory]
     [InlineData("test")]
     [InlineData("")]
     [InlineData("Prod")]

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Shared by every site host (ADR 0020): the content governance health check (ADR 0018). The rule itself is in the
+    domain; this project only reads published pages through Umbraco.
+  -->
+
+  <ItemGroup>
+    <PackageReference Include="Umbraco.Cms.Core" />
+    <ProjectReference Include="..\UmbracoSample.Domain\UmbracoSample.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

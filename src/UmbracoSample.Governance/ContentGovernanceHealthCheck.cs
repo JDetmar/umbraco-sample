@@ -3,7 +3,7 @@ using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Core.Services;
 using UmbracoSample.Domain.Governance;
 
-namespace UmbracoSample.Web.Governance;
+namespace UmbracoSample.Governance;
 
 /// <summary>
 /// Flags published pages with no content owner, no review date or an overdue review (GOV-02, GOV-03), in the back

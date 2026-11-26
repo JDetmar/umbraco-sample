@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Shared by every site host (ADR 0020): component view models and the mapping from blocks. No content and no
+    site-specific values. The views stay in each host until a second host shares them (ADR 0020).
+  -->
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Umbraco.Cms.Web.Common" />
+  </ItemGroup>
+
+</Project>

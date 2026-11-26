@@ -1,7 +1,10 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/UmbracoSample.AppHost/UmbracoSample.AppHost.csproj" />
+    <Project Path="src/UmbracoSample.Components/UmbracoSample.Components.csproj" />
     <Project Path="src/UmbracoSample.Domain/UmbracoSample.Domain.csproj" />
+    <Project Path="src/UmbracoSample.Governance/UmbracoSample.Governance.csproj" />
+    <Project Path="src/UmbracoSample.Security/UmbracoSample.Security.csproj" />
     <Project Path="src/UmbracoSample.ServiceDefaults/UmbracoSample.ServiceDefaults.csproj" />
     <Project Path="src/UmbracoSample.Web/UmbracoSample.Web.csproj" />
   </Folder>
