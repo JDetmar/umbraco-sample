@@ -6,9 +6,11 @@ namespace UmbracoSample.Domain.Leads;
 /// A work email address in the common ASCII form: one "@", a dot-atom local part of at most 64 characters, and a domain
 /// of at least two DNS labels with an alphabetic top-level label. The domain is lower-cased. Quoted local parts, IP
 /// literals and internationalised addresses are refused on purpose: a marketing platform rarely accepts them, and a
-/// narrow rule is easier to prove (ES-021). The only way to get one is <see cref="TryParse"/>.
+/// narrow rule is easier to prove (ES-021). A top-level label is alphabetic or an IDNA A-label ("xn--"). Invisible
+/// characters inside an address are refused rather than removed, so the address stored is the one the visitor typed.
+/// The only way to get one is <see cref="TryParse"/>.
 /// </summary>
-public readonly record struct EmailAddress
+public sealed record EmailAddress
 {
     private EmailAddress(string value) => Value = value;
 
@@ -16,9 +18,9 @@ public readonly record struct EmailAddress
 
     public override string ToString() => Value;
 
-    public static bool TryParse(string? text, out EmailAddress email, [NotNullWhen(false)] out string? error)
+    public static bool TryParse(string? text, [NotNullWhen(true)] out EmailAddress? email, [NotNullWhen(false)] out string? error, int maxLength = LeadLimits.MaxEmail)
     {
-        email = default;
+        email = null;
         var value = PlainText.Normalise(text, multiline: false);
         if (value.Length == 0)
         {
@@ -26,9 +28,16 @@ public readonly record struct EmailAddress
             return false;
         }
 
-        if (value.Length > LeadLimits.Email)
+        if (value.Length > Math.Min(maxLength, LeadLimits.MaxEmail))
         {
-            error = $"must be at most {LeadLimits.Email} characters";
+            error = $"must be at most {Math.Min(maxLength, LeadLimits.MaxEmail)} characters";
+            return false;
+        }
+
+        if (!string.Equals(value, text!.Trim(), StringComparison.Ordinal))
+        {
+            // Normalising removed or replaced something inside the address: refuse it rather than store a different one.
+            error = "must be an email address";
             return false;
         }
 
@@ -95,6 +104,6 @@ public readonly record struct EmailAddress
         }
 
         var top = labels[^1];
-        return top.Length >= 2 && top.All(char.IsAsciiLetter);
+        return top.StartsWith("xn--", StringComparison.Ordinal) ? top.Length > 4 : top.Length >= 2 && top.All(char.IsAsciiLetter);
     }
 }

@@ -40,7 +40,7 @@ public static class PlainText
                 if (char.IsHighSurrogate(c) && i + 1 < text.Length && char.IsLowSurrogate(text[i + 1]))
                 {
                     var category = CharUnicodeInfo.GetUnicodeCategory(text, i);
-                    if (category is not (UnicodeCategory.Format or UnicodeCategory.PrivateUse))
+                    if (category is not (UnicodeCategory.Format or UnicodeCategory.PrivateUse or UnicodeCategory.OtherNotAssigned))
                     {
                         builder.Append(c).Append(text[i + 1]);
                     }

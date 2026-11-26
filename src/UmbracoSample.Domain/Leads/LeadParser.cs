@@ -7,9 +7,11 @@ namespace UmbracoSample.Domain.Leads;
 /// </summary>
 public static class LeadParser
 {
-    public static LeadParseResult Parse(LeadInput input)
+    public static LeadParseResult Parse(LeadInput input, LeadRules rules)
     {
         ArgumentNullException.ThrowIfNull(input);
+        ArgumentNullException.ThrowIfNull(rules);
+        var limits = rules.Limits;
         var errors = new Dictionary<string, string>(StringComparer.Ordinal);
 
         var name = PlainText.Normalise(input.Name, multiline: false);
@@ -17,28 +19,28 @@ public static class LeadParser
         {
             errors["name"] = "is required";
         }
-        else if (name.Length > LeadLimits.Name)
+        else if (name.Length > limits.Name)
         {
-            errors["name"] = $"must be at most {LeadLimits.Name} characters";
+            errors["name"] = $"must be at most {limits.Name} characters";
         }
 
-        if (!EmailAddress.TryParse(input.Email, out var email, out var emailError))
+        if (!EmailAddress.TryParse(input.Email, out var email, out var emailError, limits.Email))
         {
             errors["email"] = emailError;
         }
 
-        var company = Optional(input.Company, multiline: false, LeadLimits.Company, "company", errors);
-        var message = Optional(input.Message, multiline: true, LeadLimits.Message, "message", errors);
+        var company = Optional(input.Company, multiline: false, limits.Company, "company", errors);
+        var message = Optional(input.Message, multiline: true, limits.Message, "message", errors);
 
         var version = PlainText.Normalise(input.ConsentVersion, multiline: false);
-        if (version.Length is 0 or > LeadLimits.ConsentVersion || !version.All(c => char.IsAsciiLetterOrDigit(c) || c is '.' or '_' or '-'))
+        if (version.Length is 0 or > LeadLimits.ConsentVersion || !rules.ConsentVersions.Contains(version))
         {
             errors["consentVersion"] = "is not a known consent text version";
         }
 
         return errors.Count > 0
             ? new LeadParseResult(null, errors)
-            : new LeadParseResult(new Lead(name, email, company, message, input.MarketingConsent, version), errors);
+            : new LeadParseResult(new Lead(name, email!, company, message, input.MarketingConsent, version), errors);
     }
 
     private static string? Optional(string? raw, bool multiline, int limit, string field, Dictionary<string, string> errors)

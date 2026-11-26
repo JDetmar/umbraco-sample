@@ -16,6 +16,14 @@ public sealed class EmailAddressTests
         email.Value.ShouldBe(expected);
     }
 
+    [Fact]
+    public void A_punycode_top_level_label_is_accepted()
+    {
+        EmailAddress.TryParse("ada@example.xn--p1ai", out var email, out var error).ShouldBeTrue(error);
+        email.Value.ShouldBe("ada@example.xn--p1ai");
+        EmailAddress.TryParse("ada@example.xn--", out _, out _).ShouldBeFalse();
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("ada")]
@@ -38,6 +46,8 @@ public sealed class EmailAddressTests
     [InlineData("ada lovelace@example.com")]
     [InlineData("ada@example.com\r\nBcc: x@example.com")]
     [InlineData("<script>@example.com")]
+    [InlineData("ada\u200b@example.com")]
+    [InlineData("ada@exam\u00adple.com")]
     public void Anything_else_is_refused(string text) =>
         EmailAddress.TryParse(text, out _, out var error).ShouldBeFalse(error);
 
@@ -48,9 +58,25 @@ public sealed class EmailAddressTests
         EmailAddress.TryParse($"{local64}@example.com", out _, out _).ShouldBeTrue();
         EmailAddress.TryParse($"a{local64}@example.com", out _, out _).ShouldBeFalse();
 
-        var longDomain = string.Join('.', Enumerable.Repeat(new string('d', 60), 4)) + ".com";
-        var atLimit = $"{new string('a', LeadLimits.Email - longDomain.Length - 1)}@{longDomain}";
-        (atLimit.Length <= LeadLimits.Email).ShouldBeTrue();
+        // 64 + "@" + 189 = 254 characters; one more character in the domain makes 255.
+        string Address(int third) => $"{local64}@{new string('d', 63)}.{new string('d', 63)}.{new string('d', third)}.com";
+        var at254 = Address(57);
+        at254.Length.ShouldBe(LeadLimits.MaxEmail);
+        EmailAddress.TryParse(at254, out _, out var error).ShouldBeTrue(error);
+
+        var at255 = Address(58);
+        at255.Length.ShouldBe(LeadLimits.MaxEmail + 1);
+        EmailAddress.TryParse(at255, out _, out error).ShouldBeFalse();
+        error.ShouldBe($"must be at most {LeadLimits.MaxEmail} characters");
+    }
+
+    [Fact]
+    public void A_configured_lower_limit_applies_and_a_higher_one_cannot_raise_the_maximum()
+    {
+        EmailAddress.TryParse("ada@example.com", out _, out _, maxLength: 15).ShouldBeTrue();
+        EmailAddress.TryParse("ada@example.com", out _, out _, maxLength: 14).ShouldBeFalse();
+        var long255 = $"{new string('a', 64)}@{new string('d', 63)}.{new string('d', 63)}.{new string('d', 58)}.com";
+        EmailAddress.TryParse(long255, out _, out _, maxLength: 1000).ShouldBeFalse();
     }
 
     [Fact]

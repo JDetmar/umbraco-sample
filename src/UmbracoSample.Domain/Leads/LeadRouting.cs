@@ -11,22 +11,14 @@ public sealed record PlatformList(string Key, string ListId, ListPurpose Purpose
 
 /// <summary>
 /// Chooses the list a lead goes to (threat model 0001, tampering): a marketing list only with consent. Without consent a
-/// lead goes to the block's sales list, or to no list. Inputs come from the published block and configuration only.
+/// lead goes to the block's sales list, or to no list. The list comes from the published block only, never the request.
 /// </summary>
 public static class LeadRouting
 {
-    public static PlatformList? Choose(PlatformList? blockList, PlatformList? salesFallback, bool marketingConsent)
+    public static PlatformList? Choose(PlatformList? blockList, bool marketingConsent) => blockList switch
     {
-        if (blockList is { Purpose: ListPurpose.Sales })
-        {
-            return blockList;
-        }
-
-        if (blockList is { Purpose: ListPurpose.Marketing } && marketingConsent)
-        {
-            return blockList;
-        }
-
-        return salesFallback is { Purpose: ListPurpose.Sales } ? salesFallback : null;
-    }
+        { Purpose: ListPurpose.Sales } => blockList,
+        { Purpose: ListPurpose.Marketing } when marketingConsent => blockList,
+        _ => null,
+    };
 }

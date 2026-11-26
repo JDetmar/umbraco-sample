@@ -19,7 +19,12 @@ public static class SubmissionScreen
     public static readonly TimeSpan MinimumAge = TimeSpan.FromSeconds(3);
     public static readonly TimeSpan MaximumAge = TimeSpan.FromHours(2);
 
-    /// <summary>Allowed clock difference between replicas before a render time counts as in the future.</summary>
+    /// <summary>
+    /// How far in the future a render time may be before it counts as tampering (<see cref="ScreenVerdict.FromTheFuture"/>)
+    /// rather than a too-fast post. It labels the rejection; it does not relax <see cref="MinimumAge"/>. Replica clocks are
+    /// kept in step by the host's time sync (milliseconds apart), and a person takes far longer than the 3 s minimum, so a
+    /// real visitor is not rejected by skew.
+    /// </summary>
     public static readonly TimeSpan ClockSkew = TimeSpan.FromSeconds(30);
 
     public static ScreenVerdict Check(string? honeypot, DateTimeOffset renderedAt, DateTimeOffset now)

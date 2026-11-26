@@ -21,12 +21,16 @@ public sealed class CorpusTests
     {
         var input = JsonSerializer.Deserialize<LeadInput>(File.ReadAllText(Path.Join(AppContext.BaseDirectory, "Leads", "corpus", file)), Json)!;
 
-        var result = LeadParser.Parse(input);
+        var result = LeadParser.Parse(input, TestRules.Default);
 
         result.IsValid.ShouldBe(file.StartsWith("valid-", StringComparison.Ordinal), string.Join("; ", result.Errors.Select(e => $"{e.Key} {e.Value}")));
-        if (!result.IsValid)
+        if (result.Lead is { } lead)
         {
-            file.ShouldStartWith("invalid-");
+            // A valid case must also come out clean: no control, format or separator characters survive.
+            foreach (var text in new[] { lead.Name, lead.Company, lead.Message, lead.Email.Value })
+            {
+                text?.ShouldNotContain(c => c != '\n' && LeadParserTests.IsForbidden(c));
+            }
         }
     }
 }
