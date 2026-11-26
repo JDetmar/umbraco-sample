@@ -1,6 +1,6 @@
 # 0019. Scheduled restore test in dev
 
-- Status: Proposed
+- Status: Accepted (owner, 2026-11-26, decision card in the project thread)
 - Date: 2026-11-25
 - Decider: owner
 - Clauses: ES-019, ES-031, ES-047, ES-040; framework OPS-05
@@ -37,7 +37,7 @@ For media, under any option: blob and container soft delete, 7 days outside prod
 
 ## Decision
 
-Proposed: option 1, weekly, dev only. The workflow runs only on `main`, in the `dev` environment, and its own policy test limits it to these resources:
+Option 1, weekly, dev only. The workflow runs only on `main`, in the `dev` environment, and its own policy test limits it to these resources:
 
 - the restore copy named `<database>-restore-test`;
 - the job's check command;
