@@ -1,6 +1,6 @@
 # 0018. Page owner and review cycle, inherited down the tree
 
-- Status: Proposed
+- Status: Accepted by the owner on 2026-11-26 (project thread), with the 12-month default cycle as written
 - Date: 2026-11-25; revised 2026-11-26 for a site of about 1,500 pages
 - Decider: owner
 - Clauses: ES-002, ES-019, ES-020, ES-023, ES-047, ES-058; framework GOV-02, GOV-03
@@ -109,8 +109,8 @@ Not built (owner decision, 2026-11-26). When it is, it runs weekly on the schedu
 The owner is a reference to a back-office user that Umbraco already stores.
 Nothing new about the user is stored.
 
-**Open decision for the owner.**
-The default cycle, if the home page should start with one other than 12 months.
+**Default cycle.**
+12 months, accepted by the owner with this record.
 
 **Before implementation.**
 The export endpoint is a new authenticated route.
