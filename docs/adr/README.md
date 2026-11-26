@@ -21,7 +21,7 @@ Lightweight records of significant decisions (ES-019). Each records context, alt
 | [0015](ADR-0015-single-server-role-and-one-active-revision.md) | Single Umbraco server role and one active revision (amends 0004) | Accepted |
 | [0016](ADR-0016-admin-bypass-for-a-single-maintainer.md) | Admin bypass of required checks for a single maintainer | Accepted |
 | [0017](ADR-0017-database-user-job-in-the-network.md) | Create the site's database user from a job inside the network (amends 0010) | Accepted |
-| [0018](ADR-0018-page-owner-and-review-date.md) | Page owner and review date, flagged by a back-office health check | Proposed |
+| [0018](ADR-0018-page-owner-and-review-date.md) | Page owner and review cycle, inherited down the tree | Accepted |
 | [0019](ADR-0019-scheduled-restore-test-in-dev.md) | Scheduled restore test in dev | Accepted |
 | [0020](ADR-0020-one-repository-for-a-standalone-site-and-a-shared-instance.md) | One repository for a standalone site and a later shared multi-site instance | Accepted |
 
