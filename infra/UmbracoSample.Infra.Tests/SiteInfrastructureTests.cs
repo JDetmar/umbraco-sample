@@ -109,6 +109,21 @@ public sealed class SiteInfrastructureTests
     }
 
     [Fact]
+    public async Task The_stack_exposes_what_the_restore_test_needs()
+    {
+        SiteInfrastructure? infrastructure = null;
+        await Deployment.TestAsync(new RecordingMocks(), new TestOptions { IsPreview = false, ProjectName = "umbraco-sample", StackName = "dev" },
+            () =>
+            {
+                infrastructure = new SiteInfrastructure(Dev, Secrets());
+                return infrastructure.Outputs;
+            });
+
+        (await Pulumi.Utilities.OutputUtilities.GetValueAsync((Output<string>)infrastructure!.Outputs["database"]!)).ShouldBe("umbraco");
+        (await Pulumi.Utilities.OutputUtilities.GetValueAsync((Output<string>)infrastructure.Outputs["databaseUserJob"]!)).ShouldBe("/mock/azure-native:app:Job/umbraco-sample-dev-db-user");
+    }
+
+    [Fact]
     public async Task The_app_waits_for_its_key_vault_access_to_propagate()
     {
         var wait = (await Declare(Dev)).Resources.Single(r => r.Type == "command:local:Command" && r.Name == "wait-for-secret-access").Inputs;

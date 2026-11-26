@@ -445,6 +445,9 @@ public sealed class SiteInfrastructure
             ["sqlServer"] = sqlServer.FullyQualifiedDomainName,
             ["mediaContainer"] = media.Name,
             ["keyVault"] = vault.Name,
+            // For the weekly restore test (ADR 0019): the database it restores and the job that checks the copy.
+            ["database"] = database.Name,
+            ["databaseUserJob"] = databaseUserJob.Id,
             ["edgeEnabled"] = settings.EnableEdge.ToString(CultureInfo.InvariantCulture),
         };
     }

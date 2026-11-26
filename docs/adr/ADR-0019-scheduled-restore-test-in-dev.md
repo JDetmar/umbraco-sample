@@ -51,3 +51,4 @@ It never touches the live database or other blobs.
 - The dev deploy identity is used on a schedule to create and delete one database. This widens the use under DEV-017, which the owner must accept.
 - If a run fails before cleanup, the copy is left behind and billed until the next run deletes it. Every run first deletes any leftover copy.
 - Prod, when it exists, needs its own decision: restore into a separate resource group, and decide whether a restore test may read prod data.
+- Implementation note (2026-11-26): the test blob restore is not built. The deploy identity has no data-plane role on storage and shared keys are off, so it would need a new role grant, which is the owner's call. Media soft delete is declared and mock-tested, but not exercised by a run.
