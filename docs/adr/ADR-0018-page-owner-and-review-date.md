@@ -1,4 +1,4 @@
-# 0018. Page owner and review cycle, inherited down the tree, with a weekly digest to each owner
+# 0018. Page owner and review cycle, inherited down the tree
 
 - Status: Proposed
 - Date: 2026-11-25; revised 2026-11-26 for a site of about 1,500 pages
@@ -59,7 +59,7 @@ It is sound for a handful of pages but fails every point above, so this revision
 
 - **Umbraco's health-check notifications.** Built in, but they send one summary to one address, not each owner's own pages.
 - **A weekly digest per owner from a recurring background job.** Each owner gets only their due and overdue pages.
-  Chosen; the delivery channel is an open decision below.
+  Deferred: the owner decided on 2026-11-26 to send no email for now, because the site has no mail delivery and adding one needs a new service and either a package or a stored secret. Owners use the health check and the export until then.
 
 ## Decision
 
@@ -102,44 +102,30 @@ It no longer loads pages through the content service.
   It returns one row per published page: name, URL, section, effective owner and where it came from, cycle, last reviewed, due date and findings.
   Owners appear by name, never by email address.
 
-**Digest.**
-
-- A recurring background job runs weekly, on the scheduling server only (ADR 0015 keeps one).
-- It sends each active owner one message listing their overdue pages and pages due in the next 30 days, at most 50 pages, with a link to the export for the rest.
-- Pages with no effective owner go to a governance contact set per environment.
-- It is off unless its delivery setting is configured, so dev and CI send nothing by default.
-- A run records the week it covered, so a restart in the same week does not send the digest twice.
+**Digest (deferred).**
+Not built (owner decision, 2026-11-26). When it is, it runs weekly on the scheduling server only (ADR 0015), sends each active owner their overdue pages and those due in the next 30 days (at most 50, with a link to the export), sends ownerless pages to a governance contact per environment, and is off unless delivery is configured. Choosing the delivery channel and the contact is then a new decision.
 
 **Data.**
 The owner is a reference to a back-office user that Umbraco already stores.
-The digest reads the user's email address only to send the message, and stores nothing new about the user.
-The run record holds only the week and the count sent.
+Nothing new about the user is stored.
 
-**Open decisions for the owner.**
-These must be settled before the digest is built:
-
-1. **Delivery channel.**
-   The site has no mail delivery today.
-   Recommended: Azure Communication Services Email, called with the site's managed identity, so no SMTP password is stored (ES-024).
-   It adds an Azure resource per environment and a NuGet package, which needs an entry in `docs/dependencies.md` and your approval (ES-015).
-   The alternative, SMTP with a stored credential in Key Vault, needs no package but adds a secret.
-2. **The governance contact** who receives the digest for ownerless pages, per environment.
-3. **The default cycle**, if the home page should start with one other than 12 months.
+**Open decision for the owner.**
+The default cycle, if the home page should start with one other than 12 months.
 
 **Before implementation.**
-The export endpoint is a new authenticated route, and the digest sends to an external service.
-An update to threat model 0002 covering both comes before the code (ES-023).
+The export endpoint is a new authenticated route.
+An update to threat model 0002 covering it comes before the code (ES-023).
 
 ## Consequences
 
 - **GOV-02 is met by construction once the home page has an owner and a cycle.**
   Every page then has an effective owner and a due date, and the backfill is a few dozen section pages, not 1,500.
-- **GOV-03 is met once the digest is live.**
-  Until a delivery channel is approved and configured, the flag is on demand only.
-  `docs/traceability.md` keeps GOV-03 as "partly" until the digest runs in dev.
-- An owner leaving shows up immediately: disabling their account makes all their pages ownerless in the next report and digest.
+- **GOV-03 stays partly met.**
+  Flagging is automatic in the health check and export, but nobody is told unless they look: the digest is deferred.
+  `docs/traceability.md` keeps GOV-03 as "partly" until owners are notified.
+- An owner leaving shows up immediately: disabling their account makes all their pages ownerless in the next report.
 - An inherited owner can surprise the people who own a section.
-  The export shows where each owner came from, and the digest goes to the effective owner, so a section owner sees everything they inherit.
+  The export shows where each owner came from, so a section owner can filter for everything they inherit.
 - Removing **Review date** is a schema change.
   No published page uses it outside the synthetic seed content, so it needs no data migration; the uSync files change with the code.
 - Marking a page as reviewed means setting **Last reviewed** and publishing.
@@ -147,4 +133,4 @@ An update to threat model 0002 covering both comes before the code (ES-023).
 - The hash spread applies only to a page's first cycle.
   After that, due dates follow when each page was actually reviewed, so they stay spread unless editors review in large batches.
 - The check is bounded by the tree size.
-  At ten times the current site it is still one pass over the cache, but the export and digest should be measured again before the site grows that much.
+  At ten times the current site it is still one pass over the cache, but the export should be measured again before the site grows that much.

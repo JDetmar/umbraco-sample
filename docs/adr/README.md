@@ -21,6 +21,6 @@ Lightweight records of significant decisions (ES-019). Each records context, alt
 | [0015](ADR-0015-single-server-role-and-one-active-revision.md) | Single Umbraco server role and one active revision (amends 0004) | Accepted |
 | [0016](ADR-0016-admin-bypass-for-a-single-maintainer.md) | Admin bypass of required checks for a single maintainer | Accepted |
 | [0017](ADR-0017-database-user-job-in-the-network.md) | Create the site's database user from a job inside the network (amends 0010) | Accepted |
-| [0018](ADR-0018-page-owner-and-review-date.md) | Page owner and review cycle, inherited down the tree, with a weekly digest to each owner | Proposed |
+| [0018](ADR-0018-page-owner-and-review-date.md) | Page owner and review cycle, inherited down the tree | Proposed |
 
 New records copy [template.md](template.md) and are named `ADR-NNNN-short-title.md`, with the next free number; a policy test checks the name and that this index lists the file.
