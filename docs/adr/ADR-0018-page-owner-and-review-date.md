@@ -1,6 +1,6 @@
 # 0018. Page owner and review cycle, inherited down the tree
 
-- Status: Accepted by the owner on 2026-11-26 (project thread), with the 12-month default cycle as written. Amendment of 2026-11-26 (missing cycle uses the default, first due date from the later of start and creation date, unset start date, no owner fallback) proposed after review, pending the owner's confirmation
+- Status: Accepted by the owner on 2026-11-26 (project thread), with the 12-month default cycle as written. Amended on 2026-11-26 after review (missing cycle uses the default, first due date from the later of start and creation date, unset start date is an error, no owner fallback), confirmed by the owner on 2026-11-26 (decision card in the project thread)
 - Date: 2026-11-25; revised 2026-11-26 for a site of about 1,500 pages
 - Decider: owner
 - Clauses: ES-002, ES-019, ES-020, ES-023, ES-025, ES-047, ES-058; framework GOV-02, GOV-03
