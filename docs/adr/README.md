@@ -12,7 +12,7 @@ Lightweight records of significant decisions (ES-019). Each records context, alt
 | [0006](ADR-0006-dependency-policy.md) | Dependency policy | Accepted |
 | [0007](ADR-0007-front-end-build.md) | Front-end build: design tokens and one stylesheet, built outside the image | Accepted |
 | [0008](ADR-0008-security-headers-and-third-party-allowlist.md) | Security headers, content security policy and the third-party allowlist | Accepted |
-| [0009](ADR-0009-redirect-map-and-domain-project.md) | Redirect map as a parsed file, and a domain project for real logic | Proposed |
+| [0009](ADR-0009-redirect-map-and-domain-project.md) | Redirect map as a parsed file, and a domain project for real logic | Accepted |
 | [0010](ADR-0010-azure-environment-design.md) | Azure environment design: Container Apps, Azure SQL, Key Vault and managed identity per environment | Proposed |
 | [0011](ADR-0011-stay-on-lts-releases.md) | Stay on long-term support releases of .NET and Umbraco | Accepted |
 | [0012](ADR-0012-aspire-17-and-cli.md) | Move to Aspire 17 with the CLI as a pinned local tool | Accepted |
