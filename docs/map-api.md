@@ -28,6 +28,8 @@ Both requests are `POST` with a JSON body, relative to the configured `Leads:Map
 }
 ```
 
+`listId` is `null` when the lead goes to no list: no marketing consent and no sales list on the block.
+
 | Response | Meaning | Client outcome |
 |---|---|---|
 | `201 Created` | New lead | Accepted |

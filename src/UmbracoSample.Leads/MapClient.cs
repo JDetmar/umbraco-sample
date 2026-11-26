@@ -19,7 +19,7 @@ namespace UmbracoSample.Leads;
 /// </list>
 /// The API it calls is described in docs/map-api.md.
 /// </summary>
-public sealed partial class MapClient(HttpClient http, MapBulkhead bulkhead, IOptions<MapOptions> options, TimeProvider time, ILogger<MapClient> logger)
+public sealed partial class MapClient(HttpClient http, MapBulkhead bulkhead, IOptions<MapOptions> options, TimeProvider time, ILogger<MapClient> logger) : IMapClient
 {
     internal const string CreatePath = "leads";
     internal const string LookupPath = "leads/lookup";
@@ -215,7 +215,7 @@ internal sealed record CreateBody(
     bool MarketingConsent,
     string ConsentVersion,
     DateTimeOffset SubmittedAt,
-    string ListId)
+    string? ListId)
 {
     public static CreateBody From(MapSubmission submission) => new(
         submission.Lead.Name,
