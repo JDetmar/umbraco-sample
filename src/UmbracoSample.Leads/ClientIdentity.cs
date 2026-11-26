@@ -58,6 +58,6 @@ public static class ClientIdentity
         Span<byte> bytes = stackalloc byte[16];
         _ = address.TryWriteBytes(bytes, out _);
         bytes[8..].Clear();
-        return new IPAddress(bytes).ToString() + "/64";
+        return $"{new IPAddress(bytes)}/64";
     }
 }
