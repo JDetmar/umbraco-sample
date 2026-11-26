@@ -4,12 +4,14 @@
     <Project Path="src/UmbracoSample.Components/UmbracoSample.Components.csproj" />
     <Project Path="src/UmbracoSample.Domain/UmbracoSample.Domain.csproj" />
     <Project Path="src/UmbracoSample.Governance/UmbracoSample.Governance.csproj" />
+    <Project Path="src/UmbracoSample.Leads/UmbracoSample.Leads.csproj" />
     <Project Path="src/UmbracoSample.Security/UmbracoSample.Security.csproj" />
     <Project Path="src/UmbracoSample.ServiceDefaults/UmbracoSample.ServiceDefaults.csproj" />
     <Project Path="src/UmbracoSample.Web/UmbracoSample.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/UmbracoSample.Domain.Tests/UmbracoSample.Domain.Tests.csproj" />
+    <Project Path="tests/UmbracoSample.Leads.Tests/UmbracoSample.Leads.Tests.csproj" />
     <Project Path="tests/UmbracoSample.Integration.Tests/UmbracoSample.Integration.Tests.csproj" />
     <Project Path="tests/UmbracoSample.Repository.Tests/UmbracoSample.Repository.Tests.csproj" />
     <Project Path="tests/UmbracoSample.Web.Tests/UmbracoSample.Web.Tests.csproj" />

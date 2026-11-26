@@ -1,6 +1,7 @@
 # Threat model 0001: lead form forwarded to the marketing automation platform
 
 - Status: **Approved by the owner on 2026-11-24, with decisions D1 to D4 recorded below (ES-023).**
+- Reviewed again by the owner on 2026-11-26 before Phase 4 started (project thread): no changes.
 - Date: 2026-11-24
 - Scope: plan Phase 4, the Form component and its submission endpoint
 - Clauses: ES-022, ES-023, ES-025, ES-026, ES-043, ES-044, ES-045, ES-046, ES-058, ES-059; framework TST-07
@@ -140,5 +141,7 @@ Once approved, Phase 4 implements this model test-first, in this order:
 2. the MAP client and contract tests against WireMock;
 3. the endpoint with antiforgery, rate limit and size limit;
 4. the component and its accessibility tests.
+
+**Progress (recorded by the implementer, not a change to the model).** Steps 1 and 2 are done. Step 3 is split in two. Step 3a (the handler, the render token, the client identity, the rate-limit policy and the D1 switch) is framework-only and tested without the site. Step 3b, the site endpoint, moves into step 4, because the endpoint is the Form block's own post-back. It brings the antiforgery (400), 16 KB body limit (413) and no-store tests, the in-page re-render that reuses the posted render token, and the binding test that an extra `listId` field is ignored. Step 4 is not done until those tests exist.
 
 Each mitigation above is linked to its test in the PR. A change to the field set, to storage (D2) or to third parties (including choosing the D1 CAPTCHA provider, its verification deadline and its fail-open or fail-closed behaviour) reopens this model.

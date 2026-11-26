@@ -32,7 +32,7 @@ How to read the status column:
 | ES-019 | Durable decisions | compliant | [ADRs](adr/README.md). |
 | ES-020 | Cohesion and effects | compliant | Domain project with no package references, checked by a test. |
 | ES-021 | State and abstraction | compliant | Redirect rules parsed into precise types (ADR 0009). |
-| ES-022 | Value integrity | not assessed | Planned with forms: idempotency key and double-submit tests (Phase 4, threat model 0001). |
+| ES-022 | Value integrity | not assessed | In progress: the MAP client (`src/UmbracoSample.Leads`) sends every create with the submission's idempotency key, retries only with it, and reconciles a timeout by lookup; contract tests in `tests/UmbracoSample.Leads.Tests` count the creates on every path. The render token that carries the key and the double-submit test come with the endpoint (Phase 4, threat model 0001). |
 | ES-023 | Threats and authorization | deviation | DEV-017. Threat models 0001 (lead form) and 0002 (Azure environment). |
 | ES-024 | Credentials | deviation | DEV-001 (admin bypass), DEV-004 (no image-URL signing key), DEV-016 (preview token, closing), DEV-017 (standing deploy identity). Managed identities, Key Vault, OIDC to Azure and Pulumi, no stored cloud secrets. |
 | ES-025 | Sensitive data | deviation | DEV-010 (no HSTS yet), DEV-013 (plain HTTP inside the Container Apps environment). |
@@ -82,7 +82,7 @@ How to read the status column:
 | ARC-03 | Content model in source control | met | uSync files in `src/UmbracoSample.Web/uSync/v17`. |
 | ARC-04 | Schema flows up through Git; content authored only in production | partly | Schema flows through Git and uSync; dev has only synthetic content. Production content authoring starts with a production environment, which is deferred (dev only for now). |
 | ARC-05 | Design tokens synced from the design tool into code | partly | Tokens in `frontend/tokens` build the stylesheet and are contrast-tested (ADR 0007). No sync from a design tool. |
-| ARC-06 | Forms native in the site, posting to the marketing automation platform | planned | Phase 4, after the owner reviews threat model 0001. |
+| ARC-06 | Forms native in the site, posting to the marketing automation platform | partly | Phase 4 under threat model 0001: domain rules (`Domain/Leads`) and the MAP client with contract tests (`docs/map-api.md`) are done; the endpoint and the Form block are next. |
 | ARC-07 | Analytics and A/B test hooks in components | gap | Not started; no tracker is on the site, and any would need the third-party allowlist (ADR 0008). |
 | ARC-08 | Clean structured data for AI search engines | met | JSON-LD on every page (`src/UmbracoSample.Web/StructuredData`), unit tests and `StructuredDataTests` (integration). |
 | ENV-01 | All Azure resources as code; no manual changes | partly | Pulumi C# stack (ADR 0010) and CD for dev (ADR 0013). A daily check (`dev-check.yml`) runs a refreshed preview of dev with `expect-no-changes` against the deployed image, so drift fails the run. Dev only; approved by the owner on 2026-11-26 under DEV-017, on once `DEV_CHECK_ENABLED` is set; no run has proved it yet. |
