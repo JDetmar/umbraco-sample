@@ -55,9 +55,11 @@ public sealed class SiteInfrastructureTests
         mocks.Resources.ShouldNotContain(r => r.Type == "azure-native:sql:FirewallRule", "ADR 0010: no IP rules and no 'allow Azure services'.");
         ((ImmutableArray<object>)subnet["serviceEndpoints"]).Select(e => (string)Map(e)["service"]).ShouldBe(["Microsoft.Sql"]);
         ((ImmutableArray<object>)subnet["delegations"]).Select(d => (string)Map(d)["serviceName"]).ShouldBe(["Microsoft.App/environments"]);
-        // Azure adds this action when it applies the delegation; declaring it keeps the daily refresh free of drift.
-        ((ImmutableArray<object>)subnet["delegations"]).Select(d => Map(d)["actions"]).Cast<ImmutableArray<object>>().Single()
-            .ShouldBe(["Microsoft.Network/virtualNetworks/subnets/join/action"]);
+        // Declared to match what Azure sets on the delegation; the dev check after deploy is what shows the drift is gone.
+        var delegation = Map(((ImmutableArray<object>)subnet["delegations"]).ShouldHaveSingleItem());
+        delegation.ShouldContainKey("actions");
+        delegation["actions"].ShouldBeOfType<ImmutableArray<object>>().ShouldBe(["Microsoft.Network/virtualNetworks/subnets/join/action"]);
+        delegation["type"].ShouldBe("Microsoft.Network/virtualNetworks/subnets/delegations");
         rule["virtualNetworkSubnetId"].ShouldBe("/mock/azure-native:network:Subnet/apps");
         rule["ignoreMissingVnetServiceEndpoint"].ShouldBe(false);
     }

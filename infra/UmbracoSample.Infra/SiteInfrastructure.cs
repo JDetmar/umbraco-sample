@@ -196,8 +196,9 @@ public sealed class SiteInfrastructure
             ResourceGroupName = group.Name,
             VirtualNetworkName = network.Name,
             AddressPrefix = "10.40.0.0/23",
-            // Azure fills in the actions the service needs when it applies the delegation. Declaring the same value keeps the
-            // stored state equal to what a refresh reads, so the daily drift check (dev-check.yml) sees no change.
+            // Azure fills in the delegation's actions and type when it applies it. Declaring the same values makes code match
+            // what a refresh reads; state converges on the next CD deploy (which runs up without refresh), after which the
+            // daily drift check (dev-check.yml) sees no change. The delegation's id and etag are server-assigned and ignored.
             Delegations =
             {
                 new DelegationArgs
@@ -205,10 +206,11 @@ public sealed class SiteInfrastructure
                     Name = "container-apps",
                     ServiceName = "Microsoft.App/environments",
                     Actions = { "Microsoft.Network/virtualNetworks/subnets/join/action" },
+                    Type = "Microsoft.Network/virtualNetworks/subnets/delegations",
                 },
             },
             ServiceEndpoints = { new ServiceEndpointPropertiesFormatArgs { Service = "Microsoft.Sql" } },
-        });
+        }, new CustomResourceOptions { IgnoreChanges = { "delegations[*].id", "delegations[*].etag" } });
 
         var sqlNetworkRule = new SqlVirtualNetworkRule("apps-subnet", new SqlVirtualNetworkRuleArgs
         {
