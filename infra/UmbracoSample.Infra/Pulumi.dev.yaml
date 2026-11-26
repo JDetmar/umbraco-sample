@@ -13,6 +13,8 @@ config:
   umbraco-sample:sqlAdminGroupObjectId:
     secure: AAABANz/QoGHXbsghB6Yts5yaYox2149I2QfUTYypPNim8oXX7h/06qkQ55D0N662ADCaC3UPWh2Y0ldDcmt9cGAo7Q=
   umbraco-sample:enableEdge: "false"
+  # No availability test: probing a scale-to-zero app keeps it awake (over budget); the daily smoke test covers dev.
+  umbraco-sample:uptimeTest: "false"
   umbraco-sample:umbracoAdminPassword:
     secure: AAABANTqdqztk/wLTk67t3OxwscTqRc4tbX42iKrGSO6kR82yPsB7f4UgI8lTg==
   umbraco-sample:imagingHmacKey:

@@ -24,10 +24,11 @@ flowchart LR
         end
         id["User-assigned<br/>managed identity"]
         sql[("Azure SQL serverless<br/>Entra-only auth")]
-        blob[("Storage: private<br/>media container")]
+        blob[("Storage: private<br/>media container<br/>soft delete 7 / 30 days")]
         kv["Key Vault<br/>RBAC"]
         ai["Application Insights<br/>+ Log Analytics"]
         budget["Consumption budget<br/>80% / 100% alerts"]
+        uptime["Availability test and alert<br/>/health/ready, 3 regions<br/>(declared for prod, not deployed)"]
     end
 
     map["Marketing automation<br/>platform API (planned, D4)"]
