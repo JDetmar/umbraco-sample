@@ -22,7 +22,7 @@ The SQL server accepts connections only from the apps subnet (ADR 0017). A GitHu
 
 1. **Weekly scheduled restore test in dev, run by CI.**
    - CI restores the dev database to a temporary copy from one hour earlier and times it.
-   - CI starts the existing Container Apps job, inside the network, with a read-only check command. The check confirms the copy has the Umbraco schema and the seeded content.
+   - CI starts the existing Container Apps job, inside the network, with a read-only check command. The check confirms the copy has the installed Umbraco schema and at least one content item.
    - CI deletes the copy in all cases and writes the timings to the run summary.
    - Pros: proves the restore end to end and measures recovery time.
    - Cons: CI creates and deletes a database outside Pulumi, using the dev deploy identity (DEV-017). It costs a few cents a run, because the copy is serverless and is deleted within the hour.
@@ -52,3 +52,4 @@ It never touches the live database or other blobs.
 - If a run fails before cleanup, the copy is left behind and billed until the next run deletes it. Every run first deletes any leftover copy.
 - Prod, when it exists, needs its own decision: restore into a separate resource group, and decide whether a restore test may read prod data.
 - Implementation note (2026-11-26): the test blob restore is not built. The deploy identity has no data-plane role on storage and shared keys are off, so it would need a new role grant, which is the owner's call. Media soft delete is declared and mock-tested, but not exercised by a run.
+- Amendment (2026-11-26, review of the implementation): the Decision's "one test blob" is out of scope until the note above is resolved. "Deleted in all cases" means deletion is requested on every exit; a run cancelled mid-restore can leave a copy, which the next run deletes first. Each run passes a deployer SQL token to the job, readable in the execution for about an hour by anyone with read access to the job, the exposure ADR 0017 accepted, now weekly.

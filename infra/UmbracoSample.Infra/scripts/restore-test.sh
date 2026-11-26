@@ -20,16 +20,15 @@ server="${SQL_SERVER_FQDN%%.*}"
 copy="${DATABASE}-restore-test"
 summary="${GITHUB_STEP_SUMMARY:-/dev/null}"
 
-delete_copy() {
-  if az sql db show -g "$RESOURCE_GROUP" -s "$server" -n "$copy" --query id -o tsv >/dev/null 2>&1; then
-    az sql db delete -g "$RESOURCE_GROUP" -s "$server" -n "$copy" --yes
-    echo "deleted ${copy}"
-  fi
-}
+# Deleting a database that does not exist succeeds, so no existence check can skip a delete. The first call waits,
+# so the restore can reuse the name; the one on exit does not, so a cancelled run (which gets seconds) still sends it.
+delete_copy() { az sql db delete -g "$RESOURCE_GROUP" -s "$server" -n "$copy" --yes "$@"; }
+cleanup() { delete_copy --no-wait && echo "deletion of ${copy} requested"; }
 
 delete_copy
-trap delete_copy EXIT
+trap cleanup EXIT
 
+# An hour back exercises point-in-time restore. It fails, as it should be reported, if the database is younger than that.
 point="$(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%SZ)"
 started=$SECONDS
 # Serverless with a short auto-pause, so a copy a failed run leaves behind costs little until the next run deletes it.
@@ -50,7 +49,7 @@ token="$(az account get-access-token --resource https://database.windows.net/ --
 [[ "$token" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "could not get a SQL access token" >&2; exit 1; }
 body="$(mktemp)"
 chmod 600 "$body"
-trap 'rm -f "$body"; delete_copy' EXIT
+trap 'rm -f "$body"; cleanup' EXIT
 printf '{"containers":[{"name":"%s","image":"%s","command":%s,"resources":{"cpu":0.25,"memory":"0.5Gi"},"env":[{"name":"SQL_SERVER_FQDN","value":"%s"},{"name":"DATABASE","value":"%s"},{"name":"SQL_ACCESS_TOKEN","value":"%s"}]}]}' \
   "$container_name" "$image" "$container_command" "$SQL_SERVER_FQDN" "$copy" "$token" > "$body"
 unset token

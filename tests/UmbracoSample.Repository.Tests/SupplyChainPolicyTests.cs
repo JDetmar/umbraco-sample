@@ -137,6 +137,10 @@ public sealed partial class SupplyChainPolicyTests
         lines.ShouldNotContain("      group: pulumi-dev");
         lines.Where(line => line.TrimStart().StartsWith("command:", StringComparison.Ordinal)).ShouldBe(["          command: output"]);
         lines.Where(line => line.TrimStart().StartsWith("run:", StringComparison.Ordinal)).ShouldBe(["        run: bash infra/UmbracoSample.Infra/scripts/restore-test.sh"]);
+        // No other step can act on Azure: only these actions, in this order.
+        lines.Where(line => line.TrimStart().StartsWith("- uses:", StringComparison.Ordinal)).Select(line => line.Trim()[8..line.Trim().IndexOf('@', StringComparison.Ordinal)])
+            .ShouldBe(["actions/checkout", "azure/login", "pulumi/auth-actions", "pulumi/actions"]);
+        lines.ShouldNotContain(line => line.Contains("inlineScript", StringComparison.Ordinal) || line.Contains("shell:", StringComparison.Ordinal));
     }
 
     private static string JobBlock(string workflow, string job)

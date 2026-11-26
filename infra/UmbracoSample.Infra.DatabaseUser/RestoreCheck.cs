@@ -5,7 +5,7 @@ using Microsoft.Data.SqlClient;
 namespace UmbracoSample.Infra.DatabaseUser;
 
 /// <summary>
-/// Checks a restored copy of the site database (ADR 0019): it has the Umbraco schema and content. Read-only, and it
+/// Checks a restored copy of the site database (ADR 0019): it has the installed Umbraco schema and at least one content item. Read-only, and it
 /// refuses any database whose name does not end in <see cref="CopySuffix"/>, so it can never be pointed at the live one.
 /// Runs in the same job as <see cref="DatabaseUserGrant"/>, inside the network, with a token the caller passes.
 /// </summary>
@@ -13,12 +13,22 @@ public static partial class RestoreCheck
 {
     public const string CopySuffix = "-restore-test";
 
-    /// <summary>Counts only: content nodes, and the migration state Umbraco records once installed.</summary>
+    /// <summary>Umbraco's object type for content items (documents), as opposed to system and data type nodes.</summary>
+    public const string DocumentObjectType = "C66BA18E-EAF3-4CFF-8A22-41B16D66A972";
+
+    /// <summary>
+    /// Counts only: content items not in the recycle bin (an empty install has none, only system nodes), and the core
+    /// migration state Umbraco records once installed. Read-only by its text alone: Azure SQL General Purpose has no
+    /// read replica, so the connection's read-only intent enforces nothing.
+    /// </summary>
     public const string Sql = """
         SELECT
-            (SELECT COUNT_BIG(*) FROM dbo.umbracoNode) AS nodes,
-            (SELECT COUNT_BIG(*) FROM dbo.umbracoKeyValue WHERE [key] LIKE N'Umbraco.Core.Upgrader.State%') AS migrationStates;
+            (SELECT COUNT_BIG(*) FROM dbo.umbracoNode WHERE nodeObjectType = 'C66BA18E-EAF3-4CFF-8A22-41B16D66A972' AND trashed = 0) AS documents,
+            (SELECT COUNT_BIG(*) FROM dbo.umbracoKeyValue WHERE [key] = N'Umbraco.Core.Upgrader.State+Umbraco.Core') AS migrationStates;
         """;
+
+    /// <summary>Errors that mean the copy lacks the schema (invalid object or column): a failed check, not a crash.</summary>
+    public static readonly IReadOnlySet<int> MissingSchemaErrors = new HashSet<int> { 207, 208 };
 
     public sealed record Request(string ServerFqdn, string Database)
     {
@@ -84,10 +94,15 @@ public static partial class RestoreCheck
                 await using var command = new SqlCommand(Sql, connection);
                 await using var reader = await command.ExecuteReaderAsync().ConfigureAwait(false);
                 await reader.ReadAsync().ConfigureAwait(false);
-                var nodes = reader.GetInt64(0);
+                var documents = reader.GetInt64(0);
                 var states = reader.GetInt64(1);
-                await output.WriteLineAsync(string.Create(CultureInfo.InvariantCulture, $"{request.Database}: {nodes} content nodes, {states} migration state rows.")).ConfigureAwait(false);
-                return Verdict(nodes, states);
+                await output.WriteLineAsync(string.Create(CultureInfo.InvariantCulture, $"{request.Database}: {documents} content items, {states} core migration state rows.")).ConfigureAwait(false);
+                return Verdict(documents, states);
+            }
+            catch (SqlException e) when (MissingSchemaErrors.Contains(e.Number))
+            {
+                await error.WriteLineAsync($"{request.Database} lacks the Umbraco schema ({e.Number}: {e.Message}).").ConfigureAwait(false);
+                return 1;
             }
             catch (SqlException e) when (attempt < DatabaseUserGrant.Attempts && DatabaseUserGrant.TransientErrors.Contains(e.Number))
             {
@@ -99,8 +114,8 @@ public static partial class RestoreCheck
         return 1;
     }
 
-    /// <summary>An installed Umbraco database always has its root node and a recorded migration state.</summary>
-    public static int Verdict(long nodes, long migrationStates) => nodes > 0 && migrationStates > 0 ? 0 : 1;
+    /// <summary>Passes only with at least one content item and the recorded core migration state.</summary>
+    public static int Verdict(long documents, long migrationStates) => documents > 0 && migrationStates > 0 ? 0 : 1;
 
     [GeneratedRegex("^[A-Za-z0-9_-]{1,115}-restore-test$")]
     private static partial Regex CopyPattern();

@@ -47,7 +47,15 @@ public class RestoreCheckTests
     public void The_check_only_reads()
     {
         Regex.IsMatch(RestoreCheck.Sql, @"\b(INSERT|UPDATE|DELETE|MERGE|DROP|ALTER|CREATE|EXEC|TRUNCATE|GRANT)\b", RegexOptions.IgnoreCase).ShouldBeFalse();
-        RestoreCheck.Parse(Valid.GetValueOrDefault).ConnectionString.ShouldContain("Application Intent=ReadOnly");
+    }
+
+    [Fact]
+    public void System_nodes_alone_do_not_pass()
+    {
+        // An empty install has system and data type nodes but no content items; only documents not in the bin count.
+        RestoreCheck.Sql.ShouldContain($"nodeObjectType = '{RestoreCheck.DocumentObjectType}' AND trashed = 0");
+        RestoreCheck.Sql.ShouldContain("[key] = N'Umbraco.Core.Upgrader.State+Umbraco.Core'");
+        RestoreCheck.Sql.ShouldNotContain("LIKE");
     }
 
     [Theory]
@@ -64,11 +72,13 @@ public class RestoreCheckTests
 
         script.ShouldContain("set -euo pipefail");
         script.ShouldContain("copy=\"${DATABASE}-restore-test\"");
-        // Every delete and the restore target name the copy; the live database is only ever the restore source.
-        Regex.Matches(script, @"az sql db delete[^\n]*").Select(m => m.Value).ShouldAllBe(line => line.Contains("-n \"$copy\""));
-        script.ShouldContain("--dest-name \"$copy\"");
-        Regex.Matches(script, @"az sql db (\w+)").Select(m => m.Groups[1].Value).Distinct().Order().ShouldBe(["delete", "restore", "show"]);
-        script.ShouldContain("trap delete_copy EXIT");
+        // Every Azure call is one of these; anything new fails here and needs review.
+        string[] allowed = ["az sql db delete -g \"$RESOURCE_GROUP\" -s \"$server\" -n \"$copy\" --yes", "az sql db restore -g \"$RESOURCE_GROUP\" -s \"$server\" -n \"$DATABASE\" --dest-name \"$copy\"", "az rest --method get --url \"${JOB_ID}?${api}\"", "az rest --method post --url \"${JOB_ID}/start?${api}\"", "az rest --method get --url \"${execution}?${api}\"", "az account get-access-token --resource https://database.windows.net/"];
+        var calls = Regex.Matches(script, @"(?<![\w-])az [^\n]*").Select(m => m.Value).Where(line => !line.StartsWith("az has", StringComparison.Ordinal)).ToList();
+        calls.ShouldNotBeEmpty();
+        calls.ShouldAllBe(call => allowed.Any(call.StartsWith));
+        script.ShouldContain("trap cleanup EXIT");
+        script.ShouldContain("trap 'rm -f \"$body\"; cleanup' EXIT");
         script.ShouldNotContain("firewall-rule");
         // The job runs the read-only check, passing the copy's name, never the live database's.
         script.ShouldContain($"container_name=\"{SiteInfrastructure.DatabaseUserContainer}\"");
