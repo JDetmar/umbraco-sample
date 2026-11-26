@@ -24,8 +24,9 @@ public sealed class SharedLibraryPolicyTests
     {
         var project = Project(library);
 
-        project.Descendants("ProjectReference").Select(reference => Path.GetFileNameWithoutExtension((string)reference.Attribute("Include")!.Value.Replace('\\', '/')))
-            .ShouldAllBe(name => name.StartsWith("UmbracoSample.", StringComparison.Ordinal) && SharedLibraries.Select(row => (string)row.Data.Item1).Contains(name),
+        var shared = SharedLibraries.Select(row => row.Data.Item1).ToHashSet(StringComparer.Ordinal);
+        project.Descendants("ProjectReference").Select(reference => Path.GetFileNameWithoutExtension(reference.Attribute("Include")!.Value.Replace('\\', '/')))
+            .ShouldAllBe(name => shared.Contains(name),
                 $"{library} may reference only other shared libraries, never a host such as UmbracoSample.Web.");
         project.Descendants("PackageReference").Select(reference => (string)reference.Attribute("Include")!)
             .ShouldBeSubsetOf(allowedPackages, $"{library} takes a new package only with a reason in the pull request (ES-015).");
