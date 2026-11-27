@@ -253,7 +253,8 @@ public sealed partial class LeadFormTests(SiteFixture site)
 
     private async Task<bool> TelemetryContainsAsync(string value)
     {
-        using var response = await site.MapStub.PostAsync("/stub/telemetry/search", new StringContent(value), Cancel);
+        using var content = new StringContent(value);
+        using var response = await site.MapStub.PostAsync("/stub/telemetry/search", content, Cancel);
         return (await response.Content.ReadFromJsonAsync<TelemetrySearch>(Cancel))!.Found;
     }
 
@@ -331,14 +332,13 @@ public sealed partial class LeadFormTests(SiteFixture site)
         public async ValueTask DisposeAsync()
         {
             await _stop.CancelAsync();
-            try
-            {
-                await _watching;
-            }
-            catch (OperationCanceledException)
-            {
-            }
 
+            // Stopping cancels the watch, which is how it is meant to end; any other failure still surfaces.
+            await _watching.ContinueWith(
+                watching => watching.Exception is { } failure ? throw failure : Task.CompletedTask,
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
             _stop.Dispose();
         }
     }
