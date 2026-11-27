@@ -31,11 +31,17 @@ public sealed class LeadFormController(
     [HttpPost]
     [ValidateAntiForgeryToken]
     [EnableRateLimiting(LeadFormRateLimitPolicy.Name)]
-    public async Task<IActionResult> Submit([Bind(Prefix = "")] LeadFormFields fields, CancellationToken cancellationToken)
+    [RequestSizeLimit(LeadFormOptions.MaxBodyBytes)]
+    [RequestFormLimits(ValueLengthLimit = LeadFormOptions.MaxBodyBytes, MultipartBodyLengthLimit = LeadFormOptions.MaxBodyBytes)]
+    public async Task<IActionResult> Submit([FromForm] LeadFormFields fields, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(fields);
         Response.Headers.CacheControl = LeadFormView.NoStore;
-        if (!options.Value.Enabled)
+
+        // Off, or posted to Umbraco's direct surface route rather than a page: there is no page to re-render.
+        if (!options.Value.Enabled
+            || !UmbracoContextAccessor.TryGetUmbracoContext(out var umbraco)
+            || umbraco.PublishedRequest?.PublishedContent is null)
         {
             return NotFound();
         }
@@ -44,14 +50,15 @@ public sealed class LeadFormController(
         var tokens = HttpContext.RequestServices.GetRequiredService<RenderTokenProtector>();
         var post = new LeadFormPost(
             fields.RenderToken,
-            fields.Website,
+            fields.LeaveBlank,
             CaptchaResponse: null, // D1: no provider is chosen; the switch is off.
             new LeadInput(fields.Name, fields.Email, fields.Company, fields.Message, fields.MarketingConsent, fields.ConsentVersion));
         var result = await handler.HandleAsync(post, cancellationToken);
 
         // The view re-renders the visitor's input from the fields, not from model state.
         ModelState.Clear();
-        var blockKey = tokens.TryRead(fields.RenderToken, out var token) ? token.BlockKey : (Guid?)null;
+        // A refused post shows its notice on every form on the page: its token may name a block that is not here.
+        var blockKey = result.Kind is not LeadFormResultKind.Refused && tokens.TryRead(fields.RenderToken, out var token) ? token.BlockKey : (Guid?)null;
         HttpContext.Items[LeadFormView.StateKey] = new LeadFormState(blockKey, fields, result);
         return CurrentUmbracoPage();
     }

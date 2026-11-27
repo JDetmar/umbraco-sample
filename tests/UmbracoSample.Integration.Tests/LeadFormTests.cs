@@ -30,6 +30,7 @@ public sealed partial class LeadFormTests(SiteFixture site)
         var second = await visitor.OpenAsync();
 
         first.CacheControl.ShouldContain("no-store");
+        first.CacheControl.ShouldContain("private", Case.Sensitive, "the site's own value, not only the one antiforgery sets");
         first.RenderToken.ShouldNotBe(second.RenderToken, "each render carries its own idempotency key");
     }
 
@@ -53,6 +54,50 @@ public sealed partial class LeadFormTests(SiteFixture site)
         using var response = await visitor.PostAsync(form, Lead() with { Message = new string('x', 17 * 1024) });
 
         response.StatusCode.ShouldBe(HttpStatusCode.RequestEntityTooLarge);
+    }
+
+    [Fact]
+    public async Task A_post_over_16_KB_to_umbracos_direct_surface_route_gets_413_too()
+    {
+        using var visitor = Visitor();
+        var form = await visitor.OpenAsync();
+
+        using var response = await visitor.PostAsync(form, Lead() with { Message = new string('x', 17 * 1024) }, path: "/umbraco/surface/LeadForm/Submit");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.RequestEntityTooLarge);
+    }
+
+    [Fact]
+    public async Task A_chunked_post_over_16_KB_is_refused_and_sends_no_lead()
+    {
+        await ClearLeadsAsync();
+        using var visitor = Visitor();
+        var form = await visitor.OpenAsync();
+        await Task.Delay(HumanPause, Cancel);
+
+        // A valid lead padded with a field the site ignores: without the cap this post would be thanked and sent.
+        using var response = await visitor.PostAsync(form, Lead(), chunked: true, extra: [("Padding", new string('x', 17 * 1024))]);
+
+        // With no Content-Length the server cannot refuse the body up front; it stops reading at 16 KB instead. Who reads
+        // first decides the status: a 413, a 400 from antiforgery, or Umbraco giving up on the form and rendering the
+        // page. Whatever the status, the post is never handled.
+        ((int)response.StatusCode).ShouldBeOneOf(200, 400, 413);
+        (await response.Content.ReadAsStringAsync(Cancel)).ShouldNotContain("Thanks, we will be in touch.");
+        (await LeadsAsync()).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_token_rendered_on_one_page_does_not_submit_on_another()
+    {
+        await ClearLeadsAsync();
+        using var visitor = Visitor();
+        var form = await visitor.OpenAsync();
+        await Task.Delay(HumanPause, Cancel);
+
+        using var response = await visitor.PostAsync(form, Lead(), path: "/fixture-minimal/");
+
+        (await response.Content.ReadAsStringAsync(Cancel)).ShouldNotContain("Thanks, we will be in touch.");
+        (await LeadsAsync()).ShouldBeEmpty();
     }
 
     [Fact]
@@ -89,6 +134,7 @@ public sealed partial class LeadFormTests(SiteFixture site)
         var page = await response.Content.ReadAsStringAsync(Cancel);
 
         page.ShouldContain("Thanks, we will be in touch.");
+        page.ShouldMatch(@"Thanks, we will be in touch\.</p>\s*</section>", "the thank-you closes the form's region");
         var lead = (await LeadsAsync()).ShouldHaveSingleItem();
         lead.ListId.ShouldBe("synthetic-sales-list");
         lead.ConsentVersion.ShouldBe("2026-11");
@@ -185,8 +231,9 @@ public sealed partial class LeadFormTests(SiteFixture site)
         string[] secrets = [marker, key, visitor.ClientIp, form.RenderToken];
 
         var logs = await siteLogs.UntilAsync("Lead form post: Invalid");
-        await TelemetryUntilAsync(FormPage);
-        await Task.Delay(TimeSpan.FromSeconds(1), Cancel); // one more export interval, for the last spans
+        // The MAP client's span exists only for the post, so once it is exported the post's spans are there too.
+        await TelemetryUntilAsync("/leads");
+        await Task.Delay(TimeSpan.FromSeconds(1), Cancel); // one more export interval, for the invalid post's spans
         foreach (var secret in secrets)
         {
             logs.ShouldNotContain(secret, Case.Sensitive, "the site's logs");
@@ -350,9 +397,15 @@ internal sealed class Visitor : IDisposable
     }
 
     public Task<HttpResponseMessage> PostAsync(LeadFormTests.RenderedForm form, LeadFormTests.LeadValues lead, params (string Name, string Value)[] extra) =>
-        PostAsync(form, lead, antiforgery: true, extra);
+        PostAsync(form, lead, antiforgery: true, extra: extra);
 
-    public Task<HttpResponseMessage> PostAsync(LeadFormTests.RenderedForm form, LeadFormTests.LeadValues lead, bool antiforgery, params (string Name, string Value)[] extra)
+    public Task<HttpResponseMessage> PostAsync(
+        LeadFormTests.RenderedForm form,
+        LeadFormTests.LeadValues lead,
+        bool antiforgery = true,
+        string path = "/fixture-form/",
+        bool chunked = false,
+        params (string Name, string Value)[] extra)
     {
         var fields = new List<KeyValuePair<string, string>>
         {
@@ -379,16 +432,22 @@ internal sealed class Visitor : IDisposable
         Add("Message", lead.Message);
         fields.AddRange(extra.Select(e => new KeyValuePair<string, string>(e.Name, e.Value)));
 
-        var request = Request(HttpMethod.Post);
+        var request = Request(HttpMethod.Post, path);
         request.Content = new FormUrlEncodedContent(fields);
+        if (chunked)
+        {
+            request.Headers.TransferEncodingChunked = true;
+            request.Content = new UnknownLengthContent(request.Content);
+        }
+
         return _client.SendAsync(request, TestContext.Current.CancellationToken);
     }
 
     public void Dispose() => _client.Dispose();
 
-    private HttpRequestMessage Request(HttpMethod method)
+    private HttpRequestMessage Request(HttpMethod method, string path = "/fixture-form/")
     {
-        var request = new HttpRequestMessage(method, "/fixture-form/");
+        var request = new HttpRequestMessage(method, path);
         request.Headers.Add("X-Azure-FDID", _site.FrontDoorId);
         request.Headers.Add("X-Azure-ClientIP", ClientIp);
         return request;
@@ -396,4 +455,34 @@ internal sealed class Visitor : IDisposable
 
     // A random private address, so no two visitors in a run share a rate-limit window.
     private static string RandomIp() => $"10.{Random.Shared.Next(0, 256)}.{Random.Shared.Next(0, 256)}.{Random.Shared.Next(1, 255)}";
+}
+
+/// <summary>Sends a body without a Content-Length, so it goes chunked and the server cannot refuse it up front.</summary>
+internal sealed class UnknownLengthContent : HttpContent
+{
+    private readonly HttpContent _inner;
+
+    public UnknownLengthContent(HttpContent inner)
+    {
+        _inner = inner;
+        Headers.ContentType = inner.Headers.ContentType;
+    }
+
+    protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) => _inner.CopyToAsync(stream);
+
+    protected override bool TryComputeLength(out long length)
+    {
+        length = 0;
+        return false;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _inner.Dispose();
+        }
+
+        base.Dispose(disposing);
+    }
 }

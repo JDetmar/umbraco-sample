@@ -29,8 +29,9 @@
     @if (result?.Kind == LeadFormResultKind.ThankYou)
     {
         <p class="c-form__thanks" role="status" tabindex="-1">@Model.ThankYou</p>
-        return;
     }
+    else
+    {
     @if (Model.Intro is not null)
     {
         <p class="c-form__intro">@Model.Intro</p>
@@ -56,8 +57,8 @@
         <input type="hidden" name="@nameof(LeadFormFields.RenderToken)" value="@view.RenderToken" />
         <input type="hidden" name="@nameof(LeadFormFields.ConsentVersion)" value="@Model.ConsentVersion" />
         <div class="c-form__trap" aria-hidden="true">
-            <label for="@id-website">Leave this field empty</label>
-            <input type="text" id="@id-website" name="@nameof(LeadFormFields.Website)" tabindex="-1" autocomplete="off" />
+            <label for="@id-trap">Leave this field empty</label>
+            <input type="text" id="@id-trap" name="@nameof(LeadFormFields.LeaveBlank)" tabindex="-1" autocomplete="off" />
         </div>
         @Field("name", nameof(LeadFormFields.Name), "Name", "text", "name", view.Values.Name, required: true, Error("name"))
         @Field("email", nameof(LeadFormFields.Email), "Email", "email", "email", view.Values.Email, required: true, Error("email"))
@@ -69,7 +70,7 @@
                 <p class="c-form__error" id="@id-message-error">Message @messageError</p>
             }
             <textarea class="c-form__input" id="@id-message" name="@nameof(LeadFormFields.Message)" rows="5"
-                      aria-invalid="@(Error("message") is null ? "false" : "true")"
+                      aria-invalid="@(Error("message") is null ? null : "true")"
                       aria-describedby="@(Error("message") is null ? null : $"{id}-message-error")">@view.Values.Message</textarea>
         </div>
         <div class="c-form__field c-form__field--check">
@@ -82,7 +83,12 @@
         </div>
         <button class="c-form__submit" type="submit">Send</button>
     }
+    }
 </section>
+@{
+    // Antiforgery sets "no-cache, no-store" while the form renders; restate the site's stricter value afterwards.
+    Context.Response.Headers.CacheControl = LeadFormView.NoStore;
+}
 
 @functions {
     private Microsoft.AspNetCore.Html.IHtmlContent Field(string field, string name, string label, string type, string autocomplete, string? value, bool required, string? error)
@@ -97,7 +103,7 @@
         }
 
         builder.AppendHtml($"<input class=\"c-form__input\" id=\"{id}\" name=\"{name}\" type=\"{type}\" autocomplete=\"{autocomplete}\"");
-        builder.AppendHtml(required ? " required aria-required=\"true\"" : string.Empty);
+        builder.AppendHtml(required ? " required" : string.Empty);
         builder.AppendHtml(error is not null ? $" aria-invalid=\"true\" aria-describedby=\"{id}-error\"" : string.Empty);
         builder.AppendHtml(" value=\"").Append(value ?? string.Empty).AppendHtml("\" /></div>");
         return builder;

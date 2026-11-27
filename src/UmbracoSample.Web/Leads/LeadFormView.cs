@@ -11,8 +11,11 @@ public sealed class LeadFormFields
 
     public string? RenderToken { get; set; }
 
-    /// <summary>The honeypot: hidden from people, so any value means a bot.</summary>
-    public string? Website { get; set; }
+    /// <summary>
+    /// The honeypot: hidden from people, so any value means a bot. Its name means nothing to browser autofill, which
+    /// could otherwise fill a field called "website" for a real visitor.
+    /// </summary>
+    public string? LeaveBlank { get; set; }
 
     public string? Name { get; set; }
 
