@@ -8,7 +8,7 @@ Pages are built from blocks in a Block List property called `blocks`, on both th
 | Rich text | `richTextBlock` | [rich-text.md](rich-text.md) |
 | Card grid | `cardGridBlock` (cards: `cardBlock`) | [card-grid.md](card-grid.md) |
 | Call to action | `ctaBlock` | [call-to-action.md](call-to-action.md) |
-| Form | not built yet | Waits for the Phase 4 threat model (ES-023) |
+| Form | `formBlock` | Schema only; the renderer and its doc come next (Phase 4, step 4) |
 
 ## How a block becomes HTML
 

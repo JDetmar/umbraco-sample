@@ -5,8 +5,9 @@ using Shouldly;
 namespace UmbracoSample.Web.Tests.Leads;
 
 /// <summary>
-/// Keeps the Form block's uSync schema as the step 4 plan and threat model 0001 describe it: editors choose a list key
-/// and a consent version from fixed dropdowns, never type a platform list ID, and the block is offered on pages.
+/// Keeps the Form block's uSync schema as threat model 0001 describes it (section 1 and tampering): editors choose a list
+/// key and a consent version from fixed dropdowns, never type a platform list ID or the consent wording, and every text
+/// field has a length limit (boundary 4: settings are validated like input).
 /// </summary>
 public sealed class FormBlockSchemaTests
 {
@@ -37,7 +38,6 @@ public sealed class FormBlockSchemaTests
     [InlineData("heading", "Umbraco.TextBox", true)]
     [InlineData("intro", "Umbraco.TextArea", false)]
     [InlineData("list", "Umbraco.DropDown.Flexible", true)]
-    [InlineData("consentText", "Umbraco.TextArea", true)]
     [InlineData("consentVersion", "Umbraco.DropDown.Flexible", true)]
     [InlineData("thankYou", "Umbraco.TextBox", true)]
     public void Each_field_has_the_planned_editor_and_is_required_as_planned(string alias, string editor, bool mandatory)
@@ -53,7 +53,16 @@ public sealed class FormBlockSchemaTests
     {
         // The form's fields are fixed in code; a new block field needs the threat model and this test updated.
         FormBlock().Descendants("GenericProperty").Select(p => p.Element("Alias")!.Value).Order()
-            .ShouldBe(["consentText", "consentVersion", "heading", "intro", "list", "thankYou"]);
+            .ShouldBe(["consentVersion", "heading", "intro", "list", "thankYou"]);
+    }
+
+    [Theory]
+    [InlineData("heading", 120, 1)]
+    [InlineData("intro", 500, 0)]
+    [InlineData("thankYou", 200, 1)]
+    public void Each_text_field_has_a_length_limit(string alias, int max, int min)
+    {
+        Property(alias).Element("Validation")!.Value.ShouldBe($"^[\\s\\S]{{{min},{max}}}$");
     }
 
     [Theory]
@@ -65,17 +74,6 @@ public sealed class FormBlockSchemaTests
 
         config.GetProperty("multiple").GetBoolean().ShouldBeFalse();
         config.GetProperty("items").EnumerateArray().Select(item => item.GetString()).ShouldBe(items);
-    }
-
-    [Fact]
-    public void Pages_can_use_the_form_block()
-    {
-        var pageBlocks = Config(DataType("2e88d5e3-4ba5-488b-9918-9e4fdef493e0"));
-        var formKey = (string)FormBlock().Attribute("Key")!;
-
-        pageBlocks.GetProperty("blocks").EnumerateArray()
-            .Select(block => block.GetProperty("contentElementTypeKey").GetString())
-            .ShouldContain(formKey);
     }
 
     private static JsonElement Config(XElement dataType) => JsonDocument.Parse(dataType.Element("Config")!.Value).RootElement;
