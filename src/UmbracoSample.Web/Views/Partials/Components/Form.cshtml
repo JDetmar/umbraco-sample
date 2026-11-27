@@ -1,0 +1,105 @@
+@* The lead form (threat model 0001). Docs: docs/components/form.md. Renders nothing while the form is switched off. *@
+@model UmbracoSample.Components.FormModel
+@using UmbracoSample.Leads
+@using UmbracoSample.Web.Leads
+@inject LeadFormView FormView
+@{
+    var view = FormView.For(Model);
+    if (view is null)
+    {
+        return;
+    }
+
+    var id = $"f-{Model.BlockKey:N}";
+    var result = view.Result;
+    var errors = result?.Kind == LeadFormResultKind.Invalid ? result.Errors : new Dictionary<string, string>();
+    string? Error(string field) => errors.TryGetValue(field, out var message) ? message : null;
+    var labels = new Dictionary<string, string> { ["name"] = "Name", ["email"] = "Email", ["company"] = "Company", ["message"] = "Message", ["consentVersion"] = "Consent" };
+    string? notice = result?.Kind switch
+    {
+        LeadFormResultKind.TryAgain => "We could not send your details. Please try again.",
+        LeadFormResultKind.NotAccepted => "We could not accept these details. Please contact us another way.",
+        LeadFormResultKind.OutcomeUnknown => "We may already have your details. Please wait a few minutes before you send them again.",
+        LeadFormResultKind.Refused => "Something went wrong. Please reload the page and try again.",
+        _ => null,
+    };
+}
+<section class="c-form" aria-labelledby="@id-heading">
+    <h2 class="c-form__heading" id="@id-heading">@Model.Heading</h2>
+    @if (result?.Kind == LeadFormResultKind.ThankYou)
+    {
+        <p class="c-form__thanks" role="status" tabindex="-1">@Model.ThankYou</p>
+        return;
+    }
+    @if (Model.Intro is not null)
+    {
+        <p class="c-form__intro">@Model.Intro</p>
+    }
+    @if (errors.Count > 0)
+    {
+        <div class="c-form__summary" role="alert" tabindex="-1" aria-labelledby="@id-summary">
+            <h3 class="c-form__summary-heading" id="@id-summary">Please check the form</h3>
+            <ul>
+                @foreach (var (field, message) in errors)
+                {
+                    <li><a href="#@id-@field">@(labels.GetValueOrDefault(field, field)) @message</a></li>
+                }
+            </ul>
+        </div>
+    }
+    else if (notice is not null)
+    {
+        <p class="c-form__notice" role="alert" tabindex="-1">@notice</p>
+    }
+    @using (Html.BeginUmbracoForm<LeadFormController>(nameof(LeadFormController.Submit), null, new { @class = "c-form__form", novalidate = "novalidate" }))
+    {
+        <input type="hidden" name="@nameof(LeadFormFields.RenderToken)" value="@view.RenderToken" />
+        <input type="hidden" name="@nameof(LeadFormFields.ConsentVersion)" value="@Model.ConsentVersion" />
+        <div class="c-form__trap" aria-hidden="true">
+            <label for="@id-website">Leave this field empty</label>
+            <input type="text" id="@id-website" name="@nameof(LeadFormFields.Website)" tabindex="-1" autocomplete="off" />
+        </div>
+        @Field("name", nameof(LeadFormFields.Name), "Name", "text", "name", view.Values.Name, required: true, Error("name"))
+        @Field("email", nameof(LeadFormFields.Email), "Email", "email", "email", view.Values.Email, required: true, Error("email"))
+        @Field("company", nameof(LeadFormFields.Company), "Company (optional)", "text", "organization", view.Values.Company, required: false, Error("company"))
+        <div class="c-form__field">
+            <label class="c-form__label" for="@id-message">Message (optional)</label>
+            @if (Error("message") is { } messageError)
+            {
+                <p class="c-form__error" id="@id-message-error">Message @messageError</p>
+            }
+            <textarea class="c-form__input" id="@id-message" name="@nameof(LeadFormFields.Message)" rows="5"
+                      aria-invalid="@(Error("message") is null ? "false" : "true")"
+                      aria-describedby="@(Error("message") is null ? null : $"{id}-message-error")">@view.Values.Message</textarea>
+        </div>
+        <div class="c-form__field c-form__field--check">
+            @if (Error("consentVersion") is { } consentError)
+            {
+                <p class="c-form__error" id="@id-consentVersion">Consent @consentError. Please reload the page.</p>
+            }
+            <input type="checkbox" id="@id-consent" name="@nameof(LeadFormFields.MarketingConsent)" value="true" @(view.Values.MarketingConsent ? "checked" : null) />
+            <label for="@id-consent">@view.ConsentText</label>
+        </div>
+        <button class="c-form__submit" type="submit">Send</button>
+    }
+</section>
+
+@functions {
+    private Microsoft.AspNetCore.Html.IHtmlContent Field(string field, string name, string label, string type, string autocomplete, string? value, bool required, string? error)
+    {
+        var id = $"f-{Model.BlockKey:N}-{field}";
+        var builder = new Microsoft.AspNetCore.Html.HtmlContentBuilder();
+        builder.AppendHtml("<div class=\"c-form__field\">");
+        builder.AppendHtml($"<label class=\"c-form__label\" for=\"{id}\">").Append(label).AppendHtml("</label>");
+        if (error is not null)
+        {
+            builder.AppendHtml($"<p class=\"c-form__error\" id=\"{id}-error\">").Append($"{label.Replace(" (optional)", string.Empty, StringComparison.Ordinal)} {error}").AppendHtml("</p>");
+        }
+
+        builder.AppendHtml($"<input class=\"c-form__input\" id=\"{id}\" name=\"{name}\" type=\"{type}\" autocomplete=\"{autocomplete}\"");
+        builder.AppendHtml(required ? " required aria-required=\"true\"" : string.Empty);
+        builder.AppendHtml(error is not null ? $" aria-invalid=\"true\" aria-describedby=\"{id}-error\"" : string.Empty);
+        builder.AppendHtml(" value=\"").Append(value ?? string.Empty).AppendHtml("\" /></div>");
+        return builder;
+    }
+}

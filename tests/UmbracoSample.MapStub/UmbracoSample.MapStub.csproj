@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    A local stand-in for the marketing platform (docs/map-api.md), run by the AppHost for `make run` and the integration
+    tests. Never deployed. Unlike the WireMock contract-test stub, it keeps leads in memory and de-duplicates by
+    idempotency key, so the real site's double-submit and outage behaviour can be tested end to end. It also accepts
+    OTLP exports so integration tests can search the site's spans for values that must not be there.
+  -->
+
+</Project>

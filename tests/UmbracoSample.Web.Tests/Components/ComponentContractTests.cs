@@ -18,6 +18,7 @@ public sealed class ComponentContractTests
     [InlineData(ComponentMapper.RichTextAlias)]
     [InlineData(ComponentMapper.CardGridAlias)]
     [InlineData(ComponentMapper.CtaAlias)]
+    [InlineData(ComponentMapper.FormAlias)]
     public void Empty_block_is_not_rendered(string alias) =>
         ComponentMapper.Map(new FakeBlockSource(alias)).ShouldBeNull();
 
