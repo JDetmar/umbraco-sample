@@ -32,7 +32,7 @@ How to read the status column:
 | ES-019 | Durable decisions | compliant | [ADRs](adr/README.md). |
 | ES-020 | Cohesion and effects | compliant | Domain project with no package references, checked by a test. |
 | ES-021 | State and abstraction | compliant | Redirect rules parsed into precise types (ADR 0009). |
-| ES-022 | Value integrity | not assessed | In progress: the MAP client (`src/UmbracoSample.Leads`) sends every create with the submission's idempotency key, retries only with it, and reconciles a timeout by lookup; contract tests in `tests/UmbracoSample.Leads.Tests` count the creates on every path. The render token that carries the key and the double-submit test come with the endpoint (Phase 4, threat model 0001). |
+| ES-022 | Value integrity | not assessed | In progress: the MAP client (`src/UmbracoSample.Leads`) sends every create with the submission's idempotency key, retries only with it, and reconciles a timeout by lookup; contract tests in `tests/UmbracoSample.Leads.Tests` count the creates on every path. Built with the lead form: the render token carries the key across re-renders, and a double submit stores one lead (`LeadFormTests.A_double_submission_creates_one_lead`); awaiting assessment in the ledger. |
 | ES-023 | Threats and authorization | deviation | DEV-017. Threat models 0001 (lead form) and 0002 (Azure environment). |
 | ES-024 | Credentials | deviation | DEV-001 (admin bypass), DEV-004 (no image-URL signing key), DEV-016 (preview token, closing), DEV-017 (standing deploy identity). Managed identities, Key Vault, OIDC to Azure and Pulumi, no stored cloud secrets. |
 | ES-025 | Sensitive data | deviation | DEV-010 (no HSTS yet), DEV-013 (plain HTTP inside the Container Apps environment). |
@@ -69,7 +69,7 @@ How to read the status column:
 | ES-056 | Receipts and resumability | not assessed | Pull requests and version history are the receipts (`CLAUDE.md`). |
 | ES-057 | Failure containment | not assessed | |
 | ES-058 | Ownership, purpose, and contracts | not assessed | The lead form keeps no submissions and logs no visitor values (threat model 0001, `LeadFormTests`); awaiting assessment in the ledger. |
-| ES-059 | Retention and deletion propagation | not assessed | Planned with forms (Phase 4). |
+| ES-059 | Retention and deletion propagation | not assessed | Built with the lead form: the site keeps no submissions (threat model 0001, D2: no outbox), so retention and deletion are the MAP's policy, and logs and spans carry no personal data (`LeadFormTests`); awaiting assessment in the ledger. |
 | ES-060 | Triggered adoption | not assessed | Pull request preview environments are deferred until their trigger exists (ENV-04). |
 | ES-061 | Bench verification | not_applicable | No hardware; see the ledger. |
 

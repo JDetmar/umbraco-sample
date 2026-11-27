@@ -36,4 +36,4 @@ A test keeps the back-office dropdowns and these keys identical. Changing consen
 
 **Tests:** `FormBlockSchemaTests`, `FormBlockTests` and `LeadFormOffTests` (fast); `LeadFormTests` (integration: 400, 413 including the direct surface route and chunked bodies, 429, no-store, token per render and reuse, a token only on its own page, posted `listId` ignored, double submit, outage, no visitor values in logs or spans); `e2e/tests/form.spec.mjs` (keyboard journey, error journey with axe), plus the axe and visual suites on `/fixture-form/`.
 
-**After a post** the page returns to the form by its fragment (`#f-…`), so the result is in view.
+**After a post** the page returns to the form's result by its fragment (`#f-…`): after a post the fragment id sits on the thank-you, error summary or notice (which carries `tabindex="-1"` and `autofocus`), so the browser scrolls to it and focuses it and a screen reader announces it, with no script. A browser skips `autofocus` when the fragment targets another element, which is why the id moves. The query string is kept.
