@@ -46,29 +46,29 @@ public sealed partial class LeadFormTests(SiteFixture site)
     }
 
     [Fact]
-    public async Task A_post_over_16_KB_gets_413_and_is_not_read()
+    public async Task A_post_over_32_KB_gets_413_and_is_not_read()
     {
         using var visitor = Visitor();
         var form = await visitor.OpenAsync();
 
-        using var response = await visitor.PostAsync(form, Lead() with { Message = new string('x', 17 * 1024) });
+        using var response = await visitor.PostAsync(form, Lead() with { Message = new string('x', 33 * 1024) });
 
         response.StatusCode.ShouldBe(HttpStatusCode.RequestEntityTooLarge);
     }
 
     [Fact]
-    public async Task A_post_over_16_KB_to_umbracos_direct_surface_route_gets_413_too()
+    public async Task A_post_over_32_KB_to_umbracos_direct_surface_route_gets_413_too()
     {
         using var visitor = Visitor();
         var form = await visitor.OpenAsync();
 
-        using var response = await visitor.PostAsync(form, Lead() with { Message = new string('x', 17 * 1024) }, path: "/umbraco/surface/LeadForm/Submit");
+        using var response = await visitor.PostAsync(form, Lead() with { Message = new string('x', 33 * 1024) }, path: "/umbraco/surface/LeadForm/Submit");
 
         response.StatusCode.ShouldBe(HttpStatusCode.RequestEntityTooLarge);
     }
 
     [Fact]
-    public async Task A_chunked_post_over_16_KB_is_refused_and_sends_no_lead()
+    public async Task A_chunked_post_over_32_KB_is_refused_and_sends_no_lead()
     {
         await ClearLeadsAsync();
         using var visitor = Visitor();
@@ -76,14 +76,30 @@ public sealed partial class LeadFormTests(SiteFixture site)
         await Task.Delay(HumanPause, Cancel);
 
         // A valid lead padded with a field the site ignores: without the cap this post would be thanked and sent.
-        using var response = await visitor.PostAsync(form, Lead(), chunked: true, extra: [("Padding", new string('x', 17 * 1024))]);
+        using var response = await visitor.PostAsync(form, Lead(), chunked: true, extra: [("Padding", new string('x', 33 * 1024))]);
 
-        // With no Content-Length the server cannot refuse the body up front; it stops reading at 16 KB instead. Who reads
+        // With no Content-Length the server cannot refuse the body up front; it stops reading at 32 KB instead. Who reads
         // first decides the status: a 413, a 400 from antiforgery, or Umbraco giving up on the form and rendering the
         // page. Whatever the status, the post is never handled.
         ((int)response.StatusCode).ShouldBeOneOf(200, 400, 413);
         (await response.Content.ReadAsStringAsync(Cancel)).ShouldNotContain("Thanks, we will be in touch.");
         (await LeadsAsync()).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_message_at_its_length_limit_in_a_non_latin_script_is_accepted()
+    {
+        await ClearLeadsAsync();
+        using var visitor = Visitor();
+        var form = await visitor.OpenAsync();
+        await Task.Delay(HumanPause, Cancel);
+
+        // 2,000 characters that URL-encode to 9 bytes each: about 18 KB, over the old 16 KB cap (threat model 0001, D3).
+        using var response = await visitor.PostAsync(form, Lead() with { Message = new string('語', 2000) });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await response.Content.ReadAsStringAsync(Cancel)).ShouldContain("Thanks, we will be in touch.");
+        (await LeadsAsync()).ShouldHaveSingleItem();
     }
 
     [Fact]

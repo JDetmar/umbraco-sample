@@ -26,7 +26,7 @@ The visitor's fields are fixed in code: name and email (required), company and m
 
 A test keeps the back-office dropdowns and these keys identical. Changing consent wording means adding a new version, never editing an old one.
 
-**How a post is handled**, in order: the 16 KB front-end body limit (413), the `lead-form` rate limit of 3 posts per 10 minutes per client (429), antiforgery (400), then `LeadSubmissionHandler` (render token, bot screen, block lookup on the posted page, field rules, list routing, platform call). The page re-renders in place with the result and the visitor's input. Every form page and response carries `no-store`.
+**How a post is handled**, in order: the 32 KB front-end body limit (413), the `lead-form` rate limit of 3 posts per 10 minutes per client (429), antiforgery (400), then `LeadSubmissionHandler` (render token, bot screen, block lookup on the posted page, field rules, list routing, platform call). The page re-renders in place with the result and the visitor's input. Every form page and response carries `no-store`.
 
 **Render token.** Each page view issues a new token, with its own idempotency key. A re-render after an invalid post, an outage or an unknown outcome keeps the posted token, so a resubmission cannot create a second lead. A refused post gets a fresh token.
 

@@ -14,7 +14,7 @@ using UmbracoSample.Leads;
 namespace UmbracoSample.Web.Leads;
 
 /// <summary>
-/// The Form block's post-back (threat model 0001). Before this runs, the front-end body limit (16 KB, 413) and the
+/// The Form block's post-back (threat model 0001). Before this runs, the front-end body limit (32 KB, 413) and the
 /// <c>lead-form</c> rate limit (429) have applied; the antiforgery filter then rejects a post without a valid token
 /// (400). The page re-renders in place with the result, keeping the visitor's input, and is never cached.
 /// </summary>
