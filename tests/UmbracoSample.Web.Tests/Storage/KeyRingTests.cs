@@ -30,7 +30,7 @@ public sealed class KeyRingTests
     {
         using var services = Services(Config());
 
-        KeyRing.IsConfigured(Config()).ShouldBeFalse();
+        KeyRing.IsRequested(Config()).ShouldBeFalse();
         services.GetRequiredService<IOptions<KeyManagementOptions>>().Value.XmlRepository.ShouldBeNull();
     }
 
@@ -41,7 +41,7 @@ public sealed class KeyRingTests
         var options = services.GetRequiredService<IOptions<KeyManagementOptions>>().Value;
 
         options.XmlRepository.ShouldNotBeNull().GetType().Name.ShouldBe("AzureBlobXmlRepository");
-        options.XmlEncryptor.ShouldNotBeNull("keys at rest are wrapped by the Key Vault key, never stored in plain form");
+        options.XmlEncryptor.ShouldNotBeNull().GetType().Name.ShouldBe("AzureKeyVaultXmlEncryptor", "keys at rest are wrapped by the Key Vault key, never stored in plain form");
     }
 
     [Fact]

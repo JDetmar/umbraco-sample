@@ -69,6 +69,17 @@ public sealed class LeadFormOffTests
             .Message.ShouldContain("shared key ring");
     }
 
+    [Theory]
+    [InlineData(KeyRing.BlobUriKey, "https://account.blob.core.windows.net/dataprotection/keys.xml")]
+    [InlineData(KeyRing.KeyUriKey, "https://vault.vault.azure.net/keys/dataprotection")]
+    public void Outside_development_half_a_key_ring_does_not_satisfy_the_form(string key, string value)
+    {
+        using var site = Site(Environments.Production, ("Leads:Enabled", "true"), (key, value));
+
+        Should.Throw<OptionsValidationException>(() => site.GetRequiredService<IOptions<LeadSiteOptions>>().Value)
+            .Message.ShouldContain("shared key ring");
+    }
+
     [Fact]
     public void Outside_development_the_shared_key_ring_satisfies_the_form()
     {

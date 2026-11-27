@@ -21,7 +21,7 @@ public static class LeadSiteServiceCollectionExtensions
         // key, merging their leads (threat model 0001, section 5). It ignores Cache-Control set while rendering, so the
         // form refuses to start alongside it.
         var outputCache = configuration.GetValue<bool>(OutputCacheSetting);
-        var sharedKeys = environment.IsDevelopment() || KeyRing.IsConfigured(configuration);
+        var sharedKeys = environment.IsDevelopment() || KeyRing.IsComplete(configuration);
         services.AddOptions<LeadSiteOptions>()
             .Bind(configuration.GetSection(LeadSiteOptions.Section))
             .Validate(o => o.Validate() is null, "Leads is invalid; see LeadSiteOptions.Validate.")

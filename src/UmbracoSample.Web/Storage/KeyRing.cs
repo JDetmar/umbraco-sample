@@ -23,10 +23,30 @@ public static class KeyRing
     /// </summary>
     public const string ApplicationName = "umbraco-sample";
 
-    public static bool IsConfigured(IConfiguration configuration)
+    /// <summary>True when either setting is present; <see cref="Validate"/> then insists on both.</summary>
+    public static bool IsRequested(IConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
         return !string.IsNullOrWhiteSpace(configuration[BlobUriKey]) || !string.IsNullOrWhiteSpace(configuration[KeyUriKey]);
+    }
+
+    /// <summary>True only when both settings are present and valid, so the shared ring is really in use.</summary>
+    public static bool IsComplete(IConfiguration configuration)
+    {
+        if (!IsRequested(configuration))
+        {
+            return false;
+        }
+
+        try
+        {
+            _ = Validate(configuration);
+            return true;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
     }
 
     /// <summary>
@@ -56,7 +76,7 @@ public static class KeyRing
     {
         ArgumentNullException.ThrowIfNull(services);
         var dataProtection = services.AddDataProtection().SetApplicationName(ApplicationName);
-        if (!IsConfigured(configuration))
+        if (!IsRequested(configuration))
         {
             return services;
         }

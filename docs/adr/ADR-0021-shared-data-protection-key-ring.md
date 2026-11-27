@@ -1,8 +1,8 @@
 # 0021. One Data Protection key ring in Blob storage, wrapped by a Key Vault key
 
-- Status: Accepted
+- Status: Proposed (awaiting the owner's acceptance)
 - Date: 2026-11-27
-- Decider: owner (packages approved in the project thread on 2026-11-27, recorded in pull request 63)
+- Decider: owner (the packages and this option were approved in the project thread on 2026-11-27, recorded in pull request 63; acceptance of this record is pending)
 - Clauses: ES-019, ES-015, ES-023, ES-024, ES-030
 
 ## Context
@@ -38,11 +38,15 @@ The key is created through Azure Resource Manager, so the deploy identity needs 
 
 ## Consequences
 
-- New revisions and restarts no longer sign editors out or break open forms, and R3 is met once dev runs this. Enabling the form still waits on the edge (R2).
+- New revisions and restarts are expected to keep antiforgery and render tokens readable and editors signed in. This is verified after the first dev deploy, not before: Umbraco's back-office token server may also hold keys of its own per process, and if so, some sign-in tokens would still not survive a restart. R3 is met once dev runs this. Enabling the form still waits on the edge (R2).
 - A second replica still waits on the other DEV-015 items: server roles and the uSync import.
 - Rotation:
-  - Data Protection rotates its own keys every 90 days by default.
-  - The Key Vault key is versionless in configuration, so a new version of the key wraps new keys.
-  - Old keys stay readable, because each wrapped key records the version that wrapped it.
-  - Deleting the Key Vault key, or an old version of it, makes the ring unreadable. The vault's purge protection and 30-day soft delete guard against that.
+  - Data Protection rotates its own keys every 90 days by default. Each new key is wrapped when it is written.
+  - The wrapping key itself does not rotate. Azure Resource Manager only creates the first version of a key and returns an existing key unchanged, and no rotation policy is set.
+  - Rotating it is a deliberate owner step, a new version made in Key Vault. The versionless URI in configuration means new keys then use the new version, and old keys stay readable because each wrapped key records the version that wrapped it.
+  - Changing the key's type or size in code does nothing to an existing key.
+  - Resource Manager cannot delete vault keys, so `pulumi destroy` or a rename leaves the key behind.
+  - Deleting the key, or an old version of it, makes the ring unreadable. The vault's purge protection and 30-day soft delete guard against that.
+- The fixed application name also changes Umbraco's application discriminator, which it uses for some local temporary paths. They move once on the first deploy, which is harmless.
+- A key-ring failure, such as an unpropagated role or an unreachable vault, shows up only on first use: back-office and form requests fail while `/health/ready` stays green. A readiness check that loads the ring is a possible follow-up.
 - Changing the application name, or moving the blob, orphans the ring, with the same effect as today's restarts.
