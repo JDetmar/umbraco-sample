@@ -1,5 +1,5 @@
 // Critical journeys (TST-12): what a visitor and a keyboard user must always be able to do.
-// TST-12 also names search and forms; the site has neither yet, so navigation is the only critical path today.
+// TST-12 also names search and forms: the lead form's journeys are in form.spec.mjs; the site has no search yet.
 import { expect, test } from '@playwright/test';
 
 test('home page shows the site heading and its components', async ({ page }) => {

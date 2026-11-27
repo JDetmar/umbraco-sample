@@ -4,7 +4,7 @@ using UmbracoSample.Leads;
 namespace UmbracoSample.Web.Leads;
 
 /// <summary>
-/// Caps every front-end request body at 16 KB (threat model 0001, D3). The lead form is the only thing on the public
+/// Caps every front-end request body at 32 KB (threat model 0001, D3). The lead form is the only thing on the public
 /// site that accepts a body; the back office and its API, under <c>/umbraco</c>, keep the server's own limits for media
 /// uploads. Umbraco also routes every surface controller under <c>/umbraco/surface</c>, so that path is capped too. It
 /// runs before routing, antiforgery and the rate limiter, so an oversized post is never read.

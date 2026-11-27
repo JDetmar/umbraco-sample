@@ -50,7 +50,7 @@ public static class LeadsServiceCollectionExtensions
     /// <summary>
     /// Registers the lead form (threat model 0001): its options, the render token protector, the rate-limit policy
     /// <see cref="LeadFormRateLimitPolicy.Name"/> and the submission handler, plus the MAP client. The host supplies an
-    /// <see cref="ILeadFormCatalog"/>, maps its endpoint with antiforgery, the 16 KB body limit and the rate-limit policy,
+    /// <see cref="ILeadFormCatalog"/>, maps its endpoint with antiforgery, the 32 KB body limit and the rate-limit policy,
     /// and calls <c>UseRateLimiter</c>. With the CAPTCHA switched on and no <see cref="ICaptchaVerifier"/> registered, the
     /// options fail validation and the site does not start (D1: fail closed).
     /// </summary>
