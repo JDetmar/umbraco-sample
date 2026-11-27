@@ -19,7 +19,7 @@ Editors place a **Form** block on a page. A visitor fills in a short lead form a
   - message (optional);
   - a marketing consent checkbox (unchecked by default);
   - the consent text version.
-  Editors choose only the heading, the intro text and the MAP list the lead goes to, from an allowlisted set.
+  Editors choose only the heading, the intro text, the thank-you message, the MAP list the lead goes to (from an allowlisted set of keys) and the consent version (from a fixed set). The consent wording for each version is fixed in configuration, not in the block, so the stored version always names the exact wording the visitor saw (repudiation).
 
 ## 2. Data flow and trust boundaries
 
