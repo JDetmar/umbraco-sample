@@ -5,7 +5,7 @@ namespace UmbracoSample.Web.Leads;
 /// <summary>
 /// The site's side of the lead form (threat model 0001), bound from <c>Leads</c>. The form is off unless
 /// <see cref="Enabled"/> is set; dev keeps it off until the edge exists (R2, DEV-010), and every deployed environment
-/// also needs the shared Data Protection key ring first (R3).
+/// also needs the shared Data Protection key ring first (R3, ADR 0021), which the site enforces at startup.
 /// </summary>
 public sealed class LeadSiteOptions
 {

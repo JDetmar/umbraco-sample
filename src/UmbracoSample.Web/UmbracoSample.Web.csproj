@@ -7,6 +7,8 @@
     <PackageReference Include="Umbraco.Cms" />
     <PackageReference Include="uSync" />
     <PackageReference Include="Umbraco.StorageProviders.AzureBlob" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Keys" />
     <ProjectReference Include="..\UmbracoSample.ServiceDefaults\UmbracoSample.ServiceDefaults.csproj" />
     <ProjectReference Include="..\UmbracoSample.Domain\UmbracoSample.Domain.csproj" />
     <ProjectReference Include="..\UmbracoSample.Components\UmbracoSample.Components.csproj" />

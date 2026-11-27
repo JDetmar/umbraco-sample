@@ -314,7 +314,9 @@ public sealed class SiteInfrastructureTests
         Single(mocks, "azure-native:storage:StorageAccount")["accountName"].ShouldBe(SiteInfrastructure.StorageAccountName("dev", DevSuffix));
         Single(mocks, "azure-native:keyvault:Vault")["vaultName"].ShouldBe(SiteInfrastructure.VaultName("dev", DevSuffix));
         Single(mocks, "azure-native:app:ContainerApp")["containerAppName"].ShouldBe("umbraco-sample-dev-web");
-        Single(mocks, "azure-native:storage:BlobContainer")["containerName"].ShouldBe("media");
+        mocks.Resources.Where(r => r.Type == "azure-native:storage:BlobContainer").Select(r => (string)r.Inputs["containerName"])
+            .ShouldBe(["media", SiteInfrastructure.KeyRingContainer], ignoreOrder: true);
+        Single(mocks, "azure-native:keyvault:Key")["keyName"].ShouldBe("dataprotection");
         Single(mocks, "azure-native:sql:Database")["databaseName"].ShouldBe("umbraco");
     }
 
@@ -421,18 +423,34 @@ public sealed class SiteInfrastructureTests
     }
 
     [Fact]
-    public async Task The_site_identity_gets_exactly_three_data_plane_roles()
+    public async Task Every_replica_shares_one_key_ring_in_a_private_blob_wrapped_by_a_key_vault_key()
+    {
+        var mocks = await Declare(Dev);
+        var containers = mocks.Resources.Where(r => r.Type == "azure-native:storage:BlobContainer").ToDictionary(r => (string)r.Inputs["containerName"], r => r.Inputs);
+        var key = Single(mocks, "azure-native:keyvault:Key");
+        var env = Env(mocks);
+
+        ((string)containers[SiteInfrastructure.KeyRingContainer]["publicAccess"]).ShouldBe("None");
+        var properties = Map(key["properties"]);
+        ((string)properties["kty"]).ShouldBe("RSA");
+        Convert.ToInt32(properties["keySize"], System.Globalization.CultureInfo.InvariantCulture).ShouldBe(3072);
+        ((string)env["DataProtection__KeyRingBlobUri"]["value"]).ShouldBe($"https://{SiteInfrastructure.StorageAccountName("dev", DevSuffix)}.blob.core.windows.net/dataprotection/keys.xml");
+        ((string)env["DataProtection__KeyVaultKeyUri"]["value"]).ShouldBe("https://vault.example/keys/dataprotection");
+    }
+
+    [Fact]
+    public async Task The_site_identity_gets_exactly_four_data_plane_roles()
     {
         var mocks = await Declare(Dev);
         var roles = mocks.Resources.Where(r => r.Type == "azure-native:authorization:RoleAssignment").ToList();
 
         roles.Select(r => ((string)r.Inputs["roleDefinitionId"]).Split('/')[^1]).ShouldBe(
-            [SiteInfrastructure.StorageBlobDataContributor, SiteInfrastructure.KeyVaultSecretsUser, SiteInfrastructure.MonitoringMetricsPublisher],
+            [SiteInfrastructure.StorageBlobDataContributor, SiteInfrastructure.KeyVaultSecretsUser, SiteInfrastructure.MonitoringMetricsPublisher, SiteInfrastructure.KeyVaultCryptoServiceEncryptionUser],
             ignoreOrder: true);
         roles.ShouldAllBe(r => ((string)r.Inputs["roleDefinitionId"]).StartsWith($"/subscriptions/{RecordingMocks.SubscriptionId}/", StringComparison.Ordinal));
         roles.ShouldAllBe(r => (string)r.Inputs["principalType"] == "ServicePrincipal");
         roles.Select(r => (string)r.Inputs["scope"]).ShouldBe(
-            ["/mock/azure-native:storage:StorageAccount/umbraco-sample-dev-media", "/mock/azure-native:keyvault:Vault/umbraco-sample-dev-kv", "/mock/azure-native:applicationinsights:Component/umbraco-sample-dev-ai"],
+            ["/mock/azure-native:storage:StorageAccount/umbraco-sample-dev-media", "/mock/azure-native:keyvault:Vault/umbraco-sample-dev-kv", "/mock/azure-native:applicationinsights:Component/umbraco-sample-dev-ai", "/mock/azure-native:keyvault:Key/dataprotection"],
             ignoreOrder: true,
             "ES-024: each role is scoped to the one resource it is for, never the group or subscription.");
     }

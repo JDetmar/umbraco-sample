@@ -51,6 +51,11 @@ public sealed class SiteInfrastructure
     public const string StorageBlobDataContributor = "ba92f5b4-2d11-453d-a403-e96b0029c9fe"; // gitleaks:allow public Azure built-in role ID
     public const string KeyVaultSecretsUser = "4633458b-17de-408a-b874-0445c86b69e6"; // gitleaks:allow public Azure built-in role ID
     public const string MonitoringMetricsPublisher = "3913510d-42f4-4e42-8a64-420c390055eb"; // gitleaks:allow public Azure built-in role ID
+    public const string KeyVaultCryptoServiceEncryptionUser = "e147488a-f6f5-4113-8e2d-b22465e65bf6"; // gitleaks:allow public Azure built-in role ID
+
+    /// <summary>The container and blob that hold the shared Data Protection key ring (ADR 0021).</summary>
+    public const string KeyRingContainer = "dataprotection";
+    public const string KeyRingBlob = "keys.xml";
 
     public SiteInfrastructure(SiteSettings settings, SiteSecrets secrets)
     {
@@ -129,6 +134,16 @@ public sealed class SiteInfrastructure
             PublicAccess = PublicAccess.None,
         });
 
+        // The shared Data Protection key ring (ADR 0021; threat model 0001, R3): one blob in a private container of the same
+        // account, so every replica and revision reads the same keys. The keys inside are wrapped by the Key Vault key below.
+        var keyRingContainer = new BlobContainer(KeyRingContainer, new BlobContainerArgs
+        {
+            ResourceGroupName = group.Name,
+            ContainerName = KeyRingContainer,
+            AccountName = storage.Name,
+            PublicAccess = PublicAccess.None,
+        });
+
         // Recovery (ES-031, OPS-05): soft delete keeps deleted or overwritten media, and deleted containers, for a
         // retention window. Soft delete covers overwrites too, so versioning (which keeps every version until a
         // lifecycle rule removes it) is not needed. Soft-deleted data is billed as storage until it expires. It does not
@@ -156,6 +171,17 @@ public sealed class SiteInfrastructure
                 EnablePurgeProtection = true,
                 SoftDeleteRetentionInDays = 30,
             },
+            Tags = tags,
+        });
+
+        // The key that wraps the Data Protection key ring. Created through Azure Resource Manager, so its private part never
+        // leaves Key Vault and no data-plane right is needed to create it; the site may only wrap and unwrap with it.
+        var keyRingKey = new Key("dataprotection", new KeyArgs
+        {
+            ResourceGroupName = group.Name,
+            VaultName = vault.Name,
+            KeyName = "dataprotection",
+            Properties = new KeyPropertiesArgs { Kty = JsonWebKeyType.RSA, KeySize = 3072 },
             Tags = tags,
         });
 
@@ -249,13 +275,16 @@ public sealed class SiteInfrastructure
         _ = Grant("media-writer", storage.Id, StorageBlobDataContributor, identity, client);
         var secretsReader = Grant("secrets-reader", vault.Id, KeyVaultSecretsUser, identity, client);
 
+        // Wrap and unwrap with the one key-ring key only: scoped to the key, not the vault.
+        var keyRingWrapper = Grant("keyring-wrapper", keyRingKey.Id, KeyVaultCryptoServiceEncryptionUser, identity, client);
+
         // A new role assignment can take a few minutes to reach Key Vault; without this wait the app's first revision
-        // can fail to read its secrets. Runs only when the assignment is created or replaced.
+        // can fail to read its secrets or its key ring. Runs only when an assignment is created or replaced.
         var secretAccessPropagated = new LocalCommand("wait-for-secret-access", new LocalCommandArgs
         {
             Create = "sleep 120",
-            Triggers = secretsReader.Id.Apply(id => ImmutableArray.Create<object>(id)),
-        }, new CustomResourceOptions { DependsOn = { secretsReader } });
+            Triggers = Output.Tuple(secretsReader.Id, keyRingWrapper.Id).Apply(t => ImmutableArray.Create<object>(t.Item1, t.Item2)),
+        }, new CustomResourceOptions { DependsOn = { secretsReader, keyRingWrapper } });
         _ = Grant("telemetry-writer", insights.Id, MonitoringMetricsPublisher, identity, client);
 
         // Secrets the site needs at first boot. Set by the owner per stack; stored in Key Vault; referenced, never copied,
@@ -393,6 +422,13 @@ public sealed class SiteInfrastructure
                             // Media in Blob storage via the managed identity: the endpoint only, never a key (MediaStorage in the site).
                             new EnvironmentVarArgs { Name = "Umbraco__Storage__AzureBlob__Media__ConnectionString", Value = storage.PrimaryEndpoints.Apply(e => e.Blob) },
                             new EnvironmentVarArgs { Name = "Umbraco__Storage__AzureBlob__Media__ContainerName", Value = media.Name },
+                            // One Data Protection key ring for every replica and revision (ADR 0021): URIs only, never a key.
+                            new EnvironmentVarArgs
+                            {
+                                Name = "DataProtection__KeyRingBlobUri",
+                                Value = Output.Tuple(storage.PrimaryEndpoints.Apply(e => e.Blob), keyRingContainer.Name).Apply(t => $"{t.Item1.TrimEnd('/')}/{t.Item2}/{KeyRingBlob}"),
+                            },
+                            new EnvironmentVarArgs { Name = "DataProtection__KeyVaultKeyUri", Value = keyRingKey.KeyUri },
                             // Umbraco's Production runtime mode refuses to boot without its public URL. With no edge, that is the
                             // app's own ingress host, built from the environment's domain (the app cannot reference its own output).
                             new EnvironmentVarArgs { Name = "Umbraco__CMS__WebRouting__UmbracoApplicationUrl", Value = environment.DefaultDomain.Apply(d => $"https://{name}-web.{d}/") },
@@ -423,7 +459,7 @@ public sealed class SiteInfrastructure
         {
             // The first revision boots straight into the unattended install, so the network rule, the database and the
             // Key Vault grant must exist first. RBAC can still take minutes to propagate; see docs/infra-setup.md.
-            DependsOn = { secretsReader, secretAccessPropagated, sqlNetworkRule, database, databaseUser },
+            DependsOn = { secretsReader, keyRingWrapper, secretAccessPropagated, sqlNetworkRule, database, databaseUser },
         });
 
         // ES-047: an alert before the money runs out, at 80% actual and 100% forecast spend.

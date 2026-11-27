@@ -12,7 +12,7 @@ A lead form that sends a visitor's details to the marketing platform (threat mod
 
 The visitor's fields are fixed in code: name and email (required), company and message (optional), and an unticked marketing consent box. A hidden honeypot field catches bots.
 
-**Not rendered when** a required property is empty, the form is switched off (`Leads:Enabled`, off by default and on every deployed environment until the edge and the shared key ring exist), or the consent version has no configured wording.
+**Not rendered when** a required property is empty, the form is switched off (`Leads:Enabled`, off by default and on every deployed environment until the edge exists; outside development it also refuses to start without the shared key ring, ADR 0021), or the consent version has no configured wording.
 
 **Configuration** (`appsettings.json`, synthetic values):
 
