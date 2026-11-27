@@ -18,6 +18,18 @@ var imagingKey = builder.AddParameter(
     new GenerateParameterDefault { MinLength = 64, Special = false },
     secret: true);
 
+// A local stand-in for the marketing platform (docs/map-api.md), with a key that lives only for this run. The lead
+// form is on locally and in the integration tests; deployed environments keep it off until the edge and the shared
+// key ring exist (threat model 0001, R2 and R3).
+var mapApiKey = builder.AddParameter(
+    "map-api-key",
+    new GenerateParameterDefault { MinLength = 32, Special = false },
+    secret: true);
+var mapStub = builder.AddDotnetProject("map-stub", "../../tests/UmbracoSample.MapStub/UmbracoSample.MapStub.csproj")
+    .WithHttpEndpoint()
+    .WithEnvironment("MapStub__ApiKey", mapApiKey)
+    .WithHttpHealthCheck("/stub/health");
+
 builder.AddDotnetProject("web", "../UmbracoSample.Web/UmbracoSample.Web.csproj")
     .WithReference(db)
     .WaitFor(db)
@@ -27,6 +39,10 @@ builder.AddDotnetProject("web", "../UmbracoSample.Web/UmbracoSample.Web.csproj")
     .WithEnvironment("Umbraco__CMS__Unattended__UnattendedUserEmail", "admin@example.com")
     .WithEnvironment("Umbraco__CMS__Unattended__UnattendedUserPassword", adminPassword)
     .WithEnvironment("Umbraco__CMS__Imaging__HMACSecretKey", imagingKey)
+    .WaitFor(mapStub)
+    .WithEnvironment("Leads__Enabled", "true")
+    .WithEnvironment("Leads__Map__BaseAddress", mapStub.GetEndpoint("http"))
+    .WithEnvironment("Leads__Map__ApiKey", mapApiKey)
     .WithHttpHealthCheck("/health/ready");
 
 builder.Build().Run();

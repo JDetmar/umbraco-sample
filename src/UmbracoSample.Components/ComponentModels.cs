@@ -42,6 +42,15 @@ public sealed record CtaModel(string Heading, string? Text, LinkModel Link) : IC
     public string ViewName => "CallToAction";
 }
 
+/// <summary>
+/// A lead form (threat model 0001). Holds only what the editor chose: the list and consent version are keys that the
+/// site resolves through configuration, never values the page or the visitor supplies. Docs: docs/components/form.md.
+/// </summary>
+public sealed record FormModel(Guid BlockKey, string Heading, string? Intro, string ListKey, string ConsentVersion, string ThankYou) : IComponentModel
+{
+    public string ViewName => "Form";
+}
+
 /// <summary>A link that is safe to render.</summary>
 public sealed record LinkModel(string Text, string Url, bool OpensInNewTab)
 {

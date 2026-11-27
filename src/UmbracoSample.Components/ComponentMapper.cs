@@ -6,6 +6,9 @@ namespace UmbracoSample.Components;
 /// <summary>Reads one block's values. Implemented over Umbraco content at runtime and by fakes in contract tests.</summary>
 public interface IBlockSource
 {
+    /// <summary>The block's stable key. The Form block's render token names its block by this key.</summary>
+    Guid Key { get; }
+
     string ContentTypeAlias { get; }
 
     string? Text(string propertyAlias);
@@ -30,6 +33,7 @@ public static partial class ComponentMapper
     public const string CardGridAlias = "cardGridBlock";
     public const string CardAlias = "cardBlock";
     public const string CtaAlias = "ctaBlock";
+    public const string FormAlias = "formBlock";
 
     public static IComponentModel? Map(IBlockSource block)
     {
@@ -41,6 +45,7 @@ public static partial class ComponentMapper
             RichTextAlias => RichText(block),
             CardGridAlias => CardGrid(block),
             CtaAlias => Cta(block),
+            FormAlias => Form(block),
             _ => null,
         };
     }
@@ -78,6 +83,14 @@ public static partial class ComponentMapper
     private static CtaModel? Cta(IBlockSource block) =>
         Required(block.Text("heading")) is { } heading && block.Link("link") is { } link
             ? new CtaModel(heading, Optional(block.Text("text")), link)
+            : null;
+
+    private static FormModel? Form(IBlockSource block) =>
+        Required(block.Text("heading")) is { } heading
+        && Required(block.Text("list")) is { } list
+        && Required(block.Text("consentVersion")) is { } consentVersion
+        && Required(block.Text("thankYou")) is { } thankYou
+            ? new FormModel(block.Key, heading, Optional(block.Text("intro")), list, consentVersion, thankYou)
             : null;
 
     private static string? Required(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

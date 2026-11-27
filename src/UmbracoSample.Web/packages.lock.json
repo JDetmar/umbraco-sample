@@ -1895,6 +1895,13 @@
           "UmbracoSample.Domain": "[1.0.0, )"
         }
       },
+      "umbracosample.leads": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.Extensions.Http.Resilience": "[10.11.1, )",
+          "UmbracoSample.Domain": "[1.0.0, )"
+        }
+      },
       "umbracosample.security": {
         "type": "Project"
       },

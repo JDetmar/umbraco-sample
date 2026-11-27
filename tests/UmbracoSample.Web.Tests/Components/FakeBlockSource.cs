@@ -8,6 +8,8 @@ internal sealed class FakeBlockSource(string contentTypeAlias) : IBlockSource
 {
     private readonly Dictionary<string, object> _values = new(StringComparer.Ordinal);
 
+    public Guid Key { get; init; } = Guid.NewGuid();
+
     public string ContentTypeAlias { get; } = contentTypeAlias;
 
     public FakeBlockSource With(string propertyAlias, object value)

@@ -2600,6 +2600,13 @@
           "UmbracoSample.Domain": "[1.0.0, )"
         }
       },
+      "umbracosample.leads": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.Extensions.Http.Resilience": "[10.11.1, )",
+          "UmbracoSample.Domain": "[1.0.0, )"
+        }
+      },
       "umbracosample.security": {
         "type": "Project"
       },
@@ -2624,6 +2631,7 @@
           "UmbracoSample.Components": "[1.0.0, )",
           "UmbracoSample.Domain": "[1.0.0, )",
           "UmbracoSample.Governance": "[1.0.0, )",
+          "UmbracoSample.Leads": "[1.0.0, )",
           "UmbracoSample.Security": "[1.0.0, )",
           "UmbracoSample.ServiceDefaults": "[1.0.0, )",
           "uSync": "[17.6.3, )"

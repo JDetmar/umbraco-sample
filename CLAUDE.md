@@ -59,6 +59,7 @@ Agents MUST run `make validate` before handing off a change, or record why it co
 | `tests/UmbracoSample.Repository.Tests` | Fast policy tests over the repository itself |
 | `tests/UmbracoSample.Domain.Tests` | Property, example and corpus tests for the domain, and the architecture rule that keeps it framework-free |
 | `tests/UmbracoSample.Leads.Tests` | Contract tests for the MAP client against a WireMock.Net stub |
+| `tests/UmbracoSample.MapStub` | In-memory MAP stand-in that the AppHost runs for `make run` and the integration tests; never deployed |
 | `tests/UmbracoSample.Web.Tests` | Fast unit and component contract tests |
 | `tests/UmbracoSample.Integration.Tests` | Tests against the real stack through Aspire (`Category=Integration`) |
 | `frontend/` | Design tokens (`tokens/`), stylesheet sources and the build (ADR 0007); output goes to `wwwroot/dist`, never committed |

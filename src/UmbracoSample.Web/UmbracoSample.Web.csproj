@@ -12,6 +12,7 @@
     <ProjectReference Include="..\UmbracoSample.Components\UmbracoSample.Components.csproj" />
     <ProjectReference Include="..\UmbracoSample.Governance\UmbracoSample.Governance.csproj" />
     <ProjectReference Include="..\UmbracoSample.Security\UmbracoSample.Security.csproj" />
+    <ProjectReference Include="..\UmbracoSample.Leads\UmbracoSample.Leads.csproj" />
   </ItemGroup>
 
 

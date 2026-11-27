@@ -1,5 +1,6 @@
 using UmbracoSample.Security;
 using UmbracoSample.Web.Health;
+using UmbracoSample.Web.Leads;
 using UmbracoSample.Web.Redirects;
 using UmbracoSample.Web.Security;
 using UmbracoSample.Web.Storage;
@@ -18,6 +19,8 @@ builder.CreateUmbracoBuilder()
     .AddMediaStorage(builder.Configuration)
     .Build();
 
+builder.Services.AddLeadSite(builder.Configuration);
+
 // Parse the redirect maps before booting, so an invalid map stops the site (ES-021).
 var redirects = RedirectMiddleware.Load(builder.Environment.ContentRootPath);
 
@@ -27,6 +30,7 @@ await app.BootUmbracoAsync();
 
 app.UseSecurityHeaders(ThirdPartyAllowlist.Origins);
 app.UseRedirectMap(redirects);
+app.UseFrontEndBodyLimit();
 
 app.MapDefaultEndpoints();
 app.MapSchemaDriftEndpoint();
@@ -36,6 +40,14 @@ app.UseUmbraco()
     {
         u.UseBackOffice();
         u.UseWebsite();
+
+        // After routing, so the lead form's endpoint metadata selects the "lead-form" policy; endpoints without a
+        // policy are not limited.
+        // The limiter's services exist only when the form is on.
+        if (builder.Configuration.GetValue<bool>($"{LeadSiteOptions.Section}:{nameof(LeadSiteOptions.Enabled)}"))
+        {
+            u.AppBuilder.UseRateLimiter();
+        }
     })
     .WithEndpoints(u =>
     {

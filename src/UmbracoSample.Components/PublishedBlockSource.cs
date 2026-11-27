@@ -14,6 +14,8 @@ public sealed partial class PublishedBlockSource(IPublishedElement element, ILog
     /// <summary>Hero images are requested at this width; ImageSharp resizes and caches them.</summary>
     public const int ImageWidth = 1600;
 
+    public Guid Key => element.Key;
+
     public string ContentTypeAlias => element.ContentType.Alias;
 
     public string? Text(string propertyAlias) => Value(propertyAlias) as string;

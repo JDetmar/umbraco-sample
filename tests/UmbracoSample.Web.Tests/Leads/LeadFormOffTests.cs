@@ -1,0 +1,57 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Shouldly;
+using UmbracoSample.Components;
+using UmbracoSample.Web.Leads;
+
+namespace UmbracoSample.Web.Tests.Leads;
+
+/// <summary>
+/// The configuration every deployed environment runs today: the form off (threat model 0001, R2 and R3). A page with a
+/// Form block must still render, without any of the lead services, which are not registered.
+/// </summary>
+public sealed class LeadFormOffTests
+{
+    private static readonly FormModel Form = new(Guid.NewGuid(), "Contact us", null, "general-enquiry", "2026-11", "Thanks");
+
+    private static ServiceProvider Site(params (string Key, string Value)[] settings)
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(settings.Select(s => new KeyValuePair<string, string?>(s.Key, s.Value)))
+            .Build();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<IConfiguration>(configuration);
+        services.AddLeadSite(configuration);
+        return services.BuildServiceProvider();
+    }
+
+    [Fact]
+    public void With_the_form_off_a_form_block_renders_nothing_and_needs_no_lead_services()
+    {
+        using var site = Site(("Leads:Consent:2026-11", "Yes, email me."));
+        using var scope = site.CreateScope();
+        scope.ServiceProvider.GetRequiredService<IHttpContextAccessor>().HttpContext = new DefaultHttpContext();
+
+        scope.ServiceProvider.GetRequiredService<LeadFormView>().For(Form).ShouldBeNull();
+    }
+
+    [Fact]
+    public void The_form_refuses_to_start_alongside_the_website_output_cache()
+    {
+        using var site = Site(("Leads:Enabled", "true"), (LeadSiteServiceCollectionExtensions.OutputCacheSetting, "true"));
+
+        Should.Throw<OptionsValidationException>(() => site.GetRequiredService<IOptions<LeadSiteOptions>>().Value);
+    }
+
+    [Fact]
+    public void A_version_with_no_wording_renders_no_form()
+    {
+        using var site = Site(("Leads:Consent:2025-01", "Old wording."));
+        using var scope = site.CreateScope();
+
+        scope.ServiceProvider.GetRequiredService<LeadFormView>().For(Form).ShouldBeNull();
+    }
+}
