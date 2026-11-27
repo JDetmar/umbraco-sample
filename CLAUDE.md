@@ -20,7 +20,7 @@ Use the Makefile targets; CI runs the same ones (ES-052).
 | Fast tests | `make test` |
 | Fast validation before handoff | `make validate` |
 | Integration tests (starts the Aspire stack; needs Docker) | `make test-integration` |
-| End-to-end, accessibility (axe) and visual tests against a running site (`make run` first; needs Docker or Podman, `CONTAINER_RUNTIME=podman`) | `make e2e` |
+| End-to-end, accessibility (axe) and visual tests against a running site (`make run` first; needs Docker or Podman, `CONTAINER_RUNTIME=podman`; the form journeys post twice against a limit of 3 posts per 10 minutes, so restart `make run` before a quick rerun) | `make e2e` |
 | Re-approve visual baselines after an intended visual change | `make e2e-update-snapshots` |
 | Lighthouse performance budgets against a running site (same image as `make e2e`) | `make lighthouse` |
 | Mutation testing of the domain (Stryker.NET; weekly in CI) | `make mutation` |

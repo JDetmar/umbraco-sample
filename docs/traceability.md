@@ -32,7 +32,7 @@ How to read the status column:
 | ES-019 | Durable decisions | compliant | [ADRs](adr/README.md). |
 | ES-020 | Cohesion and effects | compliant | Domain project with no package references, checked by a test. |
 | ES-021 | State and abstraction | compliant | Redirect rules parsed into precise types (ADR 0009). |
-| ES-022 | Value integrity | not assessed | In progress: the MAP client (`src/UmbracoSample.Leads`) sends every create with the submission's idempotency key, retries only with it, and reconciles a timeout by lookup; contract tests in `tests/UmbracoSample.Leads.Tests` count the creates on every path. The render token that carries the key and the double-submit test come with the endpoint (Phase 4, threat model 0001). |
+| ES-022 | Value integrity | not assessed | In progress: the MAP client (`src/UmbracoSample.Leads`) sends every create with the submission's idempotency key, retries only with it, and reconciles a timeout by lookup; contract tests in `tests/UmbracoSample.Leads.Tests` count the creates on every path. Built with the lead form: the render token carries the key across re-renders, and a double submit stores one lead (`LeadFormTests.A_double_submission_creates_one_lead`); awaiting assessment in the ledger. |
 | ES-023 | Threats and authorization | deviation | DEV-017. Threat models 0001 (lead form) and 0002 (Azure environment). |
 | ES-024 | Credentials | deviation | DEV-001 (admin bypass), DEV-004 (no image-URL signing key), DEV-016 (preview token, closing), DEV-017 (standing deploy identity). Managed identities, Key Vault, OIDC to Azure and Pulumi, no stored cloud secrets. |
 | ES-025 | Sensitive data | deviation | DEV-010 (no HSTS yet), DEV-013 (plain HTTP inside the Container Apps environment). |
@@ -53,10 +53,10 @@ How to read the status column:
 | ES-040 | Accountable delegation | not assessed | Delegation envelope in `CLAUDE.md`. DEV-017: the deploy identity is broader than its job (accepted for dev, with conditions). |
 | ES-041 | Production AI configuration and evals | not assessed | The site has no AI features. |
 | ES-042 | Untrusted context and development access | not assessed | |
-| ES-043 | Deadlines and cancellation | not assessed | Planned with the forms client (Phase 4). |
-| ES-044 | Safe retries | not assessed | Planned with the forms client (Phase 4). |
+| ES-043 | Deadlines and cancellation | not assessed | Built with the lead form: per-call timeout and a whole-submission budget in the MAP client (`docs/map-api.md`), contract-tested; awaiting assessment in the ledger. |
+| ES-044 | Safe retries | not assessed | Built with the lead form: one retry with the same idempotency key, the key kept across re-renders, and a double submit stores one lead (`LeadFormTests`); awaiting assessment in the ledger. |
 | ES-045 | Overload | not assessed | |
-| ES-046 | Lifecycle and failure testing | not assessed | Planned with the forms client (Phase 4). |
+| ES-046 | Lifecycle and failure testing | not assessed | Built with the lead form: outage, timeout and disconnect paths are tested (`MapClientContractTests`, `LeadFormTests`); awaiting assessment in the ledger. |
 | ES-047 | Bounded execution | not assessed | DEV-015 (single replica, accepted for dev) applies. Azure budget with alerts in the stack (`infra/UmbracoSample.Infra/SiteInfrastructure.cs`); Lighthouse byte and request budgets. |
 | ES-048 | AI and telemetry budgets | not assessed | Log Analytics with a 30-day retention cap. |
 | ES-049 | Inventory and immutable promotion | unknown | DEV-014 (image not signed or attested). One image built per commit and promoted by digest. |
@@ -68,8 +68,8 @@ How to read the status column:
 | ES-055 | Preview and reversibility | not assessed | Every change is one revertible pull request. `pulumi preview` runs only after merge on `main` or by hand, prints no diff (ADR 0014), and the dev deploy runs `up` without a preview step; a preview on every pull request (Phase 5) is not built. |
 | ES-056 | Receipts and resumability | not assessed | Pull requests and version history are the receipts (`CLAUDE.md`). |
 | ES-057 | Failure containment | not assessed | |
-| ES-058 | Ownership, purpose, and contracts | not assessed | Planned with forms: the site keeps no submissions (Phase 4). |
-| ES-059 | Retention and deletion propagation | not assessed | Planned with forms (Phase 4). |
+| ES-058 | Ownership, purpose, and contracts | not assessed | The lead form keeps no submissions and logs no visitor values (threat model 0001, `LeadFormTests`); awaiting assessment in the ledger. |
+| ES-059 | Retention and deletion propagation | not assessed | Built with the lead form: the site keeps no submissions (threat model 0001, D2: no outbox), so retention and deletion are the MAP's policy, and logs and spans carry no personal data (`LeadFormTests`); awaiting assessment in the ledger. |
 | ES-060 | Triggered adoption | not assessed | Pull request preview environments are deferred until their trigger exists (ENV-04). |
 | ES-061 | Bench verification | not_applicable | No hardware; see the ledger. |
 
@@ -102,7 +102,7 @@ How to read the status column:
 | TST-09 | Security headers and content security policy checks | met | `SecurityHeadersTests` and `SecurityTests` (integration); the deploy smoke test checks the policy. |
 | TST-10 | Tracker allowlist; unapproved tags fail the build | met | `ThirdPartyAllowlist.cs` (ADR 0008) and `Pages_load_nothing_the_policy_does_not_allow`. |
 | TST-11 | Visual regression | partly | Visual baselines of the fixture pages (`e2e/tests/visual.spec.mjs`). There are no real pages yet, only synthetic ones. |
-| TST-12 | End-to-end tests on critical paths | partly | Navigation, skip link, links and 404 journeys (`e2e/tests/journeys.spec.mjs`). Search and forms are not built yet. |
+| TST-12 | End-to-end tests on critical paths | partly | Navigation, skip link, links and 404 journeys (`e2e/tests/journeys.spec.mjs`); the lead form by keyboard and its error journey (`e2e/tests/form.spec.mjs`). Search is not built yet. |
 | TST-13 | Automated accessibility scans against WCAG 2.2 AA | met | axe on every seeded page (`e2e/tests/accessibility.spec.mjs`), a required check. |
 | TST-14 | Performance budgets | met | Lighthouse CI with byte and request budgets (`e2e/lighthouserc.cjs`). |
 | TST-15 | SEO checks | partly | Lighthouse SEO category at 0.9 or above, canonical link, structured data tested. No broken-link crawl yet. |

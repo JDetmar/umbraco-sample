@@ -23,12 +23,16 @@
         LeadFormResultKind.Refused => "Something went wrong. Please reload the page and try again.",
         _ => null,
     };
+    // The post returns to #id. A browser skips autofocus when the fragment targets another element, so after a post the
+    // fragment id moves from the section to the result (thank-you, summary or notice): the fragment then focuses it.
+    var hasResult = result?.Kind == LeadFormResultKind.ThankYou || errors.Count > 0 || notice is not null;
+    var sectionId = hasResult ? null : id;
 }
-<section class="c-form" aria-labelledby="@id-heading">
+<section class="c-form" id="@sectionId" aria-labelledby="@id-heading">
     <h2 class="c-form__heading" id="@id-heading">@Model.Heading</h2>
     @if (result?.Kind == LeadFormResultKind.ThankYou)
     {
-        <p class="c-form__thanks" role="status" tabindex="-1">@Model.ThankYou</p>
+        <p class="c-form__thanks" id="@id" role="status" tabindex="-1" autofocus>@Model.ThankYou</p>
     }
     else
     {
@@ -38,7 +42,7 @@
     }
     @if (errors.Count > 0)
     {
-        <div class="c-form__summary" role="alert" tabindex="-1" aria-labelledby="@id-summary">
+        <div class="c-form__summary" id="@id" role="alert" tabindex="-1" autofocus aria-labelledby="@id-summary">
             <h3 class="c-form__summary-heading" id="@id-summary">Please check the form</h3>
             <ul>
                 @foreach (var (field, message) in errors)
@@ -50,9 +54,11 @@
     }
     else if (notice is not null)
     {
-        <p class="c-form__notice" role="alert" tabindex="-1">@notice</p>
+        <p class="c-form__notice" id="@id" role="alert" tabindex="-1" autofocus>@notice</p>
     }
-    @using (Html.BeginUmbracoForm<LeadFormController>(nameof(LeadFormController.Submit), null, new { @class = "c-form__form", novalidate = "novalidate" }))
+    @* The fragment brings the visitor back to this form's result after the full-page post and focuses it, so a screen
+       reader announces it without any script. The query string is kept so campaign tags survive the post. *@
+    @using (Html.BeginUmbracoForm<LeadFormController>(nameof(LeadFormController.Submit), null, new { @class = "c-form__form", novalidate = "novalidate", action = $"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}#{id}" }))
     {
         <input type="hidden" name="@nameof(LeadFormFields.RenderToken)" value="@view.RenderToken" />
         <input type="hidden" name="@nameof(LeadFormFields.ConsentVersion)" value="@Model.ConsentVersion" />
