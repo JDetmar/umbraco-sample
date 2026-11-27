@@ -94,7 +94,7 @@ public sealed partial class LeadFormTests(SiteFixture site)
         var form = await visitor.OpenAsync();
         await Task.Delay(HumanPause, Cancel);
 
-        // 2,000 characters that URL-encode to 9 bytes each: about 18 KB, over the old 16 KB cap (threat model 0001, D3).
+        // 2,000 characters that URL-encode to 9 bytes each: 18,000 bytes before the tokens, over the old cap of 16,384 (D3).
         using var response = await visitor.PostAsync(form, Lead() with { Message = new string('語', 2000) });
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
