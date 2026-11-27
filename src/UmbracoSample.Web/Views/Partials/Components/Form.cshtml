@@ -24,7 +24,7 @@
         _ => null,
     };
 }
-<section class="c-form" aria-labelledby="@id-heading">
+<section class="c-form" id="@id" aria-labelledby="@id-heading">
     <h2 class="c-form__heading" id="@id-heading">@Model.Heading</h2>
     @if (result?.Kind == LeadFormResultKind.ThankYou)
     {
@@ -52,7 +52,8 @@
     {
         <p class="c-form__notice" role="alert" tabindex="-1">@notice</p>
     }
-    @using (Html.BeginUmbracoForm<LeadFormController>(nameof(LeadFormController.Submit), null, new { @class = "c-form__form", novalidate = "novalidate" }))
+    @* The fragment brings the visitor back to this form, and its result, after the full-page post. *@
+    @using (Html.BeginUmbracoForm<LeadFormController>(nameof(LeadFormController.Submit), null, new { @class = "c-form__form", novalidate = "novalidate", action = $"{Context.Request.Path}#{id}" }))
     {
         <input type="hidden" name="@nameof(LeadFormFields.RenderToken)" value="@view.RenderToken" />
         <input type="hidden" name="@nameof(LeadFormFields.ConsentVersion)" value="@Model.ConsentVersion" />

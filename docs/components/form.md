@@ -34,4 +34,6 @@ A test keeps the back-office dropdowns and these keys identical. Changing consen
 
 **Fixtures:** `/fixture-form/` has one form (general enquiry, consent version `2026-11`). Locally and in the integration tests the form is on and posts to the in-memory MAP stub (`tests/UmbracoSample.MapStub`).
 
-**Tests:** `FormBlockSchemaTests` and `FormBlockTests` (fast), `LeadFormTests` (integration: 400, 413, 429, no-store, token per render and reuse, posted `listId` ignored, double submit, outage, no visitor values in logs or spans).
+**Tests:** `FormBlockSchemaTests`, `FormBlockTests` and `LeadFormOffTests` (fast); `LeadFormTests` (integration: 400, 413 including the direct surface route and chunked bodies, 429, no-store, token per render and reuse, a token only on its own page, posted `listId` ignored, double submit, outage, no visitor values in logs or spans); `e2e/tests/form.spec.mjs` (keyboard journey, error journey with axe), plus the axe and visual suites on `/fixture-form/`.
+
+**After a post** the page returns to the form by its fragment (`#f-…`), so the result is in view.
