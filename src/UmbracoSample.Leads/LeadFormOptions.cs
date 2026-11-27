@@ -8,8 +8,13 @@ public sealed class LeadFormOptions
 {
     public const string Section = "Leads:Form";
 
-    /// <summary>The largest request body the form endpoint reads (D3). Applied by the host's endpoint in step 4.</summary>
-    public const int MaxBodyBytes = 16 * 1024;
+    /// <summary>
+    /// The largest request body the form endpoint reads (D3; raised from 16 KB by the owner on 2026-11-27). Every field at
+    /// its limit at 9 URL-encoded bytes per counted character (the worst case) is about 22 KB, roughly 23 KB with the form's
+    /// tokens, so 32 KB fits any language. A constant, because the controller's size attributes need one; the front-end body
+    /// limit middleware is what enforces it.
+    /// </summary>
+    public const int MaxBodyBytes = 32 * 1024;
 
     [Range(1, 1000)]
     public int PermitLimit { get; set; } = 3;
