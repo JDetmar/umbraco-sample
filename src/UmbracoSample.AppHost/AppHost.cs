@@ -19,8 +19,8 @@ var imagingKey = builder.AddParameter(
     secret: true);
 
 // A local stand-in for the marketing platform (docs/map-api.md), with a key that lives only for this run. The lead
-// form is on locally and in the integration tests; deployed environments keep it off until the edge and the shared
-// key ring exist (threat model 0001, R2 and R3).
+// form is on locally and in the integration tests; deployed environments keep it off until the edge exists (threat model
+// 0001, R2), and outside development it refuses to start without the shared key ring (R3, ADR 0021).
 var mapApiKey = builder.AddParameter(
     "map-api-key",
     new GenerateParameterDefault { MinLength = 32, Special = false },

@@ -43,6 +43,12 @@ internal sealed class RecordingMocks : IMocks
             state["defaultDomain"] = "env.region.example";
         }
 
+        if (args.Type == "azure-native:keyvault:Key")
+        {
+            // Key Vault returns the key's identifier; the private part never leaves the vault.
+            state["keyUri"] = $"https://vault.example/keys/{args.Name}";
+        }
+
         if (args.Type == "azure-native:keyvault:Secret")
         {
             // Key Vault returns the secret's URI, never its value, as resource state.

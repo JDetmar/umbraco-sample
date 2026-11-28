@@ -24,5 +24,6 @@ Lightweight records of significant decisions (ES-019). Each records context, alt
 | [0018](ADR-0018-page-owner-and-review-date.md) | Page owner and review cycle, inherited down the tree | Accepted |
 | [0019](ADR-0019-scheduled-restore-test-in-dev.md) | Scheduled restore test in dev | Accepted |
 | [0020](ADR-0020-one-repository-for-a-standalone-site-and-a-shared-instance.md) | One repository for a standalone site and a later shared multi-site instance | Accepted |
+| [0021](ADR-0021-shared-data-protection-key-ring.md) | One Data Protection key ring in Blob storage, wrapped by a Key Vault key (amends 0010) | Proposed |
 
 New records copy [template.md](template.md) and are named `ADR-NNNN-short-title.md`, with the next free number; a policy test checks the name and that this index lists the file.

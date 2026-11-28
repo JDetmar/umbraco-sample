@@ -15,7 +15,7 @@ These steps need the owner: they create cloud identities, store a secret and cha
    pulumi config set --secret umbracoAdminPassword --stack dev                 # prompts; changed after first sign-in
    openssl rand -base64 64 | tr -d '\n' | pulumi config set --secret imagingHmacKey --stack dev
    ```
-   Lifetimes: the admin password is used only by the first install; change it in the back office after first sign-in and treat the Key Vault copy as stale (rotate it with `config set` and `up` if it may have leaked). Rotate the imaging key yearly or on suspected exposure; rotating it invalidates cached image URLs.
+   Lifetimes: the admin password is used only by the first install; change it in the back office after first sign-in and treat the Key Vault copy as stale (rotate it with `config set` and `up` if it may have leaked). Rotate the imaging key yearly or on suspected exposure; rotating it invalidates cached image URLs. Rotate the key-ring wrapping key (`dataprotection` in Key Vault) on the same cadence by making a new version in Key Vault; on suspected exposure, follow ADR 0021, which also revokes the existing Data Protection keys.
 3. Create an Entra security group for SQL administration (you, and later anyone else who administers the database), and set it, also as secrets:
    ```sh
    pulumi config set --secret sqlAdminGroupName <group display name> --stack dev
@@ -48,7 +48,7 @@ After this, a `main` revision that passes all gates deploys dev by digest and is
 Do not set `CD_DEV_ENABLED` until the owner-approved amendment to the `CLAUDE.md` delegation envelope, allowing merges to `main` to deploy dev, has been merged to `main`.
 
 1. **Deploy identity.** Create a second app registration (separate from the preview's Reader identity), with a federated credential: issuer `https://token.actions.githubusercontent.com`, subject `repo:<owner>@<owner id>/umbraco-sample@<repository id>:environment:dev`.
-2. **Its Azure roles**, on the subscription: **Contributor**, and **Role Based Access Control Administrator** with the condition "allow assigning only" Key Vault Secrets User, Storage Blob Data Contributor and Monitoring Metrics Publisher (the three roles the stack grants the site).
+2. **Its Azure roles**, on the subscription: **Contributor**, and **Role Based Access Control Administrator** with the condition "allow assigning only" Key Vault Secrets User, Storage Blob Data Contributor, Monitoring Metrics Publisher and Key Vault Crypto Service Encryption User (the four roles the stack grants the site; the last wraps the shared Data Protection key ring, ADR 0021). An existing deploy identity needs the fourth role added to its condition before the first deploy that includes the key ring.
 3. **SQL.** Add the deploy identity to the SQL administrator group, so the database user step can run. Use a group that administers dev only.
 4. **Pulumi Cloud.** In the OIDC issuer from section 1, step 6, add a second policy: personal tokens for your Pulumi user when `sub` equals `repo:<owner>@<owner id>/umbraco-sample@<repository id>:environment:dev`.
 5. **GitHub.** Create an environment named `dev`, restricted to the `main` branch, with no required reviewer (merging to `main` is the approval).

@@ -19,7 +19,10 @@ builder.CreateUmbracoBuilder()
     .AddMediaStorage(builder.Configuration)
     .Build();
 
-builder.Services.AddLeadSite(builder.Configuration);
+// One Data Protection key ring for every replica and revision when configured (ADR 0021).
+builder.Services.AddKeyRing(builder.Configuration);
+
+builder.Services.AddLeadSite(builder.Configuration, builder.Environment);
 
 // Parse the redirect maps before booting, so an invalid map stops the site (ES-021).
 var redirects = RedirectMiddleware.Load(builder.Environment.ContentRootPath);
