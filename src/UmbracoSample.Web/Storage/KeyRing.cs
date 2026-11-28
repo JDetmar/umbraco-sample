@@ -50,8 +50,8 @@ public static class KeyRing
     }
 
     /// <summary>
-    /// Refuses half a configuration, a key or SAS token in either URI, plain http, a blob URI without a container and
-    /// blob name, and a URI that is not a Key Vault key. Called at startup, so a mistake stops the site instead of
+    /// Refuses half a configuration, a key, SAS token, query or fragment in either URI, plain http, a blob URI without a
+    /// container and blob name, and a URI that is not a versionless Key Vault key. Called at startup, so a mistake stops the site instead of
     /// silently falling back to per-machine keys.
     /// </summary>
     public static (Uri Blob, Uri Key) Validate(IConfiguration configuration)
@@ -64,9 +64,10 @@ public static class KeyRing
             throw new InvalidOperationException($"{BlobUriKey} must be an https blob URI (container and blob name) without a key or SAS token, set together with {KeyUriKey}.");
         }
 
-        if (key is null || key.Segments.Length < 3 || !string.Equals(key.Segments[1], "keys/", StringComparison.Ordinal))
+        // Exactly /keys/<name>: a versioned URI would pin every new key to one version and defeat rotation (ADR 0021).
+        if (key is null || key.Segments.Length != 3 || !string.Equals(key.Segments[1], "keys/", StringComparison.Ordinal) || key.Segments[2].EndsWith('/'))
         {
-            throw new InvalidOperationException($"{KeyUriKey} must be an https Key Vault key URI (https://vault/keys/name), set together with {BlobUriKey}.");
+            throw new InvalidOperationException($"{KeyUriKey} must be a versionless https Key Vault key URI (https://vault/keys/name), set together with {BlobUriKey}.");
         }
 
         return (blob, key);
@@ -89,7 +90,7 @@ public static class KeyRing
 
     private static Uri? Plain(string? value) =>
         Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps
-            && string.IsNullOrEmpty(uri.Query) && string.IsNullOrEmpty(uri.UserInfo)
+            && string.IsNullOrEmpty(uri.Query) && string.IsNullOrEmpty(uri.Fragment) && string.IsNullOrEmpty(uri.UserInfo)
             ? uri
             : null;
 }

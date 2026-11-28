@@ -62,6 +62,10 @@ public sealed class KeyRingTests
     [InlineData(Blob, "https://vault.vault.azure.net/secrets/dataprotection")]
     [InlineData(Blob, "https://vault.vault.azure.net/keys/")]
     [InlineData(Blob, "http://vault.vault.azure.net/keys/dataprotection")]
+    [InlineData(Blob, "https://vault.vault.azure.net/keys/dataprotection/0123456789abcdef0123456789abcdef")]
+    [InlineData(Blob, "https://vault.vault.azure.net/keys/dataprotection/")]
+    [InlineData(Blob, "https://vault.vault.azure.net/keys/dataprotection#v1")]
+    [InlineData(Blob + "#x", Key)]
     public void Startup_refuses_half_a_configuration_a_sas_token_plain_http_or_a_non_key_uri(string? blob, string? key)
     {
         var settings = new List<(string, string)>();

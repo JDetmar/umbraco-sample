@@ -15,7 +15,7 @@ These steps need the owner: they create cloud identities, store a secret and cha
    pulumi config set --secret umbracoAdminPassword --stack dev                 # prompts; changed after first sign-in
    openssl rand -base64 64 | tr -d '\n' | pulumi config set --secret imagingHmacKey --stack dev
    ```
-   Lifetimes: the admin password is used only by the first install; change it in the back office after first sign-in and treat the Key Vault copy as stale (rotate it with `config set` and `up` if it may have leaked). Rotate the imaging key yearly or on suspected exposure; rotating it invalidates cached image URLs.
+   Lifetimes: the admin password is used only by the first install; change it in the back office after first sign-in and treat the Key Vault copy as stale (rotate it with `config set` and `up` if it may have leaked). Rotate the imaging key yearly or on suspected exposure; rotating it invalidates cached image URLs. Rotate the key-ring wrapping key (`dataprotection` in Key Vault) on the same cadence by making a new version in Key Vault; on suspected exposure, follow ADR 0021, which also revokes the existing Data Protection keys.
 3. Create an Entra security group for SQL administration (you, and later anyone else who administers the database), and set it, also as secrets:
    ```sh
    pulumi config set --secret sqlAdminGroupName <group display name> --stack dev
